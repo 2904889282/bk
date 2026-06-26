@@ -1,0 +1,8 @@
+[
+  {
+    "apiName": "custom_api_admin",
+    "predicateItems": [
+      {"pattern": "/api/admin/**", "matchStrategy": 0}
+    ]
+  }
+]

@@ -1,0 +1,121 @@
+# ============================================================
+# application.yml — SCG 路由 + Sentinel + Actuator
+# 运行时动态路由由 Nacos 配置中心下发 (beike-gateway.yml)
+# 此文件仅保留降级默认值 + Sentinel 基础配置
+# ============================================================
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      # 从 Nacos 发现服务 → 自动生成路由 (lb://service-name)
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      # 默认过滤器
+      default-filters:
+        - AddRequestHeader=X-Gateway, beike-scg
+        - AddResponseHeader=X-Gateway, SpringCloudGateway-Alibaba
+        - RemoveResponseHeader=X-Application-Context
+      # 手动路由 (兜底, Nacos 配置可覆盖)
+      routes:
+        - id: beike-pipeline-service
+          uri: lb://beike-pipeline-service
+          predicates:
+            - Path=/api/pipelines/**
+          filters:
+            - StripPrefix=1
+        - id: beike-project-service
+          uri: lb://beike-project-service
+          predicates:
+            - Path=/api/projects/**,/api/pm/**
+          filters:
+            - StripPrefix=1
+        - id: beike-auth-service
+          uri: lb://beike-auth-service
+          predicates:
+            - Path=/api/auth/**,/api/login,/api/me
+          filters:
+            - StripPrefix=1
+
+    # Sentinel 网关流控
+    sentinel:
+      # 网关流控规则数据源 (从 Nacos 拉取)
+      datasource:
+        gw-flow:
+          nacos:
+            server-addr: ${NACOS_ADDR:nacos}:8848
+            namespace: ${NACOS_NAMESPACE:beike-prod}
+            group-id: DEFAULT_GROUP
+            data-id: beike-gateway-sentinel-flow.json
+            data-type: json
+            rule-type: gw-flow
+        gw-api-group:
+          nacos:
+            server-addr: ${NACOS_ADDR:nacos}:8848
+            namespace: ${NACOS_NAMESPACE:beike-prod}
+            group-id: DEFAULT_GROUP
+            data-id: beike-gateway-sentinel-api.json
+            data-type: json
+            rule-type: gw-api-group
+      # 降级响应
+      scg:
+        fallback:
+          mode: response
+          response-status: 429
+          response-body: '{"code":429,"msg":"请求太多，请稍后再试"}'
+
+    # Nacos 负载均衡
+    loadbalancer:
+      nacos:
+        enabled: true
+      cache:
+        enabled: true
+        ttl: 35s
+
+  # Redis (Sentinel 限流统计)
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+# ============================
+# Actuator (Prometheus + Health)
+# ============================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: beike-gateway
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 0.1
+
+# ============================
+# 日志
+# ============================
+logging:
+  level:
+    root: INFO
+    com.beike: DEBUG
+    com.alibaba.cloud.nacos: INFO
+    com.alibaba.csp.sentinel: INFO
+  pattern:
+    console: '{"time":"%d{ISO8601}","level":"%p","service":"gateway","msg":"%m"}%n'

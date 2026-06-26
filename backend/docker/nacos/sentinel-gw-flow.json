@@ -1,0 +1,48 @@
+[
+  {
+    "resource": "beike-pipeline-service",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 50,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 20,
+    "maxQueueingTimeoutMs": 500
+  },
+  {
+    "resource": "beike-project-service",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 50,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 20
+  },
+  {
+    "resource": "beike-auth-service",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 20,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 10
+  },
+  {
+    "resource": "beike-talent-service",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 30,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 15
+  },
+  {
+    "resource": "custom_api_admin",
+    "resourceMode": 1,
+    "grade": 1,
+    "count": 5,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 5
+  }
+]

@@ -1,0 +1,16 @@
+cluster.name: beike-search
+node.name: es-node-1
+path.data: /usr/share/elasticsearch/data
+path.logs: /usr/share/elasticsearch/logs
+network.host: 0.0.0.0
+http.port: 9200
+transport.port: 9300
+discovery.type: single-node
+xpack.security.enabled: false
+
+# IK 中文分词 (启动后安装: bin/elasticsearch-plugin install https://get.infini.cloud/elasticsearch/analysis-ik/8.17.0)
+# 已在 Dockerfile 中预装
+
+# 内存
+bootstrap.memory_lock: false
+indices.memory.index_buffer_size: 20%

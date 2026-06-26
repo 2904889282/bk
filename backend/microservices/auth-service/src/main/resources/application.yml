@@ -1,0 +1,37 @@
+server:
+  port: 9003
+
+spring:
+  application:
+    name: beike-auth-service
+  datasource:
+    url: jdbc:mysql://mysql-master:3306/beike_admin?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai
+    username: beike_app
+    password: beike_app_2024
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:nacos}:8848
+        namespace: ${NACOS_NAMESPACE:beike-prod}
+
+beike:
+  jwt:
+    secret: ${JWT_SECRET:beike-admin-jwt-secret-key-2024-must-be-at-least-256-bits-long!!}
+    expiration: ${JWT_EXPIRATION:604800000}           # 7天(毫秒)
+  security:
+    whitelist: ${SECURITY_WHITELIST:/auth/login,/auth/sso/**,/ws/**,/health}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: assign_id
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

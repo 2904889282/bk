@@ -1,0 +1,31 @@
+# ============================================================
+# bootstrap.yml — Nacos 配置中心 + 服务发现
+# 优先级高于 application.yml
+# ============================================================
+spring:
+  application:
+    name: beike-gateway
+  cloud:
+    nacos:
+      # 服务发现
+      discovery:
+        server-addr: ${NACOS_ADDR:nacos}:8848
+        namespace: ${NACOS_NAMESPACE:beike-prod}
+        group: DEFAULT_GROUP
+        enabled: true
+      # 配置中心 (动态路由+限流规则热更新)
+      config:
+        server-addr: ${NACOS_ADDR:nacos}:8848
+        namespace: ${NACOS_NAMESPACE:beike-prod}
+        group: DEFAULT_GROUP
+        file-extension: yml
+        # 拉取 dataId = beike-gateway.yml
+        refresh-enabled: true
+        # 共享配置
+        shared-configs:
+          - data-id: beike-common.yml
+            group: DEFAULT_GROUP
+            refresh: true
+  # 启用 bootstrap
+  config:
+    import: nacos:beike-gateway.yml

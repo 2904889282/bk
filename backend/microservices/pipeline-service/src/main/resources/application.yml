@@ -1,0 +1,160 @@
+server:
+  port: 9001
+
+spring:
+  application:
+    name: beike-pipeline-service
+
+  # ============================
+  # MySQL 8 读写分离
+  # ============================
+  datasource:
+    master:
+      jdbc-url: jdbc:mysql://mysql-master:3306/beike_admin?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      username: beike_app
+      password: beike_app_2024
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        pool-name: MasterPool
+        maximum-pool-size: 20
+        minimum-idle: 5
+        idle-timeout: 300000
+        connection-timeout: 5000
+    slave:
+      jdbc-url: jdbc:mysql://mysql-slave:3306/beike_admin?useUnicode=true&characterEncoding=utf8mb4&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+      username: beike_app
+      password: beike_app_2024
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        pool-name: SlavePool
+        maximum-pool-size: 10
+        minimum-idle: 3
+        idle-timeout: 300000
+        connection-timeout: 5000
+        read-only: true
+
+  # ============================
+  # Redis 7 缓存
+  # ============================
+  data:
+    redis:
+      host: redis
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+  cache:
+    type: redis
+    redis:
+      time-to-live: 1800000       # 默认 30 分钟
+      cache-null-values: false
+
+  # ============================
+  # Elasticsearch 8 搜索
+  # ============================
+  elasticsearch:
+    uris: http://elasticsearch:9200
+    connection-timeout: 3s
+    socket-timeout: 30s
+
+  # ============================
+  # 对象存储 (MinIO / OSS / COS)
+  # ============================
+beike:
+  pipeline:
+    import:
+      max-rows: 1000             # 单次最大导入行数
+      max-file-size: 10          # 单文件最大 MB
+      skip-on-duplicate: true    # 重复是否跳过
+  storage:
+    provider: minio              # minio | oss | cos
+    minio:
+      endpoint: http://minio:9000
+      access-key: beike_admin
+      secret-key: beike_minio_2024
+    # oss 配置 (provider=oss 时生效)
+    oss:
+      endpoint: oss-cn-hangzhou.aliyuncs.com
+      access-key-id:
+      access-key-secret:
+      bucket: beike-files
+    # cos 配置 (provider=cos 时生效)
+    cos:
+      region: ap-guangzhou
+      secret-id:
+      secret-key:
+      bucket: beike-files
+  # 外部推送
+  push:
+    wecom-webhook: ${WECOM_WEBHOOK:}     # 企业微信群机器人 Webhook
+
+  # ============================
+  # RocketMQ 消息队列
+  # ============================
+rocketmq:
+  name-server: rocketmq-namesrv:9876
+  producer:
+    group: beike-pipeline-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+  consumer:
+    group: beike-search-sync-group
+    pull-batch-size: 32
+
+  # ============================
+  # Nacos + Sentinel
+  # ============================
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:nacos}:8848
+        namespace: ${NACOS_NAMESPACE:beike-prod}
+      config:
+        server-addr: ${NACOS_ADDR:nacos}:8848
+        namespace: ${NACOS_NAMESPACE:beike-prod}
+        file-extension: yml
+    sentinel:
+      transport:
+        dashboard: sentinel:8090
+      datasource:
+        ds:
+          nacos:
+            server-addr: ${NACOS_ADDR:nacos}:8848
+            namespace: ${NACOS_NAMESPACE:beike-prod}
+            data-id: beike-pipeline-service-sentinel.json
+            data-type: json
+            rule-type: flow
+  config:
+    import: nacos:beike-pipeline-service.yml
+
+# ============================
+# MyBatis-Plus
+# ============================
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    cache-enabled: false
+
+# ============================
+# Actuator
+# ============================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env
+  metrics:
+    export:
+      prometheus:
+        enabled: true

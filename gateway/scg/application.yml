@@ -1,0 +1,209 @@
+# ============================================================
+# Spring Cloud Gateway 配置 — 贝壳统一管理平台
+# ============================================================
+server:
+  port: 8080
+
+spring:
+  application:
+    name: beike-gateway
+  cloud:
+    gateway:
+      # ============================
+      # 全局默认过滤器
+      # ============================
+      default-filters:
+        # 1. 请求 ID 追踪
+        - AddRequestHeader=X-Trace-Id, ${scg.traceid}
+        # 2. 网关标识
+        - AddResponseHeader=X-Gateway, SpringCloudGateway
+        # 3. 移除内部头
+        - RemoveRequestHeader=Cookie
+        - RemoveResponseHeader=X-Application-Context
+        # 4. 重试
+        - Retry=3
+
+      # ============================
+      # 路由规则
+      # ============================
+      routes:
+
+        # --- 路由 1: 管线管理 API ---
+        - id: beike-pipeline-service
+          uri: lb://beike-pipeline-service
+          predicates:
+            - Path=/api/pipelines/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+            - name: CircuitBreaker
+              args:
+                name: pipelineCircuitBreaker
+                fallbackUri: forward:/fallback/pipelines
+            - name: Retry
+              args:
+                retries: 3
+                statuses: BAD_GATEWAY,SERVICE_UNAVAILABLE,GATEWAY_TIMEOUT
+
+        # --- 路由 2: 项目管理 API ---
+        - id: beike-project-service
+          uri: lb://beike-project-service
+          predicates:
+            - Path=/api/projects/**,/api/pm/**
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+            - name: CircuitBreaker
+              args:
+                name: projectCircuitBreaker
+                fallbackUri: forward:/fallback/projects
+
+        # --- 路由 3: 认证服务 ---
+        - id: beike-auth-service
+          uri: lb://beike-auth-service
+          predicates:
+            - Path=/api/auth/**,/api/login,/api/me,/api/users
+          filters:
+            - StripPrefix=1
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 5
+                redis-rate-limiter.burstCapacity: 10
+
+        # --- 路由 4: 人才服务 ---
+        - id: beike-talent-service
+          uri: lb://beike-talent-service
+          predicates:
+            - Path=/api/talent/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: talentCircuitBreaker
+                fallbackUri: forward:/fallback/talent
+
+        # --- 路由 5: 客户服务 ---
+        - id: beike-client-service
+          uri: lb://beike-client-service
+          predicates:
+            - Path=/api/clients/**
+          filters:
+            - StripPrefix=1
+
+        # --- 路由 6: 文件服务 ---
+        - id: beike-file-service
+          uri: lb://beike-file-service
+          predicates:
+            - Path=/api/files/**
+          filters:
+            - StripPrefix=1
+            - name: RequestSize
+              args:
+                maxSize: 10MB
+
+        # --- 路由 7: 通知/告警服务 ---
+        - id: beike-notification-service
+          uri: lb://beike-notification-service
+          predicates:
+            - Path=/api/alerts/**,/api/notifications/**
+          filters:
+            - StripPrefix=1
+
+  # ============================
+  # Redis (限流器存储)
+  # ============================
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+# ============================
+# 日志
+# ============================
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.filter.ratelimit: TRACE
+  pattern:
+    console: '{"time":"%d{ISO8601}","level":"%p","service":"gateway","trace":"%X{traceId}","span":"%X{spanId}","msg":"%m"}%n'
+
+# ============================
+# Resilience4j 断路器
+# ============================
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      pipelineCircuitBreaker:
+        base-config: default
+      projectCircuitBreaker:
+        base-config: default
+      talentCircuitBreaker:
+        base-config: default
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 5s
+
+# ============================
+# Actuator (Prometheus 抓取)
+# ============================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: beike-gateway
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 0.1
+
+# ============================
+# 降级处理
+# ============================
+scg:
+  traceid: ${X-Trace-Id:${X-Request-Id:${random.uuid}}}
+
+# 自定义过滤器配置
+beike:
+  gateway:
+    # 认证白名单 (无需登录的路径)
+    auth-whitelist:
+      - /api/auth/login
+      - /api/auth/captcha
+      - /api/health
+    # CORS
+    cors:
+      allowed-origins: "https://admin.beike.com"
+      allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+      allowed-headers: "*"
+      max-age: 3600

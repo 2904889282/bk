@@ -1,0 +1,89 @@
+# ============================================================
+# 网关层 docker-compose 扩展 (叠加到基础 docker-compose.yml)
+# 启动: docker compose -f docker/docker-compose.yml -f gateway/docker/docker-compose.gateway.yml up -d
+# ============================================================
+version: "3.9"
+
+services:
+  # ============================
+  # Nginx 边缘网关
+  # ============================
+  nginx-gateway:
+    build:
+      context: ..
+      dockerfile: gateway/docker/Dockerfile.nginx
+    container_name: beike-nginx-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ../gateway/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../gateway/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../gateway/nginx/waf:/etc/nginx/waf:ro
+      - nginx_gateway_logs:/var/log/nginx
+    environment:
+      - NGINX_ENV=production
+    restart: unless-stopped
+    networks:
+      - beike-net
+    depends_on:
+      - scg-gateway
+      - beike-web
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=80"
+
+  # ============================
+  # Spring Cloud Gateway
+  # ============================
+  scg-gateway:
+    build:
+      context: ..
+      dockerfile: gateway/docker/Dockerfile.scg
+    container_name: beike-scg-gateway
+    ports:
+      - "8080:8080"   # 仅内网暴露, 实际通过 nginx-gateway 反代
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SPRING_PROFILES_ACTIVE=docker
+      - JAVA_TOOL_OPTIONS=-javaagent:/app/skywalking-agent.jar -DSW_AGENT_NAME=scg-gateway
+    volumes:
+      - ../gateway/scg/application.yml:/app/config/application.yml:ro
+    restart: unless-stopped
+    networks:
+      - beike-net
+    depends_on:
+      - redis
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8080"
+      - "prometheus.path=/actuator/prometheus"
+
+  # ============================
+  # Redis (限流器 + 会话)
+  # ============================
+  redis:
+    image: redis:7.4-alpine
+    container_name: beike-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - beike-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  nginx_gateway_logs:
+  redis_data:
+
+networks:
+  beike-net:
+    external: true

@@ -1,0 +1,9 @@
+-- 创建复制用户
+CREATE USER IF NOT EXISTS 'replica'@'%' IDENTIFIED BY 'replica_pass_2024';
+GRANT REPLICATION SLAVE, REPLICATION CLIENT ON *.* TO 'replica'@'%';
+FLUSH PRIVILEGES;
+
+-- 创建应用用户 (读写)
+CREATE USER IF NOT EXISTS 'beike_app'@'%' IDENTIFIED BY 'beike_app_2024';
+GRANT SELECT, INSERT, UPDATE, DELETE ON beike_admin.* TO 'beike_app'@'%';
+FLUSH PRIVILEGES;
