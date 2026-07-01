@@ -1,115 +1,178 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button, List, Tag, message, Popconfirm, Space, Modal } from 'antd';
-import { UploadOutlined, DownloadOutlined, DeleteOutlined, FileOutlined, FilePdfOutlined, FileImageOutlined, FileWordOutlined, AudioOutlined, EyeOutlined } from '@ant-design/icons';
-import type { AttachmentItem } from '../../../../store/useLeadStore';
-import { LS_ATTACHMENTS, loadLS, saveLS } from '../../../../store/useLeadStore';
+import {
+  UploadOutlined, DownloadOutlined, DeleteOutlined,
+  FileOutlined, FilePdfOutlined, FileImageOutlined, FileWordOutlined,
+  AudioOutlined, EyeOutlined,
+} from '@ant-design/icons';
+import { uploadFile, fetchAttachmentList, deleteAttachment } from '../../../../api/attachment';
 
-const CATEGORIES = ['方案文档', '报价单', '合同', '沟通记录', '其他'];
+// ─── 后端附件 VO ───
+interface AttachmentVO {
+  id: number;
+  bizType: string;
+  bizId: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  fileUrl: string;
+  uploadUserId: number;
+  uploadTime: string;
+}
 
+/** 根据文件名获取图标 */
 function getIcon(name: string) {
   const ext = name.split('.').pop()?.toLowerCase();
-  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '')) return <FileImageOutlined style={{ color: '#10b981', fontSize: 24 }} />;
+  if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '')) {
+    return <FileImageOutlined style={{ color: '#10b981', fontSize: 24 }} />;
+  }
   if (ext === 'pdf') return <FilePdfOutlined style={{ color: '#ef4444', fontSize: 24 }} />;
   if (['doc', 'docx'].includes(ext || '')) return <FileWordOutlined style={{ color: '#3b82f6', fontSize: 24 }} />;
   if (['mp3', 'wav', 'ogg'].includes(ext || '')) return <AudioOutlined style={{ color: '#f59e0b', fontSize: 24 }} />;
   return <FileOutlined style={{ color: '#999', fontSize: 24 }} />;
 }
 
-interface Props { leadId: string; operator: string; onLog: (action: string, detail: string) => void; }
+/** 字节 → 可读大小 */
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)}KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+}
 
-export default function FilesTab({ leadId, operator, onLog }: Props) {
-  const [files, setFiles] = useState<AttachmentItem[]>([]);
-  const [category, setCategory] = useState('方案文档');
+/** 是否为图片 */
+function isImage(name: string): boolean {
+  const ext = name.split('.').pop()?.toLowerCase();
+  return ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+}
+
+interface Props {
+  bizType: string;
+  bizId: number;
+}
+
+export default function FilesTab({ bizType, bizId }: Props) {
+  const [files, setFiles] = useState<AttachmentVO[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
   const [previewName, setPreviewName] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const load = () => setFiles(loadLS<AttachmentItem[]>(LS_ATTACHMENTS, []).filter(f => f.leadId === leadId));
-  useEffect(() => { load(); }, [leadId]);
+  /** 加载附件列表 */
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await fetchAttachmentList(bizType, bizId);
+      setFiles(data as unknown as AttachmentVO[]);
+    } catch {
+      setFiles([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [bizType, bizId]);
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => { load(); }, [load]);
+
+  /** 上传文件 */
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 50 * 1024 * 1024) { message.error('文件不能超过 50MB'); return; }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const all = loadLS<AttachmentItem[]>(LS_ATTACHMENTS, []);
-      const size = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(0)}KB` : `${(file.size / (1024 * 1024)).toFixed(1)}MB`;
-      const item: AttachmentItem = {
-        id: 'AT' + Date.now(), leadId, name: file.name, category,
-        uploader: operator, uploadTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        size, url: reader.result as string,
-      };
-      all.push(item);
-      saveLS(LS_ATTACHMENTS, all);
-      onLog('上传附件', `上传文件: ${file.name}`);
-      message.success('上传成功'); load();
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 50 * 1024 * 1024) {
+      message.error('文件不能超过 50MB');
+      return;
+    }
+    try {
+      setUploading(true);
+      await uploadFile(file, bizType, bizId);
+      message.success('上传成功');
+      await load();
+    } catch { /* 错误由请求拦截器处理 */ }
+    finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    const all = loadLS<AttachmentItem[]>(LS_ATTACHMENTS, []).filter(f => f.id !== id);
-    saveLS(LS_ATTACHMENTS, all);
-    onLog('删除附件', `删除文件: ${name}`);
-    message.success('已删除'); load();
+  /** 删除附件 */
+  const handleDelete = async (id: number, name: string) => {
+    try {
+      await deleteAttachment(id);
+      message.success(`已删除: ${name}`);
+      await load();
+    } catch { /* 错误由请求拦截器处理 */ }
   };
 
-  const handlePreview = (f: AttachmentItem) => { setPreviewUrl(f.url); setPreviewName(f.name); };
-  const handleDownload = (f: AttachmentItem) => {
-    const a = document.createElement('a'); a.href = f.url; a.download = f.name; a.click();
+  /** 预览（图片） */
+  const handlePreview = (f: AttachmentVO) => {
+    setPreviewUrl(f.fileUrl);
+    setPreviewName(f.fileName);
   };
 
-  const categoryFiles = files.filter(f => f.category === category);
+  /** 下载 */
+  const handleDownload = (f: AttachmentVO) => {
+    // fileUrl 为相对路径，直接在新窗口打开
+    window.open(f.fileUrl, '_blank');
+  };
 
   return (
     <div>
       <Space style={{ marginBottom: 16 }} wrap>
-        {CATEGORIES.map(c => (
-          <Tag.CheckableTag key={c} checked={category === c} onChange={() => setCategory(c)}
-            style={{ padding: '4px 12px', fontSize: 13 }}>
-            {c} ({files.filter(f => f.category === c).length})
-          </Tag.CheckableTag>
-        ))}
         <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={handleUpload} />
-        <Button type="primary" icon={<UploadOutlined />} onClick={() => fileRef.current?.click()}>
-          上传文件
+        <Button type="primary" icon={<UploadOutlined />} loading={uploading}
+          onClick={() => fileRef.current?.click()}>
+          {uploading ? '上传中…' : '上传文件'}
         </Button>
+        <span style={{ color: '#999', fontSize: 12 }}>
+          {loading ? '加载中…' : `共 ${files.length} 个文件`}
+        </span>
       </Space>
 
-      {categoryFiles.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无「{category}」分类的文件</div>
+      {!loading && files.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>暂无附件</div>
       ) : (
-        <List dataSource={categoryFiles} renderItem={f => (
-          <List.Item actions={[
-            <Button size="small" icon={<EyeOutlined />} onClick={() => handlePreview(f)} key="preview">预览</Button>,
-            <Button size="small" icon={<DownloadOutlined />} onClick={() => handleDownload(f)} key="down">下载</Button>,
-            <Popconfirm title="确定删除？" onConfirm={() => handleDelete(f.id, f.name)} key="del">
-              <Button size="small" danger icon={<DeleteOutlined />} />
-            </Popconfirm>,
-          ]}>
-            <List.Item.Meta
-              avatar={getIcon(f.name)}
-              title={f.name}
-              description={<span style={{ fontSize: 12 }}>{f.uploader} · {f.uploadTime} · <Tag style={{ marginLeft: 4 }}>{f.size}</Tag></span>}
-            />
-          </List.Item>
-        )} />
+        <List
+          loading={loading}
+          dataSource={files}
+          renderItem={f => (
+            <List.Item
+              actions={[
+                isImage(f.fileName) && (
+                  <Button size="small" icon={<EyeOutlined />} key="preview" onClick={() => handlePreview(f)}>
+                    预览
+                  </Button>
+                ),
+                <Button size="small" icon={<DownloadOutlined />} key="down" onClick={() => handleDownload(f)}>
+                  下载
+                </Button>,
+                <Popconfirm title="确定删除此附件？" onConfirm={() => handleDelete(f.id, f.fileName)} key="del">
+                  <Button size="small" danger icon={<DeleteOutlined />} />
+                </Popconfirm>,
+              ].filter(Boolean)}
+            >
+              <List.Item.Meta
+                avatar={getIcon(f.fileName)}
+                title={f.fileName}
+                description={
+                  <span style={{ fontSize: 12 }}>
+                    上传于 {f.uploadTime} · <Tag>{formatSize(f.fileSize)}</Tag>
+                  </span>
+                }
+              />
+            </List.Item>
+          )}
+        />
       )}
 
-      <Modal open={!!previewUrl} title={previewName} footer={null} onCancel={() => setPreviewUrl('')} width={800} destroyOnClose>
-        {previewUrl.startsWith('data:image') ? (
-          <img src={previewUrl} alt={previewName} style={{ maxWidth: '100%' }} />
-        ) : previewUrl.startsWith('data:application/pdf') ? (
-          <iframe src={previewUrl} style={{ width: '100%', height: 500, border: 'none' }} title={previewName} />
-        ) : (
-          <div style={{ textAlign: 'center', padding: 40 }}>
-            <FileOutlined style={{ fontSize: 64, color: '#999' }} />
-            <p style={{ marginTop: 16 }}>不支持在线预览此文件类型</p>
-            <Button onClick={() => handleDownload({ id: '', leadId: '', name: previewName, category: '', uploader: '', uploadTime: '', size: '', url: previewUrl })}>下载查看</Button>
-          </div>
-        )}
+      {/* 图片预览弹窗 */}
+      <Modal
+        open={!!previewUrl}
+        title={previewName}
+        footer={null}
+        onCancel={() => setPreviewUrl('')}
+        width={800}
+        destroyOnClose
+      >
+        <img src={previewUrl} alt={previewName} style={{ maxWidth: '100%' }} />
       </Modal>
     </div>
   );

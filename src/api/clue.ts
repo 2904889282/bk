@@ -46,6 +46,22 @@ export interface CluePageResult {
   pageSize: number;
 }
 
+/** 跟进记录 VO */
+export interface ClueFollowVO {
+  id: number;
+  clueId: number;
+  followType: string;
+  followDate: string;
+  followUserId: number;
+  followUserName: string;
+  coreConclusion: string;
+  detailContent: string;
+  nextPlan: string;
+  nextDeadline: string;
+  newStatus: string;
+  createTime: string;
+}
+
 /** 线索新增/编辑请求体 */
 export interface ClueSaveDTO {
   clueName: string;
@@ -99,7 +115,7 @@ export function createFollow(data: Record<string, unknown>): Promise<void> {
   return request.post('/clue/follow', data);
 }
 
-export function fetchFollowList(clueId: number): Promise<Record<string, unknown>[]> {
+export function fetchFollowList(clueId: number): Promise<ClueFollowVO[]> {
   return request.get(`/clue/${clueId}/follow`);
 }
 
