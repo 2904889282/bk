@@ -1,7 +1,7 @@
 import { Card, Tag, Progress, Row, Col, Button, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../../store/useDataStore';
-import { PM_STAGE_MAP, type ProjectStage } from '../../../types';
+import { type ProjectStage } from '../../../types';
 import { useState } from 'react';
 import ProjectForm from '../Projects/Form';
 

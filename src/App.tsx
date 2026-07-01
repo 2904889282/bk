@@ -14,7 +14,6 @@ import PmRisks from './pages/PM/Risks';
 import PmTalent from './pages/PM/Talent';
 import AdminUsers from './pages/Admin/Users';
 import RecycleBin from './pages/Admin/RecycleBin';
-import LeadsKanban from './pages/LTC/Leads/Kanban';
 import LeadsList from './pages/LTC/Leads/List';
 import LeadsDetail from './pages/LTC/Leads/Detail';
 

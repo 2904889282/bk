@@ -1,7 +1,7 @@
 import { Modal, Form, Input, Select, InputNumber, DatePicker, message } from 'antd';
 import { useEffect } from 'react';
 import { useDataStore } from '../../../store/useDataStore';
-import { PM_STAGE_MAP } from '../../../types';
+import { PM_STAGE_MAP, type Project } from '../../../types';
 import dayjs from 'dayjs';
 
 interface Props { open: boolean; editId: string | null; onClose: () => void; }
@@ -22,8 +22,8 @@ export default function ProjectForm({ open, editId, onClose }: Props) {
 
   const onFinish = (values: Record<string, unknown>) => {
     const data = { ...values, startDate: values.startDate ? dayjs(values.startDate as string).format('YYYY-MM-DD') : '', expectedEnd: values.expectedEnd ? dayjs(values.expectedEnd as string).format('YYYY-MM-DD') : '' };
-    if (editId) { updateProject(editId, data as Record<string, unknown>); message.success('项目已更新'); }
-    else { addProject(data as Record<string, unknown>); message.success('项目已创建'); }
+    if (editId) { updateProject(editId, data as Partial<Project>); message.success('项目已更新'); }
+    else { addProject(data as unknown as Omit<Project, 'id'>); message.success('项目已创建'); }
     onClose();
   };
 

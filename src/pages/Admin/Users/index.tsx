@@ -71,7 +71,7 @@ export default function AdminUsers() {
         if (idx >= 0) { users[idx] = { ...users[idx], ...values }; saveToLocal(users); }
       } else {
         if (users.find(u => u.username === values.username)) { message.error('用户名已存在'); return; }
-        users.push({ id: 'U' + Date.now(), username: values.username, realName: values.realName || values.username, status: 1, createdAt: new Date().toISOString().slice(0, 10) });
+        users.push({ id: 'U' + Date.now(), username: values.username, realName: values.realName || values.username, avatar: '', status: 1, createdAt: new Date().toISOString().slice(0, 10) });
         saveToLocal(users);
       }
     }

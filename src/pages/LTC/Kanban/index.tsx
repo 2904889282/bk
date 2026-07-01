@@ -1,10 +1,8 @@
-import { Card, Tag, Progress, Row, Col, Button, Space, Typography } from 'antd';
+import { Card, Tag, Progress, Row, Col, Button, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../../store/useDataStore';
-import { STAGE_MAP, STAGE_COLORS, STAGE_ORDER, type PipelineStage } from '../../../types';
+import { STAGE_MAP, STAGE_COLORS, type PipelineStage } from '../../../types';
 import PipelineForm from '../Pipeline/Form';
-
-const { Title } = Typography;
 
 const COLUMNS: { stages: PipelineStage[]; title: string; color: string; icon: string }[] = [
   { stages: ['lead', 'verify'], title: 'ML · 线索管理', color: '#6366f1', icon: '🟣' },
@@ -13,7 +11,7 @@ const COLUMNS: { stages: PipelineStage[]; title: string; color: string; icon: st
 ];
 
 export default function LtcKanban() {
-  const { pipelines, deletePipeline } = useDataStore();
+  const { pipelines } = useDataStore();
   const [formOpen, setFormOpen] = React.useState(false);
   const [editItem, setEditItem] = React.useState<string | null>(null);
 

@@ -16,3 +16,5 @@ body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC',
 .module-card:hover .arrow-icon { transform: translateX(4px); }
 /* 标签链接悬浮 */
 .tag-link:hover { text-decoration: underline; opacity: 0.8; }
+/* 顶部用户下拉区域悬浮 */
+.user-dropdown-trigger:hover { background: #f5f5f5; }

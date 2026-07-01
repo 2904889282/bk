@@ -1,6 +1,7 @@
 import { Table, Tag, Button, message, Space, Card, Modal, Form, Input, Select } from 'antd';
 import { PlusOutlined, CheckOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../../store/useDataStore';
+import { type Risk } from '../../../types';
 import { useState } from 'react';
 
 export default function PmRisks() {
@@ -9,7 +10,7 @@ export default function PmRisks() {
   const [form] = Form.useForm();
 
   const onFinish = (values: Record<string, unknown>) => {
-    addRisk(values as Record<string, unknown>);
+    addRisk(values as unknown as Omit<Risk, 'id' | 'createdAt' | 'status'>);
     message.success('风险已添加');
     form.resetFields();
     setFormOpen(false);

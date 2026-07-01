@@ -1,7 +1,7 @@
-import { Card, Row, Col, Statistic, Progress } from 'antd';
+import { Card, Row, Col, Statistic } from 'antd';
 import ReactECharts from 'echarts-for-react';
 import { useDataStore } from '../../../store/useDataStore';
-import { STAGE_MAP, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP, type PipelineStage } from '../../../types';
+import { STAGE_MAP, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP } from '../../../types';
 import { useMemo } from 'react';
 
 export default function LtcAnalysis() {
@@ -24,7 +24,6 @@ export default function LtcAnalysis() {
   // 产品线分布
   const productOption = useMemo(() => {
     const products = Object.keys(PRODUCT_MAP);
-    const stages = ['lead', 'verify', 'opportunity', 'contract', 'delivery', 'cash'] as PipelineStage[];
     return {
       tooltip: { trigger: 'axis' },
       legend: { top: 10, data: ['线索/验证', '机会点', '合同/交付/回款'] },

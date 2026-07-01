@@ -1,6 +1,7 @@
 import { Table, Tag, Progress, Space, Card, Button, Modal, Form, Input, InputNumber, Select, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { useDataStore } from '../../../store/useDataStore';
+import { type Talent } from '../../../types';
 import { useState } from 'react';
 
 export default function PmTalent() {
@@ -9,7 +10,7 @@ export default function PmTalent() {
   const [form] = Form.useForm();
 
   const onFinish = (values: Record<string, unknown>) => {
-    addTalent(values as Record<string, unknown>);
+    addTalent(values as unknown as Omit<Talent, 'id'>);
     message.success('人才已添加');
     form.resetFields();
     setFormOpen(false);

@@ -1,81 +1,119 @@
-import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { ProLayout, PageContainer } from '@ant-design/pro-components';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import NotificationBell from '../components/notification/NotificationBell';
-import { DashboardOutlined, FundOutlined, AlertOutlined, PieChartOutlined, ProjectOutlined, SafetyOutlined, TeamOutlined, SettingOutlined, UserOutlined, DeleteOutlined } from '@ant-design/icons';
-import { Dropdown, message } from 'antd';
-import type { MenuDataItem } from '@ant-design/pro-components';
+import { Dropdown, Avatar, Space, message } from 'antd';
+import type { MenuProps } from 'antd';
+import {
+  UserOutlined,
+  KeyOutlined,
+  LogoutOutlined,
+  DownOutlined,
+} from '@ant-design/icons';
 
 export default function BasicLayout() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { user, logout, menus } = useAuth();
-  const [pathname, setPathname] = useState(location.pathname);
+  const { user, logout } = useAuth();
 
-  const menuData: MenuDataItem[] = [
-    { path: '/', name: '🏠 工作台', icon: <DashboardOutlined /> },
+  const userMenuItems: MenuProps['items'] = [
     {
-      name: '📊 LTC 管线管理', key: 'ltc', icon: <FundOutlined />,
-      children: [
-        { path: '/ltc/kanban', name: '管线看板', icon: <FundOutlined /> },
-        { path: '/ltc/pipeline', name: '管线列表', icon: <DashboardOutlined /> },
-        { path: '/ltc/alerts', name: '预警中心', icon: <AlertOutlined /> },
-        { path: '/ltc/analysis', name: '数据分析', icon: <PieChartOutlined /> },
-        { path: '/ltc/leads', name: '线索管理', icon: <AlertOutlined /> },
-      ],
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: '个人中心',
+      onClick: () => message.info('个人中心（待建设）'),
     },
     {
-      name: '🎯 项目管理', key: 'pm', icon: <ProjectOutlined />,
-      children: [
-        { path: '/pm/kanban', name: '项目看板', icon: <ProjectOutlined /> },
-        { path: '/pm/projects', name: '项目列表', icon: <DashboardOutlined /> },
-        { path: '/pm/risks', name: '风险管理', icon: <SafetyOutlined /> },
-        { path: '/pm/talent', name: '人才池', icon: <TeamOutlined /> },
-      ],
+      key: 'password',
+      icon: <KeyOutlined />,
+      label: '修改密码',
+      onClick: () => message.info('请联系管理员修改密码'),
     },
-    // 系统管理（仅管理员可见）
-    ...(user?.roles?.includes('ROLE_ADMIN') ? [{
-      name: '⚙️ 系统管理', key: 'admin', icon: <SettingOutlined />,
-      children: [
-        { path: '/admin/users', name: '用户管理', icon: <UserOutlined /> },
-        { path: '/admin/recycle', name: '数据回收站', icon: <DeleteOutlined /> },
-      ],
-    }] : []),
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: '退出登录',
+      danger: true,
+      onClick: () => {
+        logout();
+        navigate('/login');
+      },
+    },
   ];
 
   return (
-    <ProLayout
-      title="贝壳管理平台"
-      logo="🐚"
-      menuDataRender={() => menuData}
-      menuItemRender={(item, dom) => (
-        <a onClick={() => { setPathname(item.path || '/'); navigate(item.path || '/'); }}>{dom}</a>
-      )}
-      location={{ pathname }}
-      avatarProps={{
-        src: undefined,
-        title: user?.name,
-        render: () => (
-          <Dropdown menu={{ items: [
-            { key: 'info', label: `👤 ${user?.name} (${user?.roles?.includes('ROLE_ADMIN') ? '管理员' : user?.roles?.[0] || '用户'})`, disabled: true },
-            { type: 'divider' },
-            { key: 'pwd', label: '🔒 修改密码', onClick: () => message.info('请联系管理员修改密码') },
-            { type: 'divider' },
-            { key: 'logout', label: '🚪 退出登录', onClick: () => { logout(); navigate('/login'); } },
-          ]}} trigger={['click']}>
-            <span style={{ cursor: 'pointer', userSelect: 'none', marginRight: 8 }}>
-              {user?.avatar} {user?.name}
-            </span>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
+      {/* ===== 顶部通栏 ===== */}
+      <header
+        style={{
+          height: 64,
+          background: '#fff',
+          borderBottom: '1px solid #f0f0f0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 24px',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100,
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+        }}
+      >
+        {/* 左侧：Logo + 名称 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, userSelect: 'none' }}>
+          <span style={{ fontSize: 24, lineHeight: 1 }}>🐚</span>
+          <span
+            style={{
+              fontSize: 18,
+              fontWeight: 700,
+              color: '#1a1a1a',
+              letterSpacing: 1,
+            }}
+          >
+            贝壳管理平台
+          </span>
+        </div>
+
+        {/* 右侧：通知铃铛 + 用户下拉 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <NotificationBell />
+          <Dropdown menu={{ items: userMenuItems }} trigger={['click']}>
+            <Space
+              style={{
+                cursor: 'pointer',
+                padding: '6px 10px',
+                borderRadius: 6,
+                transition: 'background 0.2s',
+              }}
+              className="user-dropdown-trigger"
+            >
+              <Avatar
+                style={{ backgroundColor: '#6366f1', verticalAlign: 'middle', flexShrink: 0 }}
+                size="small"
+              >
+                {user?.name?.[0] || 'U'}
+              </Avatar>
+              <span style={{ fontSize: 14, color: '#333', maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {user?.name || '用户'}
+              </span>
+              <DownOutlined style={{ fontSize: 10, color: '#999' }} />
+            </Space>
           </Dropdown>
-        ),
-      }}
-      actionsRender={() => [<NotificationBell key="bell" />]}
-      menuFooterRender={(props) => props?.collapsed ? undefined : <div style={{ textAlign: 'center', padding: 12, color: '#999', fontSize: 12 }}>v4.0 · React</div>}
-    >
-      <PageContainer header={{ title: false, breadcrumb: {} }}>
+        </div>
+      </header>
+
+      {/* ===== 主体内容区 ===== */}
+      <main
+        style={{
+          flex: 1,
+          width: '100%',
+          maxWidth: 1200,
+          margin: '0 auto',
+          padding: '24px',
+          boxSizing: 'border-box',
+        }}
+      >
         <Outlet />
-      </PageContainer>
-    </ProLayout>
+      </main>
+    </div>
   );
 }

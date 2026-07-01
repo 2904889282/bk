@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Modal, Upload, Button, Statistic, Row, Col, Space, message, Table } from 'antd';
+import { Modal, Upload, Button, Statistic, Row, Col, Space, message } from 'antd';
 import { DownloadOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload';
 

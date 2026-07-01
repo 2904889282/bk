@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Divider, Space, message } from 'antd';
 import { WechatOutlined, DingdingOutlined } from '@ant-design/icons';
-import { useAuth } from '../../hooks/useAuth';
 
 interface Props { onLoginStart?: () => void; }
 

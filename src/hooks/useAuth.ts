@@ -1,14 +1,18 @@
 import { create } from 'zustand';
-import request from '../utils/request';
+import { loginApi, registerApi, getUserInfoApi, type LoginResult } from '../api/auth';
 
-interface UserInfo { id: string; username: string; name: string; avatar: string; roles: string[]; }
+interface UserInfo {
+  id: number; username: string; realName: string; roles: string[]; permissions: string[];
+}
 interface AuthState {
   user: UserInfo | null;
   token: string | null;
   permissions: string[];
-  menus: { path: string; name: string; icon: string; component?: string }[];
+  roles: string[];
   isLoggedIn: boolean;
+
   login: (username: string, password: string) => Promise<{ success: boolean; msg?: string }>;
+  register: (username: string, password: string, realName: string) => Promise<{ success: boolean; msg?: string }>;
   fetchUserInfo: () => Promise<void>;
   logout: () => void;
   hasPermission: (code: string) => boolean;
@@ -19,74 +23,76 @@ export const useAuth = create<AuthState>((set, get) => ({
   user: null,
   token: localStorage.getItem('beike_token'),
   permissions: [],
-  menus: [],
+  roles: [],
   isLoggedIn: false,
 
   login: async (username, password) => {
-    // 1. 尝试后端登录
     try {
-      const res = await request.post('/auth/login', { username, password });
-      const data = res.data.data;
+      const data: LoginResult = await loginApi({ username, password });
       localStorage.setItem('beike_token', data.token);
       localStorage.setItem('beike_user', JSON.stringify(data.user));
-      set({ token: data.token, user: data.user, isLoggedIn: true, permissions: data.permissions || [], menus: data.menus || [] });
+      set({
+        token: data.token, user: data.user,
+        permissions: data.user.permissions, roles: data.user.roles, isLoggedIn: true,
+      });
       return { success: true };
-    } catch {
-      // 2. 后端不可用 → 降级模拟登录
+    } catch (e: unknown) {
+      // 降级：后端不可用时使用本地模拟登录
+      const DEMO: Record<string, { name: string; roles: string[]; permissions: string[] }> = {
+        admin: { name: '管理员', roles: ['ROLE_ADMIN'], permissions: ['*'] },
+        zhangming: { name: '张明', roles: ['ROLE_MANAGER'], permissions: ['clue:list','clue:create','clue:edit','clue:delete','clue:batch','clue:import','clue:export','clue:convert','project:list','project:create','project:edit'] },
+      };
+      const d = DEMO[username];
+      if (d && password === (username === 'admin' ? 'admin123' : 'zm2026')) {
+        const token = 'mock_' + Date.now();
+        const user = { id: 1, username, realName: d.name, roles: d.roles, permissions: d.permissions };
+        localStorage.setItem('beike_token', token);
+        localStorage.setItem('beike_user', JSON.stringify(user));
+        set({ token, user, permissions: d.permissions, roles: d.roles, isLoggedIn: true });
+        return { success: true };
+      }
+      return { success: false, msg: (e as Error).message || '登录失败' };
     }
+  },
 
-    // 演示账号
-    const DEMO_USERS: Record<string, { password: string; name: string; roles: string[]; avatar: string; permissions: string[] }> = {
-      admin: { password: 'admin123', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['*'] },
-      zhangming: { password: 'zm2026', name: '张明', roles: ['ROLE_MANAGER'], avatar: '👤', permissions: ['pipeline:create', 'pipeline:import', 'pipeline:batch-delete', 'pipeline:batch-modify', 'pipeline:edit', 'pipeline:delete'] },
-    };
-
-    // 检查演示账号
-    const demoUser = DEMO_USERS[username];
-    if (demoUser && demoUser.password === password) {
-      const token = 'mock_' + Date.now();
-      const user = { id: username, username, name: demoUser.name, avatar: demoUser.avatar, roles: demoUser.roles };
-      localStorage.setItem('beike_token', token);
-      localStorage.setItem('beike_user', JSON.stringify(user));
-      set({ token, user, isLoggedIn: true, permissions: demoUser.permissions, menus: [] });
+  register: async (username, password, realName) => {
+    try {
+      await registerApi({ username, password, realName });
       return { success: true };
+    } catch (e: unknown) {
+      return { success: false, msg: (e as Error).message || '注册失败' };
     }
-
-    // 检查 localStorage 注册用户
-    const registered = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
-    const regUser = registered.find((u: { username: string; password: string }) => u.username === username && u.password === password);
-    if (regUser) {
-      const token = 'mock_' + Date.now();
-      const user = { id: username, username, name: regUser.realName || username, avatar: '👤', roles: ['ROLE_USER'] };
-      localStorage.setItem('beike_token', token);
-      localStorage.setItem('beike_user', JSON.stringify(user));
-      set({ token, user, isLoggedIn: true, permissions: [], menus: [] });
-      return { success: true };
-    }
-
-    return { success: false, msg: '用户名或密码错误' };
   },
 
   fetchUserInfo: async () => {
     try {
-      const res = await request.get('/auth/userinfo');
-      const data = res.data.data;
+      const data = await getUserInfoApi();
       localStorage.setItem('beike_user', JSON.stringify(data.user));
       set({
         user: data.user, isLoggedIn: true,
-        permissions: data.permissions || [], menus: data.menus || [],
+        permissions: data.user.permissions, roles: data.user.roles,
       });
     } catch {
-      get().logout();
+      // 降级：localStorage
+      const saved = localStorage.getItem('beike_user');
+      if (saved) {
+        const u = JSON.parse(saved) as UserInfo;
+        set({ user: u, isLoggedIn: true, permissions: u.permissions, roles: u.roles });
+      } else {
+        get().logout();
+      }
     }
   },
 
   logout: () => {
     localStorage.removeItem('beike_token');
     localStorage.removeItem('beike_user');
-    set({ user: null, token: null, isLoggedIn: false, permissions: [], menus: [] });
+    set({ user: null, token: null, isLoggedIn: false, permissions: [], roles: [] });
   },
 
-  hasPermission: (code) => get().permissions.includes(code) || get().user?.roles?.includes('ROLE_ADMIN') || false,
-  hasRole: (role) => get().user?.roles?.includes(role) || false,
+  hasPermission: (code) => {
+    const { permissions, roles } = get();
+    return roles.includes('ROLE_ADMIN') || permissions.includes('*') || permissions.includes(code);
+  },
+  hasRole: (role) => get().roles.includes(role),
 }));

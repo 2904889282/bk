@@ -1,7 +1,7 @@
 import { Modal, Form, Input, Select, InputNumber, message, Button, Space } from 'antd';
 import { useEffect } from 'react';
 import { useDataStore } from '../../../store/useDataStore';
-import { STAGE_MAP, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP } from '../../../types';
+import { STAGE_MAP, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP, type Pipeline } from '../../../types';
 import Permission from '../../../components/auth/Permission';
 
 interface Props { open: boolean; editId: string | null; onClose: () => void; onImportClick?: () => void; }
@@ -21,8 +21,8 @@ export default function PipelineForm({ open, editId, onClose, onImportClick }: P
   }, [open, editId]);
 
   const onFinish = (values: Record<string, unknown>) => {
-    if (editId) { updatePipeline(editId, values as Record<string, unknown>); message.success('管线已更新'); }
-    else { addPipeline(values as Record<string, unknown>); message.success('管线已创建'); }
+    if (editId) { updatePipeline(editId, values as Partial<Pipeline>); message.success('管线已更新'); }
+    else { addPipeline(values as unknown as Omit<Pipeline, 'id' | 'createdAt' | 'updatedAt'>); message.success('管线已创建'); }
     onClose();
   };
 

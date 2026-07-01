@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Badge, Popover, List, Empty, Typography, Button } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import { useWebSocket } from '../../hooks/useWebSocket';

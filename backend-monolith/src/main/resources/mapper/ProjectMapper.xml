@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.beike.platform.mapper.ProjectMapper">
+
+    <select id="selectPageWithFilter" resultType="com.beike.platform.entity.Project">
+        SELECT * FROM biz_project
+        <where>
+            <if test="dto.keyword != null and dto.keyword != ''">
+                AND (project_name LIKE CONCAT('%', #{dto.keyword}, '%')
+                     OR client_name LIKE CONCAT('%', #{dto.keyword}, '%'))
+            </if>
+            <if test="dto.status != null and dto.status != ''">
+                AND project_status = #{dto.status}
+            </if>
+            <if test="dto.manager != null and dto.manager != ''">
+                AND project_manager LIKE CONCAT('%', #{dto.manager}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>
