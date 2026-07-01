@@ -46,6 +46,29 @@ export interface CluePageResult {
   pageSize: number;
 }
 
+/** 线索新增/编辑请求体 */
+export interface ClueSaveDTO {
+  clueName: string;
+  clientCompany: string;
+  clientDept?: string;
+  clientContact?: string;
+  beikeOwner: string;
+  budget?: string;
+  clueLevel: string;
+  clueStatus: string;
+  reviewStatus?: string;
+  businessConfirmed?: string;
+  contactDate?: string;
+  proposalDate?: string;
+  requirementDesc?: string;
+  clueEvaluation?: string;
+  remark?: string;
+  deptBelong: string;
+  arUserId?: number;
+  srUserId?: number;
+  frUserId?: number;
+}
+
 export function fetchClueList(params: CluePageParams): Promise<CluePageResult> {
   return request.get('/clue/page', { params });
 }
@@ -54,14 +77,20 @@ export function fetchClueDetail(id: number): Promise<ClueVO> {
   return request.get(`/clue/${id}`);
 }
 
-export function createClue(data: Record<string, unknown>): Promise<void> {
+export function createClue(data: ClueSaveDTO): Promise<void> {
   return request.post('/clue', data);
 }
 
-export function updateClue(data: Record<string, unknown>): Promise<void> {
-  return request.put('/clue', data);
+export function updateClue(id: number, data: ClueSaveDTO): Promise<void> {
+  return request.put(`/clue/${id}`, data);
 }
 
+/** 单条删除 */
+export function deleteClue(id: number): Promise<void> {
+  return request.delete(`/clue/${id}`);
+}
+
+/** 批量删除 */
 export function deleteClueBatch(ids: number[]): Promise<void> {
   return request.delete('/clue/batch', { data: ids });
 }
