@@ -60,7 +60,7 @@ export default function LoginPage() {
           </div>
           <Button type="primary" size="large" block loading={loading} onClick={doLogin}>登 录</Button>
           <p style={{ textAlign: 'center', marginTop: 20, color: '#999', fontSize: 12, lineHeight: 1.8 }}>
-            管理员: admin / admin123<br />部门经理: zhangming / zm2026
+            管理员: admin / 123456<br />部门经理: zhangming / 123456<br />普通员工: employee / 123456
           </p>
         </div>
       ),

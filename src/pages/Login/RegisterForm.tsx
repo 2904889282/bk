@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Input, Button, Checkbox, Progress, message } from 'antd';
 import { UserOutlined, LockOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
-import request from '../../utils/request';
+import { registerApi } from '../../api/auth';
 
 interface Props { onSuccess: () => void; }
 
@@ -50,18 +50,7 @@ export default function RegisterForm({ onSuccess }: Props) {
     if (!validate()) return;
     setLoading(true);
     try {
-      // 尝试后端注册，失败则回退到 localStorage 模拟
-      try {
-        await request.post('/auth/register', { username: username.trim(), realName: realName.trim(), phone, password, confirmPassword: confirmPwd });
-      } catch {
-        // 后端不可用时，模拟注册到 localStorage
-        const users = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
-        if (users.find((u: { username: string }) => u.username === username.trim())) {
-          message.error('用户名已存在'); setLoading(false); return;
-        }
-        users.push({ username: username.trim(), realName: realName.trim(), phone, password, createdAt: new Date().toISOString() });
-        localStorage.setItem('beike_registered_users', JSON.stringify(users));
-      }
+      await registerApi({ username: username.trim(), password, realName: realName.trim() });
       setCountdown(3);
       const timer = setInterval(() => {
         setCountdown(c => {
@@ -70,7 +59,7 @@ export default function RegisterForm({ onSuccess }: Props) {
         });
       }, 1000);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { msg?: string } } })?.response?.data?.msg || '注册失败';
+      const msg = (err as Error).message || '注册失败';
       message.error(msg);
     }
     setLoading(false);
