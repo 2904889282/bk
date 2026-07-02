@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.beike.platform.mapper.AlertMapper">
+
+    <select id="selectPageWithFilter" resultType="com.beike.platform.entity.Alert">
+        SELECT * FROM biz_alert
+        <where>
+            <if test="dto.keyword != null and dto.keyword != ''">
+                AND (type LIKE CONCAT('%', #{dto.keyword}, '%')
+                     OR description LIKE CONCAT('%', #{dto.keyword}, '%'))
+            </if>
+            <if test="dto.level != null and dto.level != ''">
+                AND `level` = #{dto.level}
+            </if>
+            <if test="dto.status != null and dto.status != ''">
+                AND status = #{dto.status}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

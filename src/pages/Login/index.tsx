@@ -1,15 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Input, Button, Checkbox, message, Tabs } from 'antd';
+import { Input, Button, Checkbox, message, Tabs, Spin } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import RegisterForm from './RegisterForm';
 
+// 简单的本地编码（非加密，仅防止明文存储）
+const encode = (s: string) => btoa(encodeURIComponent(s).replace(/%([0-9A-F]{2})/g, (_m, p) => String.fromCharCode(parseInt(p, 16))));
+const decode = (s: string) => { try { return decodeURIComponent(Array.from(atob(s), c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0')).join('')); } catch { return ''; } };
+
 export default function LoginPage() {
-  const [username, setUsername] = useState(localStorage.getItem('remembered_username') || '');
+  const savedUser = localStorage.getItem('rm_user') || '';
+  const savedPass = localStorage.getItem('rm_pass') || '';
+  const [username, setUsername] = useState(savedUser);
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(!!localStorage.getItem('remembered_username'));
+  const [remember, setRemember] = useState(!!savedUser);
   const [loading, setLoading] = useState(false);
+  const [autoLogging, setAutoLogging] = useState(!!savedUser);
   const [error, setError] = useState('');
   const [shake, setShake] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
@@ -20,6 +27,21 @@ export default function LoginPage() {
 
   useEffect(() => { if (isLoggedIn) navigate('/', { replace: true }); }, [isLoggedIn, navigate]);
 
+  // 自动登录
+  useEffect(() => {
+    if (!savedUser || !savedPass) { setAutoLogging(false); return; }
+    (async () => {
+      const result = await login(savedUser, decode(savedPass));
+      if (result.success) {
+        message.success('已自动登录');
+      } else {
+        setAutoLogging(false);
+        setError('自动登录失败，请重新输入密码');
+        setPassword('');
+      }
+    })();
+  }, []);
+
   const doLogin = async () => {
     setError('');
     if (!username.trim()) { setError('请输入用户名'); triggerShake(); return; }
@@ -28,8 +50,13 @@ export default function LoginPage() {
     const result = await login(username.trim(), password);
     setLoading(false);
     if (result.success) {
-      if (remember) localStorage.setItem('remembered_username', username);
-      else localStorage.removeItem('remembered_username');
+      if (remember) {
+        localStorage.setItem('rm_user', username.trim());
+        localStorage.setItem('rm_pass', encode(password));
+      } else {
+        localStorage.removeItem('rm_user');
+        localStorage.removeItem('rm_pass');
+      }
       message.success('登录成功');
       navigate((location.state as { from?: { pathname: string } })?.from?.pathname || '/', { replace: true });
     } else {
@@ -43,19 +70,29 @@ export default function LoginPage() {
   const tabItems = [
     {
       key: 'login', label: '登录',
-      children: (
+      children: autoLogging ? (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <Spin size="large" />
+          <p style={{ marginTop: 16, color: '#999' }}>正在自动登录...</p>
+          <p style={{ marginTop: 12 }}>
+            <Button type="link" size="small" onClick={() => { localStorage.removeItem('rm_user'); localStorage.removeItem('rm_pass'); setAutoLogging(false); setUsername(''); setPassword(''); }}>
+              取消自动登录
+            </Button>
+          </p>
+        </div>
+      ) : (
         <div style={{ opacity: activeTab === 'login' ? 1 : 0, transition: 'opacity 0.2s' }}>
           {error && <div style={{ background: '#fef2f2', color: '#ef4444', padding: 8, borderRadius: 8, marginBottom: 16, fontSize: 13, textAlign: 'center' }}>{error}</div>}
           <div className={shake ? 'shake' : ''}>
             <Input size="large" prefix={<UserOutlined />} placeholder="用户名" value={username}
               onChange={e => setUsername(e.target.value)} style={{ marginBottom: 16 }}
               onPressEnter={doLogin} autoComplete="username" />
-            <Input.Password size="large" prefix={<LockOutlined />} placeholder="密码（至少6位）" value={password}
+            <Input.Password size="large" prefix={<LockOutlined />} placeholder="密码" value={password}
               onChange={e => setPassword(e.target.value)} style={{ marginBottom: 16 }}
               onPressEnter={doLogin} autoComplete="current-password" />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <Checkbox checked={remember} onChange={e => setRemember(e.target.checked)}>记住用户名</Checkbox>
+            <Checkbox checked={remember} onChange={e => setRemember(e.target.checked)}>记住密码，下次自动登录</Checkbox>
             <a style={{ fontSize: 13, color: '#6366f1' }} onClick={() => message.info('请联系管理员重置密码')}>忘记密码？</a>
           </div>
           <Button type="primary" size="large" block loading={loading} onClick={doLogin}>登 录</Button>

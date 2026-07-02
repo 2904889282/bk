@@ -57,7 +57,7 @@ export default function SSOLoginButtons({ onLoginStart }: Props) {
   return (
     <>
       <Divider plain style={{ fontSize: 13, color: '#999' }}>第三方登录</Divider>
-      <Space direction="vertical" style={{ width: '100%' }} size={12}>
+      <Space orientation="vertical" style={{ width: '100%' }} size={12}>
         {ssoUrls.wecom && (
           <Button icon={<WechatOutlined />} size="large" block
             style={{ background: '#07c160', color: '#fff', borderColor: '#07c160' }}

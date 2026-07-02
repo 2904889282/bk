@@ -1,13 +1,23 @@
-import { Card, Row, Col, Statistic, Progress } from 'antd';
+import { Card, Row, Col, Statistic } from 'antd';
 import ReactECharts from 'echarts-for-react';
-import { useDataStore } from '../../../store/useDataStore';
 import { STAGE_MAP, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP, type PipelineStage } from '../../../types';
-import { useMemo } from 'react';
+import { fetchPipelineList, type Pipeline } from '../../../api/pipeline';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function LtcAnalysis() {
-  const { pipelines, stats } = useDataStore();
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
 
-  // 阶段分布漏斗
+  useEffect(() => {
+    fetchPipelineList().then((data) => setPipelines(Array.isArray(data) ? data : []));
+  }, []);
+
+  const stats = useMemo(() => ({
+    activePipelines: pipelines.filter(p => p.stage !== 'closed').length,
+    totalAmount: pipelines
+      .filter(p => !['lead', 'verify', 'closed'].includes(p.stage))
+      .reduce((s, p) => s + (p.amount || 0), 0),
+  }), [pipelines]);
+
   const stageOption = useMemo(() => {
     const stageCounts = STAGE_ORDER.slice(0, 6).map(s => pipelines.filter(p => p.stage === s).length);
     return {
@@ -21,7 +31,6 @@ export default function LtcAnalysis() {
     };
   }, [pipelines]);
 
-  // 产品线分布
   const productOption = useMemo(() => {
     const products = Object.keys(PRODUCT_MAP);
     const stages = ['lead', 'verify', 'opportunity', 'contract', 'delivery', 'cash'] as PipelineStage[];
@@ -31,14 +40,13 @@ export default function LtcAnalysis() {
       xAxis: { type: 'category', data: products.map(p => PRODUCT_MAP[p as keyof typeof PRODUCT_MAP]) },
       yAxis: { type: 'value' },
       series: [
-        { name: '线索/验证', type: 'bar', stack: 'total', data: products.map(p => pipelines.filter(x => x.product === p && ['lead', 'verify'].includes(x.stage)).length), color: '#a5b4fc', itemStyle: { borderRadius: [0, 0, 0, 0] } },
+        { name: '线索/验证', type: 'bar', stack: 'total', data: products.map(p => pipelines.filter(x => x.product === p && ['lead', 'verify'].includes(x.stage)).length), color: '#a5b4fc' },
         { name: '机会点', type: 'bar', stack: 'total', data: products.map(p => pipelines.filter(x => x.product === p && x.stage === 'opportunity').length), color: '#fcd34d' },
         { name: '合同/交付/回款', type: 'bar', stack: 'total', data: products.map(p => pipelines.filter(x => x.product === p && ['contract', 'delivery', 'cash'].includes(x.stage)).length), color: '#6ee7b7', itemStyle: { borderRadius: [6, 6, 0, 0] } },
       ],
     };
   }, [pipelines]);
 
-  // 行业分布
   const industryOption = useMemo(() => {
     const industries = Object.keys(INDUSTRY_MAP);
     const amounts = industries.map(ind => pipelines.filter(p => p.industry === ind).reduce((s, p) => s + (p.amount || 0), 0));
@@ -51,7 +59,6 @@ export default function LtcAnalysis() {
     };
   }, [pipelines]);
 
-  // 阶段金额分布
   const amountOption = useMemo(() => {
     const stagesAmt = STAGE_ORDER.slice(0, 6).map(s => pipelines.filter(p => p.stage === s).reduce((sm, p) => sm + (p.amount || 0), 0));
     return {

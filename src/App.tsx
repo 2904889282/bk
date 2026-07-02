@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
+import { App as AntdApp } from 'antd';
 import { useAuth } from './hooks/useAuth';
 import LoginPage from './pages/Login';
 import BasicLayout from './layouts/BasicLayout';
@@ -35,26 +36,28 @@ function AppInit() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppInit />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
-          <Route index element={<PortalPage />} />
-          <Route path="ltc/kanban" element={<LtcKanban />} />
-          <Route path="ltc/pipeline" element={<LtcPipeline />} />
-          <Route path="ltc/alerts" element={<LtcAlerts />} />
-          <Route path="ltc/analysis" element={<LtcAnalysis />} />
-          <Route path="pm/kanban" element={<PmKanban />} />
-          <Route path="pm/projects" element={<PmProjects />} />
-          <Route path="pm/risks" element={<PmRisks />} />
-          <Route path="pm/talent" element={<PmTalent />} />
-          <Route path="admin/users" element={<AdminUsers />} />
-          <Route path="admin/recycle" element={<RecycleBin />} />
-          <Route path="ltc/leads" element={<LeadsList />} />
-          <Route path="ltc/leads/:id" element={<LeadsDetail />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AntdApp>
+      <BrowserRouter>
+        <AppInit />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
+            <Route index element={<PortalPage />} />
+            <Route path="ltc/kanban" element={<LtcKanban />} />
+            <Route path="ltc/pipeline" element={<LtcPipeline />} />
+            <Route path="ltc/alerts" element={<LtcAlerts />} />
+            <Route path="ltc/analysis" element={<LtcAnalysis />} />
+            <Route path="pm/kanban" element={<PmKanban />} />
+            <Route path="pm/projects" element={<PmProjects />} />
+            <Route path="pm/risks" element={<PmRisks />} />
+            <Route path="pm/talent" element={<PmTalent />} />
+            <Route path="admin/users" element={<AdminUsers />} />
+            <Route path="admin/recycle" element={<RecycleBin />} />
+            <Route path="ltc/leads" element={<LeadsList />} />
+            <Route path="ltc/leads/:id" element={<LeadsDetail />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AntdApp>
   );
 }

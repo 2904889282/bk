@@ -101,8 +101,8 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
 
   return (
     <Modal title="📥 导入管线" open={open} onCancel={() => { resetState(); onClose(); }}
-      width={640} footer={null} destroyOnClose>
-      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      width={640} footer={null} destroyOnHidden>
+      <Space orientation="vertical" style={{ width: '100%' }} size={16}>
 
         {/* ① 模板下载 */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

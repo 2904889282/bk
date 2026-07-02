@@ -25,8 +25,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   login: async (username, password) => {
     // 1. 尝试后端登录
     try {
-      const res = await request.post('/auth/login', { username, password });
-      const data = res.data.data;
+      const res = await request.post('/api/auth/login', { username, password });
+      const data = res.data;
       localStorage.setItem('beike_token', data.token);
       localStorage.setItem('beike_user', JSON.stringify(data.user));
       set({ token: data.token, user: data.user, isLoggedIn: true, permissions: data.permissions || [], menus: data.menus || [] });
@@ -69,8 +69,8 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   fetchUserInfo: async () => {
     try {
-      const res = await request.get('/auth/userinfo');
-      const data = res.data.data;
+      const res = await request.get('/api/auth/userinfo');
+      const data = res.data;
       localStorage.setItem('beike_user', JSON.stringify(data.user));
       set({
         user: data.user, isLoggedIn: true,
@@ -84,6 +84,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem('beike_token');
     localStorage.removeItem('beike_user');
+    localStorage.removeItem('rm_user');
+    localStorage.removeItem('rm_pass');
     set({ user: null, token: null, isLoggedIn: false, permissions: [], menus: [] });
   },
 

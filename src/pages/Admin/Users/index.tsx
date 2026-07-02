@@ -21,9 +21,9 @@ export default function AdminUsers() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await request.get('/system/user/page', { params: { page, size: 10, keyword } });
-      setData(res.data.data?.records || []);
-      setTotal(res.data.data?.total || 0);
+      const res = await request.get('/api/user/page', { params: { page, size: 10, keyword } });
+      setData(res.data?.records || []);
+      setTotal(res.data?.total || 0);
     } catch {
       // 后端不可用 — 降级 localStorage
       const stored = JSON.parse(localStorage.getItem('beike_admin_users') || '[]');
@@ -59,9 +59,9 @@ export default function AdminUsers() {
     const values = await form.validateFields();
     try {
       if (editId) {
-        await request.put('/system/user', { id: editId, ...values, password: values.password || '' });
+        await request.put('/api/user', { id: editId, ...values, password: values.password || '' });
       } else {
-        await request.post('/system/user', values);
+        await request.post('/api/user', values);
       }
     } catch {
       // 降级 localStorage
@@ -80,14 +80,14 @@ export default function AdminUsers() {
   };
 
   const handleDelete = async (id: string) => {
-    try { await request.delete(`/system/user/${id}`); } catch {
+    try { await request.delete(`/api/user/${id}`); } catch {
       saveToLocal(getLocal().filter(u => u.id !== id));
     }
     message.success('已删除'); fetchData();
   };
 
   const toggleStatus = async (id: string) => {
-    try { await request.put(`/system/user/${id}/status`); } catch {
+    try { await request.put(`/api/user/${id}/status`); } catch {
       const users = getLocal();
       const u = users.find(x => x.id === id);
       if (u) { u.status = u.status === 1 ? 0 : 1; saveToLocal(users); }
@@ -96,7 +96,7 @@ export default function AdminUsers() {
   };
 
   const resetPwd = async (id: string) => {
-    try { await request.put(`/system/user/${id}/reset-password`, { password: '123456' }); } catch {}
+    try { await request.put(`/api/user/${id}/reset-password`, { password: '123456' }); } catch {}
     message.success('已重置为 123456');
   };
 
@@ -130,7 +130,7 @@ export default function AdminUsers() {
         pagination={{ current: page, total, pageSize: 10, onChange: p => setPage(p), showTotal: t => `共 ${t} 人` }} />
 
       <Modal title={editId ? '编辑用户' : '新增用户'} open={modalOpen} onCancel={() => setModalOpen(false)}
-        onOk={handleSave} destroyOnClose width={520}>
+        onOk={handleSave} destroyOnHidden width={520}>
         <Form form={form} layout="vertical">
           <Form.Item name="username" label="用户名" rules={[{ required: true, message: '请输入用户名' }]}>
             <Input disabled={!!editId} placeholder="登录用户名" />
