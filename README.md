@@ -1,32 +1,54 @@
-# React + TypeScript + Vite
+# Beike Admin
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+贝壳统一管理平台当前按“前端应用 + 后端接口 + 运维资料 + 参考代码”整理。
 
-Currently, two official plugins are available:
+日常二次开发只需要关注：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `apps/web`: React 前端
+- `apps/api`: Spring Boot 后端
+- `docs/sql`: 数据库初始化和升级脚本
+- `ops`: 部署、网关、监控、日志等运维资料
 
-## React Compiler
+参考或历史方案已从主程序目录移出到 `reference`，避免干扰当前开发。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 本地启动
 
-## Expanding the Oxlint configuration
+一键启动：
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+start.bat
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+前端单独启动：
+
+```bash
+pnpm dev
+```
+
+前端访问地址：
+
+```text
+http://localhost:5173/
+```
+
+后端接口端口：
+
+```text
+http://localhost:8080/
+```
+
+注意：`8080` 是后端 API 端口，不是前端页面入口。
+
+## 构建
+
+```bash
+pnpm build
+```
+
+## 二开文档
+
+完整工程结构、文件分类和后续简化建议见：
+
+```text
+docs/ENGINEERING_GUIDE.md
+```

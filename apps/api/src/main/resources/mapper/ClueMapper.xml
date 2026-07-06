@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.beike.platform.mapper.ClueMapper">
+
+    <select id="selectPageWithFilter" resultType="com.beike.platform.entity.Clue">
+        SELECT * FROM biz_clue
+        <where>
+            is_deleted = 0
+            <if test="dto.keyword != null and dto.keyword != ''">
+                AND (clue_name LIKE CONCAT('%', #{dto.keyword}, '%')
+                     OR client_company LIKE CONCAT('%', #{dto.keyword}, '%'))
+            </if>
+            <if test="dto.owner != null and dto.owner != ''">
+                AND beike_owner LIKE CONCAT('%', #{dto.owner}, '%')
+            </if>
+            <if test="dto.status != null and dto.status != ''">
+                AND clue_status = #{dto.status}
+            </if>
+            <if test="dto.level != null and dto.level != ''">
+                AND clue_level = #{dto.level}
+            </if>
+            <if test="dto.dateFrom != null and dto.dateFrom != ''">
+                AND (contact_date &gt;= #{dto.dateFrom} OR create_date &gt;= #{dto.dateFrom})
+            </if>
+            <if test="dto.dateTo != null and dto.dateTo != ''">
+                AND (contact_date &lt;= #{dto.dateTo} OR create_date &lt;= #{dto.dateTo})
+            </if>
+            <!-- v1.3 -->
+            <if test="dto.clientCircle != null and dto.clientCircle != ''">
+                AND client_circle = #{dto.clientCircle}
+            </if>
+            <if test="dto.campaignId != null">
+                AND campaign_id = #{dto.campaignId}
+            </if>
+            <if test="dto.healthStatus != null and dto.healthStatus != ''">
+                AND health_status = #{dto.healthStatus}
+            </if>
+            <if test="dto.clueLevel != null and dto.clueLevel != ''">
+                AND clue_level = #{dto.clueLevel}
+            </if>
+            <!-- v1.5 -->
+            <if test="dto.deptBelong != null and dto.deptBelong != ''">
+                AND dept_belong = #{dto.deptBelong}
+            </if>
+            <if test="dto.industry != null and dto.industry != ''">
+                AND industry = #{dto.industry}
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+</mapper>

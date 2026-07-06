@@ -1,6 +1,14 @@
 node_modules/
+node_modules/.tmp/
 dist/
 .m2/
+.runtime/
+.codebuddy/
+.agents/
+.vscode/
 *.log
 target/
+apps/**/target/
+reference/**/target/
+*.tsbuildinfo
 .DS_Store

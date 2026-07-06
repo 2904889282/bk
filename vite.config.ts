@@ -1,11 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import path from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
+  root: path.resolve(__dirname, './apps/web'),
+  publicDir: path.resolve(__dirname, './apps/web/public'),
   plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './apps/web/src'),
+    },
+  },
+  build: {
+    outDir: path.resolve(__dirname, './dist'),
+    emptyOutDir: true,
+  },
   server: {
-    host: '0.0.0.0',       // 云端开发必须：允许外部 IP 访问
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
