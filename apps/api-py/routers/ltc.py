@@ -1,0 +1,115 @@
+from fastapi import APIRouter, Depends, UploadFile, File, Form
+from sqlalchemy import select, func, or_, text
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import get_db
+from models import BizPipeline, BizCampaign
+from security import get_current_user
+from schemas import success, fail
+
+router = APIRouter(tags=["LTC"])
+
+def row_to_dict(r):
+    return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+
+# ==================== 商机管道 ====================
+
+@router.get("/api/pipeline/page")
+async def pipeline_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, stage: str = None,
+                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    q = select(BizPipeline).where(BizPipeline.is_deleted == 0)
+    if keyword: q = q.where(or_(BizPipeline.name.contains(keyword), BizPipeline.customer.contains(keyword)))
+    if stage: q = q.where(BizPipeline.stage == stage)
+    q = q.order_by(BizPipeline.id.desc())
+    total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+    rows = (await db.execute(q.offset((pageNum-1)*pageSize).limit(pageSize))).scalars().all()
+    return success({"records": [row_to_dict(r) for r in rows], "total": total})
+
+@router.get("/api/pipeline/{pipeline_id}")
+async def pipeline_detail(pipeline_id: int, db: AsyncSession = Depends(get_db)):
+    r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id))).scalar_one_or_none()
+    return success(row_to_dict(r)) if r else fail("商机不存在")
+
+@router.post("/api/pipeline")
+async def pipeline_create(dto: dict, db: AsyncSession = Depends(get_db)):
+    p = BizPipeline(**{k: v for k, v in dto.items() if hasattr(BizPipeline, k)})
+    db.add(p); await db.commit(); await db.refresh(p)
+    return success(row_to_dict(p))
+
+@router.put("/api/pipeline/{pipeline_id}")
+async def pipeline_update(pipeline_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id))).scalar_one_or_none()
+    if not r: return fail("商机不存在")
+    for k, v in dto.items():
+        if hasattr(BizPipeline, k): setattr(r, k, v)
+    await db.commit(); return success()
+
+@router.delete("/api/pipeline/{pipeline_id}")
+async def pipeline_delete(pipeline_id: int, db: AsyncSession = Depends(get_db)):
+    r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id))).scalar_one_or_none()
+    if r: r.is_deleted = 1; await db.commit()
+    return success()
+
+# ==================== 线索跟进 ====================
+
+@router.get("/api/clue/{clue_id}/follow")
+async def follow_list(clue_id: int, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT * FROM biz_clue_follow WHERE clue_id = :cid AND is_deleted = 0 ORDER BY follow_date DESC"), {"cid": clue_id})).mappings().all()
+    return success([dict(r) for r in rows])
+
+@router.post("/api/clue/follow")
+async def follow_create(dto: dict, db: AsyncSession = Depends(get_db)):
+    from datetime import datetime
+    dto['create_time'] = datetime.utcnow()
+    cols = ','.join(dto.keys()); vals = ','.join(f":{k}" for k in dto)
+    await db.execute(text(f"INSERT INTO biz_clue_follow ({cols}) VALUES ({vals})"), dto)
+    await db.commit(); return success()
+
+@router.put("/api/clue/follow/{follow_id}")
+async def follow_update(follow_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    sets = ','.join(f"{k}=:{k}" for k in dto); dto['id'] = follow_id
+    await db.execute(text(f"UPDATE biz_clue_follow SET {sets} WHERE id = :id"), dto)
+    await db.commit(); return success()
+
+@router.delete("/api/clue/follow/{follow_id}")
+async def follow_delete(follow_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue_follow SET is_deleted=1 WHERE id=:id"), {"id": follow_id})
+    await db.commit(); return success()
+
+# ==================== 附件 ====================
+
+@router.post("/api/attachment/upload")
+async def attachment_upload(file: UploadFile = File(...), bizType: str = Form(...), bizId: int = Form(...),
+                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    import os, uuid
+    os.makedirs("uploads", exist_ok=True)
+    ext = file.filename.rsplit('.', 1)[-1] if '.' in file.filename else ''
+    fname = f"{uuid.uuid4()}.{ext}"
+    path = os.path.join("uploads", fname)
+    content = await file.read()
+    with open(path, "wb") as f: f.write(content)
+    await db.execute(text("INSERT INTO biz_attachment (biz_type, biz_id, file_name, file_type, file_size, file_url, upload_user_id) VALUES (:bt,:bi,:fn,:ft,:fs,:fu,:ui)"),
+                     {"bt": bizType, "bi": bizId, "fn": file.filename, "ft": ext, "fs": len(content), "fu": f"/uploads/{fname}", "ui": user["id"]})
+    await db.commit()
+    return success({"fileName": file.filename, "fileUrl": f"/uploads/{fname}"})
+
+@router.get("/api/attachment/{biz_type}/{biz_id}")
+async def attachment_list(biz_type: str, biz_id: int, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT * FROM biz_attachment WHERE biz_type=:bt AND biz_id=:bi AND is_deleted=0 ORDER BY upload_time DESC"), {"bt": biz_type, "bi": biz_id})).mappings().all()
+    return success([dict(r) for r in rows])
+
+@router.delete("/api/attachment/{att_id}")
+async def attachment_delete(att_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_attachment SET is_deleted=1 WHERE id=:id"), {"id": att_id})
+    await db.commit(); return success()
+
+# ==================== 活动战役 ====================
+
+@router.get("/api/campaign/page")
+async def campaign_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
+                        db: AsyncSession = Depends(get_db)):
+    q = select(BizCampaign).where(BizCampaign.is_deleted == 0)
+    if keyword: q = q.where(BizCampaign.name.contains(keyword))
+    q = q.order_by(BizCampaign.create_time.desc())
+    total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar()
+    rows = (await db.execute(q.offset((pageNum-1)*pageSize).limit(pageSize))).scalars().all()
+    return success({"records": [row_to_dict(r) for r in rows], "total": total})
