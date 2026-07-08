@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, DatePicker, Space, message, Collapse, Row, Col, Typography, Progress } from 'antd';
+import { Card, Descriptions, Tag, Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, DatePicker, Space, message, Row, Col, Typography, Progress } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, WarningOutlined, DollarOutlined, TeamOutlined, FlagOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { fetchProjectDetail, fetchPeriods, savePeriod, deletePeriod, type ProjectVO, type ProjectPeriod } from '../../../api/project';

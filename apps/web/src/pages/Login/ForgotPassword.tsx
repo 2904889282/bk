@@ -103,6 +103,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       width={460}
       className="auth-modal"
       styles={{
+        // @ts-ignore - antd v6 content/body/header/mask inline styles
         content: {
           background: '#141c30',
           borderRadius: 20,
