@@ -4,7 +4,7 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, project, biz
+from routers import auth, project, biz, system, ltc
 
 app = FastAPI(title="贝壳管理平台", version="2.0.0")
 
@@ -13,6 +13,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.include_router(auth.router)
 app.include_router(project.router)
 app.include_router(biz.router)
+app.include_router(system.router)
+app.include_router(ltc.router)
 
 @app.get("/api/health")
 def health():

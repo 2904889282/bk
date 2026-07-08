@@ -12,3 +12,10 @@ apps/**/target/
 reference/**/target/
 *.tsbuildinfo
 .DS_Store
+# Python
+__pycache__/
+*.pyc
+.env
+.venv/
+# Test scripts
+scripts/test_*.py

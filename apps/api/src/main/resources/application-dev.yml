@@ -1,9 +1,0 @@
-# 开发环境配置
-spring:
-  sql:
-    init:
-      mode: always  # 开发环境：每次启动自动执行 schema.sql
-
-beike:
-  cors:
-    allowed-origins: "*"  # 开发环境不限制来源
