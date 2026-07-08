@@ -1,4 +1,4 @@
-package com.beike.service.service;
+﻿package com.beike.service.service;
 
 import com.beike.common.mq.RocketMQTopics;
 import com.beike.service.entity.es.PipelineDocument;
@@ -12,7 +12,7 @@ import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.stereotype.Component;
 
 /**
- * 管线变更 → ES 索引同步消费者
+ * 线索变更 → ES 索引同步消费者
  * 消费组: beike-search-sync-group
  * 消费模式: 集群 (CLUSTERING), 支持多实例水平扩展
  */

@@ -1,4 +1,4 @@
-package com.beike.service.service;
+﻿package com.beike.service.service;
 
 import com.beike.common.mq.RocketMQTopics;
 import com.beike.service.entity.mysql.Pipeline;
@@ -12,7 +12,7 @@ import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
 
 /**
- * 管线消息生产者 — 异步解耦 CRUD → ES 同步 / 审计日志 / 通知
+ * 线索消息生产者 — 异步解耦 CRUD → ES 同步 / 审计日志 / 通知
  */
 @Slf4j
 @Service
@@ -22,17 +22,17 @@ public class PipelineMessageProducer {
     private final RocketMQTemplate rocketMQTemplate;
     private final ObjectMapper objectMapper;
 
-    /** 管线创建事件 */
+    /** 线索创建事件 */
     public void sendCreated(Pipeline pipeline) {
         sendAsync(RocketMQTopics.TOPIC_PIPELINE_CHANGE, RocketMQTopics.TAG_CREATED, pipeline);
     }
 
-    /** 管线更新事件 */
+    /** 线索更新事件 */
     public void sendUpdated(Pipeline pipeline) {
         sendAsync(RocketMQTopics.TOPIC_PIPELINE_CHANGE, RocketMQTopics.TAG_UPDATED, pipeline);
     }
 
-    /** 管线删除事件 */
+    /** 线索删除事件 */
     public void sendDeleted(String pipelineId) {
         var msg = MessageBuilder.withPayload("{\"id\":\"" + pipelineId + "\"}").build();
         rocketMQTemplate.asyncSend(

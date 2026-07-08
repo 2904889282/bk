@@ -1,4 +1,4 @@
-USE beike_admin;
+﻿USE beike_admin;
 
 CREATE TABLE IF NOT EXISTS sys_role (
   id VARCHAR(16) PRIMARY KEY, name VARCHAR(64), code VARCHAR(64) UNIQUE,
@@ -25,21 +25,21 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
 -- 角色
 INSERT INTO sys_role (id, name, code, description, sort) VALUES
 ('R001', '超级管理员', 'ROLE_ADMIN', '系统全部权限', 1),
-('R002', '部门经理', 'ROLE_MANAGER', '管理本部门管线与项目', 2),
+('R002', '部门经理', 'ROLE_MANAGER', '管理本部门线索与项目', 2),
 ('R003', '普通员工', 'ROLE_USER', '查看与填报', 3)
 ON DUPLICATE KEY UPDATE name=name;
 
 -- 菜单权限
 INSERT INTO sys_permission (id, parent_id, name, code, type, path, component, icon, sort) VALUES
 ('P001', '0', '工作台', 'portal', 1, '/', './Portal', 'DashboardOutlined', 1),
-('P010', '0', 'LTC管线', 'ltc', 0, '', '', 'FundOutlined', 10),
-('P011', 'P010', '管线看板', 'ltc:kanban', 1, '/ltc/kanban', './LTC/Kanban', 'FundOutlined', 11),
-('P012', 'P010', '管线列表', 'ltc:pipeline', 1, '/ltc/pipeline', './LTC/Pipeline', 'UnorderedListOutlined', 12),
+('P010', '0', 'LTC线索', 'ltc', 0, '', '', 'FundOutlined', 10),
+('P011', 'P010', '线索看板', 'ltc:kanban', 1, '/ltc/kanban', './LTC/Kanban', 'FundOutlined', 11),
+('P012', 'P010', '线索列表', 'ltc:pipeline', 1, '/ltc/pipeline', './LTC/Pipeline', 'UnorderedListOutlined', 12),
 ('P013', 'P010', '预警中心', 'ltc:alerts', 1, '/ltc/alerts', './LTC/Alerts', 'AlertOutlined', 13),
 ('P014', 'P010', '数据分析', 'ltc:analysis', 1, '/ltc/analysis', './LTC/Analysis', 'PieChartOutlined', 14),
-('P015', 'P010', '创建管线', 'pipeline:create', 2, '', '', '', 15),
-('P016', 'P010', '删除管线', 'pipeline:delete', 2, '', '', '', 16),
-('P017', 'P010', '导入管线', 'pipeline:import', 2, '', '', '', 17),
+('P015', 'P010', '创建线索', 'pipeline:create', 2, '', '', '', 15),
+('P016', 'P010', '删除线索', 'pipeline:delete', 2, '', '', '', 16),
+('P017', 'P010', '导入线索', 'pipeline:import', 2, '', '', '', 17),
 ('P020', '0', '项目管理', 'pm', 0, '', '', 'ProjectOutlined', 20),
 ('P021', 'P020', '项目看板', 'pm:kanban', 1, '/pm/kanban', './PM/Kanban', 'ProjectOutlined', 21),
 ('P022', 'P020', '项目列表', 'pm:projects', 1, '/pm/projects', './PM/Projects', 'UnorderedListOutlined', 22),

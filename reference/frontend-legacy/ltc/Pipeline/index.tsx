@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Table, Button, Tag, Input, Select, Space, Card, message, Modal, Progress } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { STAGE_MAP, STAGE_COLORS, STAGE_ORDER, PRODUCT_MAP, INDUSTRY_MAP } from '../../../types';
@@ -71,7 +71,7 @@ export default function LtcPipeline() {
 
   const columns = [
     {
-      title: '管线名称',
+      title: '线索名称',
       dataIndex: 'name',
       key: 'name',
       width: 180,
@@ -154,7 +154,7 @@ export default function LtcPipeline() {
               onClick={() => {
                 Modal.confirm({
                   title: '确认删除',
-                  content: `确定删除管线「${r.name}」？此操作不可撤销。`,
+                  content: `确定删除线索「${r.name}」？此操作不可撤销。`,
                   okText: '确认删除',
                   cancelText: '取消',
                   okButtonProps: { danger: true },
@@ -173,7 +173,7 @@ export default function LtcPipeline() {
       <Space style={{ marginBottom: 16 }} wrap>
         <Input
           prefix={<SearchOutlined />}
-          placeholder="搜索管线名称/客户/负责人"
+          placeholder="搜索线索名称/客户/负责人"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{ width: 220 }}
@@ -210,7 +210,7 @@ export default function LtcPipeline() {
             icon={<PlusOutlined />}
             onClick={openCreate}
           >
-            新建管线
+            新建线索
           </Button>
         </Permission>
 
@@ -233,7 +233,7 @@ export default function LtcPipeline() {
           showTotal: (t) => `共 ${t} 条`,
         }}
         scroll={{ x: 1200 }}
-        locale={{ emptyText: '暂无管线数据' }}
+        locale={{ emptyText: '暂无线索数据' }}
       />
 
       <PipelineForm

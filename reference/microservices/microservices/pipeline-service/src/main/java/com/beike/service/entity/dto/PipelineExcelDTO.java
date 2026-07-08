@@ -1,16 +1,16 @@
-package com.beike.service.entity.dto;
+﻿package com.beike.service.entity.dto;
 
 import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 /**
- * LTC 管线 Excel 导入行映射
+ * LTC 线索 Excel 导入行映射
  * EasyExcel 自动映射，字段顺序即 Excel 列顺序
  */
 @Data
 public class PipelineExcelDTO {
 
-    @ExcelProperty(value = "管线名称*", index = 0)
+    @ExcelProperty(value = "线索名称*", index = 0)
     private String name;
 
     @ExcelProperty(value = "客户名称*", index = 1)

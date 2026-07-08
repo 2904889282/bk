@@ -1,4 +1,4 @@
-package com.beike.service.entity.es;
+﻿package com.beike.service.entity.es;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -8,7 +8,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 import org.springframework.data.elasticsearch.annotations.Setting;
 
 /**
- * Elasticsearch 管线文档 (用于搜索)
+ * Elasticsearch 线索文档 (用于搜索)
  * 索引名: beike_pipelines
  * IK 分词: ik_max_word (索引) / ik_smart (搜索)
  */

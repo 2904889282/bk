@@ -1,4 +1,4 @@
-package com.beike.service.repository;
+﻿package com.beike.service.repository;
 
 import com.beike.service.entity.es.PipelineDocument;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * Elasticsearch 管线搜索 Repository
+ * Elasticsearch 线索搜索 Repository
  * Spring Data Elasticsearch 自动实现 CRUD + 自定义查询
  */
 @Repository

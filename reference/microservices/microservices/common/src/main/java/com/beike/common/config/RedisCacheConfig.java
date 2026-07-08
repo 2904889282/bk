@@ -1,4 +1,4 @@
-package com.beike.common.config;
+﻿package com.beike.common.config;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
@@ -21,7 +21,7 @@ import java.time.Duration;
 /**
  * Redis 7 缓存配置
  * - 默认 TTL: 30 分钟
- * - 管线列表缓存: 10 分钟
+ * - 线索列表缓存: 10 分钟
  * - 人才数据缓存: 60 分钟
  * - 统计分析缓存: 5 分钟
  */

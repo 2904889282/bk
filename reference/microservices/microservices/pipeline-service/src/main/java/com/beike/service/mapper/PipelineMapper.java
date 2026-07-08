@@ -1,4 +1,4 @@
-package com.beike.service.mapper;
+﻿package com.beike.service.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.beike.service.entity.mysql.Pipeline;
@@ -11,7 +11,7 @@ import java.util.Map;
 @Mapper
 public interface PipelineMapper extends BaseMapper<Pipeline> {
 
-    /** 按阶段统计管线数 */
+    /** 按阶段统计线索数 */
     @Select("SELECT stage, COUNT(*) AS cnt FROM pipelines GROUP BY stage")
     List<Map<String, Object>> countByStage();
 

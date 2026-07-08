@@ -1,4 +1,4 @@
-package com.beike.service.controller;
+﻿package com.beike.service.controller;
 
 import com.beike.common.config.SlaveDataSource;
 import com.beike.common.security.audit.AuditLog;
@@ -55,7 +55,7 @@ public class PipelineController {
         // 同步到 Elasticsearch
         PipelineDocument doc = toDocument(pipeline);
         searchRepository.save(doc);
-        log.info("管线创建并同步 ES: {}", pipeline.getId());
+        log.info("线索创建并同步 ES: {}", pipeline.getId());
         return pipeline;
     }
 
@@ -91,7 +91,7 @@ public class PipelineController {
 
     // ========== Excel 导入 ==========
 
-    /** Excel 导入管线 — 批量创建 + 自动去重 + 错误明细 */
+    /** Excel 导入线索 — 批量创建 + 自动去重 + 错误明细 */
     @PostMapping("/import")
     @CacheEvict(value = {"pipelines", "stats"}, allEntries = true)
     @AuditLog(operation = "IMPORT", targetType = "Pipeline")
@@ -112,7 +112,7 @@ public class PipelineController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("msg", e.getMessage()));
         } catch (Exception e) {
-            log.error("导入管线失败", e);
+            log.error("导入线索失败", e);
             return ResponseEntity.internalServerError().body(Map.of("msg", "导入失败: " + e.getMessage()));
         }
     }
@@ -123,7 +123,7 @@ public class PipelineController {
         var result = importService.importFromExcel(file);
         byte[] excelBytes = importService.generateErrorExcel(result.errors());
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=管线导入错误明细.xlsx");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=线索导入错误明细.xlsx");
         response.getOutputStream().write(excelBytes);
         response.getOutputStream().flush();
     }
@@ -132,7 +132,7 @@ public class PipelineController {
     @GetMapping("/import/template")
     public void downloadTemplate(HttpServletResponse response) throws Exception {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=管线导入模板.xlsx");
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=线索导入模板.xlsx");
         com.alibaba.excel.EasyExcel.write(response.getOutputStream())
                 .head(com.beike.service.entity.dto.PipelineExcelDTO.class)
                 .sheet("导入模板").doWrite(null);

@@ -1,4 +1,4 @@
-package com.beike.common.push;
+﻿package com.beike.common.push;
 
 import com.beike.common.websocket.StompMessageHandler;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +17,7 @@ import java.util.Map;
  * 统一推送服务
  * 渠道: WebSocket 实时 / 企业微信 / 邮件 / 站内信
  *
- * 使用: pushService.send(userId, "管线已创建", "P013 已进入合同阶段")
+ * 使用: pushService.send(userId, "线索已创建", "P013 已进入合同阶段")
  */
 @Slf4j
 @Service
@@ -65,7 +65,7 @@ public class PushNotificationService {
     }
 
     // ============================
-    // 批量推送 (管线阶段变更等)
+    // 批量推送 (线索阶段变更等)
     // ============================
     @Async
     public void sendToRoles(List<String> roleCodes, String title, String content) {

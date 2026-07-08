@@ -1,4 +1,4 @@
-package com.beike.service.service;
+﻿package com.beike.service.service;
 
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
@@ -49,7 +49,7 @@ public class PipelineImportService {
     );
 
     /**
-     * 解析并导入管线 Excel
+     * 解析并导入线索 Excel
      * @return ImportResult (包含成功/失败统计 + 错误明细)
      */
     @Transactional(rollbackFor = Exception.class)
@@ -174,7 +174,7 @@ public class PipelineImportService {
             }
         }
 
-        log.info("管线导入完成: 成功{}条, 失败{}条, 跳过{}条, 操作人: {}", successCount, failCount, skipCount, currentUser);
+        log.info("线索导入完成: 成功{}条, 失败{}条, 跳过{}条, 操作人: {}", successCount, failCount, skipCount, currentUser);
         return new ImportResult(successCount, failCount, skipCount, errors);
     }
 
@@ -201,8 +201,8 @@ public class PipelineImportService {
     private List<String> validateRow(PipelineExcelDTO row, Set<String> existingUsers) {
         List<String> errs = new ArrayList<>();
 
-        if (isEmpty(row.getName())) errs.add("管线名称为必填");
-        else if (row.getName().length() > 128) errs.add("管线名称过长(>128)");
+        if (isEmpty(row.getName())) errs.add("线索名称为必填");
+        else if (row.getName().length() > 128) errs.add("线索名称过长(>128)");
 
         if (isEmpty(row.getClient())) errs.add("客户名称为必填");
         else if (row.getClient().length() > 128) errs.add("客户名称过长(>128)");
@@ -256,7 +256,7 @@ public class PipelineImportService {
     public static class ErrorRow {
         @com.alibaba.excel.annotation.ExcelProperty("行号")
         private int rowNum;
-        @com.alibaba.excel.annotation.ExcelProperty("管线名称")
+        @com.alibaba.excel.annotation.ExcelProperty("线索名称")
         private String name;
         @com.alibaba.excel.annotation.ExcelProperty("客户名称")
         private String client;

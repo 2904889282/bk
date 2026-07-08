@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Modal, Upload, Button, Statistic, Row, Col, Space, message, Table } from 'antd';
 import { DownloadOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload';
@@ -48,7 +48,7 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
         if (data.fail > 0 || data.skip > 0) {
           message.warning(`导入完成: 成功${data.success}条, 失败${data.fail}条, 跳过${data.skip}条`);
         } else {
-          message.success(`成功导入 ${data.success} 条管线`);
+          message.success(`成功导入 ${data.success} 条线索`);
         }
         onImported();
       }
@@ -69,7 +69,7 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = '管线导入模板.xlsx'; a.click();
+      a.href = url; a.download = '线索导入模板.xlsx'; a.click();
       URL.revokeObjectURL(url);
     } catch {
       message.error('模板下载失败');
@@ -90,7 +90,7 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url; a.download = '管线导入错误明细.xlsx'; a.click();
+      a.href = url; a.download = '线索导入错误明细.xlsx'; a.click();
       URL.revokeObjectURL(url);
     } catch {
       message.error('错误明细下载失败');
@@ -100,7 +100,7 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
   const resetState = () => { setFile(null); setResult(null); setErrorMsg(''); };
 
   return (
-    <Modal title="📥 导入管线" open={open} onCancel={() => { resetState(); onClose(); }}
+    <Modal title="📥 导入线索" open={open} onCancel={() => { resetState(); onClose(); }}
       width={640} footer={null} destroyOnHidden>
       <Space orientation="vertical" style={{ width: '100%' }} size={16}>
 
@@ -108,7 +108,7 @@ export default function ImportModal({ open, onClose, onImported }: Props) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 600 }}>步骤 1: 下载模板</span>
           <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>
-            管线导入模板.xlsx
+            线索导入模板.xlsx
           </Button>
         </div>
 

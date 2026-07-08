@@ -1,4 +1,4 @@
-package com.beike.common.config;
+﻿package com.beike.common.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.json.jackson.JacksonJsonpMapper;
@@ -17,7 +17,7 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
  * Elasticsearch 8 搜索配置
  * - Spring Data Elasticsearch 自动管理索引
  * - IK 中文分词 (已在 Dockerfile 预装 ik_max_word / ik_smart)
- * - 索引: beike_pipelines (管线搜索)
+ * - 索引: beike_pipelines (线索搜索)
  */
 @Configuration
 @EnableElasticsearchRepositories(basePackages = "com.beike.*.repository.search")

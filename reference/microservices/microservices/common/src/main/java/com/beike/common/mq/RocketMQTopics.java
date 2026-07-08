@@ -1,4 +1,4 @@
-package com.beike.common.mq;
+﻿package com.beike.common.mq;
 
 /**
  * RocketMQ Topic + Consumer Group 常量定义
@@ -11,7 +11,7 @@ public final class RocketMQTopics {
     // Topic 定义
     // ============================
 
-    /** 管线变更事件 (创建/更新/阶段推进/删除) */
+    /** 线索变更事件 (创建/更新/阶段推进/删除) */
     public static final String TOPIC_PIPELINE_CHANGE = "beike-pipeline-change";
 
     /** 项目变更事件 */
