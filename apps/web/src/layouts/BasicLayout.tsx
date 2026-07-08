@@ -200,9 +200,9 @@ export default function BasicLayout() {
           type="warning"
           showIcon
           closable
-          message="演示模式"
+          title="演示模式"
           description={
-            <Space direction="vertical" size={4}>
+            <Space orientation="vertical" size={4}>
               <span>后端服务未连接，页面数据无法加载。请启动后端服务（cd apps/api && mvn spring-boot:run）后使用真实账号重新登录。</span>
               <Button size="small" loading={checkingHealth} onClick={handleCheckConnection}>
                 检查连接

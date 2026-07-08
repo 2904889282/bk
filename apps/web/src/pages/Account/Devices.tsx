@@ -159,7 +159,7 @@ export default function DevicesPage() {
         pagination={false}
         locale={{
           emptyText: demoMode && !loading ? (
-            <Space direction="vertical" size={8} style={{ padding: 24 }}>
+            <Space orientation="vertical" size={8} style={{ padding: 24 }}>
               <Typography.Text type="secondary">演示模式下无法加载设备数据</Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务后使用真实账号重新登录</Typography.Text>
             </Space>
