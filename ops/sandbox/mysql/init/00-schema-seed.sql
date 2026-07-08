@@ -430,6 +430,7 @@ CREATE TABLE IF NOT EXISTS biz_talent (
     current_project VARCHAR(256),
     utilization INT DEFAULT 0,
     status VARCHAR(16) NOT NULL DEFAULT 'normal',
+    talent_type VARCHAR(16) DEFAULT 'internal',
     create_by BIGINT,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_by BIGINT,

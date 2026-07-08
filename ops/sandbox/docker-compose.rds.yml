@@ -1,0 +1,69 @@
+name: beike-sandbox
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '20m'
+    max-file: '3'
+
+services:
+  api:
+    build:
+      context: ../..
+      dockerfile: ops/sandbox/Dockerfile.api
+    container_name: beike-sandbox-api
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      SPRING_PROFILES_ACTIVE: sandbox
+      DB_HOST: rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com
+      DB_PORT: '3306'
+      DB_NAME: beike_platform
+      DB_USER: beike
+      DB_PASSWORD: BEIKEadmin123
+      JWT_SECRET: beike-cloud-dev-jwt-secret-2026-must-be-at-least-64-characters-long-for-hs384
+      JWT_ACCESS_EXPIRE_HOURS: '72'
+      JWT_REFRESH_EXPIRE_DAYS: '30'
+      BEIKE_UPLOAD_DIR: /app/uploads
+      BEIKE_LOG_DIR: /app/logs
+    volumes:
+      - api_uploads:/app/uploads
+      - api_logs:/app/logs
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:8080/api/health | grep -q UP']
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    logging: *default-logging
+    networks:
+      - beike-net
+
+  web:
+    build:
+      context: ../..
+      dockerfile: ops/sandbox/Dockerfile.web
+    container_name: beike-sandbox-web
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1/health | grep -q OK']
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    logging: *default-logging
+    networks:
+      - beike-net
+
+volumes:
+  api_uploads:
+  api_logs:
+
+networks:
+  beike-net:
+    driver: bridge

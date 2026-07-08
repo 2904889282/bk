@@ -448,6 +448,7 @@ CREATE TABLE IF NOT EXISTS biz_talent (
     current_project VARCHAR(256) COMMENT '当前项目',
     utilization INT DEFAULT 0 COMMENT '利用率(%)',
     status VARCHAR(16) NOT NULL DEFAULT 'normal' COMMENT 'normal/high/overload/idle',
+    talent_type VARCHAR(16) DEFAULT 'internal' COMMENT '类型: internal内部/external外部',
     create_by BIGINT,
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_by BIGINT,
