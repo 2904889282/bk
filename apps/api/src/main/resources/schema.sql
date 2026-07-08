@@ -70,7 +70,8 @@ CREATE TABLE IF NOT EXISTS sys_role_permission (
 
 CREATE TABLE IF NOT EXISTS sys_dept (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(64) NOT NULL COMMENT '组/部门名称'
+    name VARCHAR(64) NOT NULL COMMENT '组/部门名称',
+    is_deleted INT DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS sys_login_device (
