@@ -1,0 +1,23 @@
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routers import auth, project, biz
+
+app = FastAPI(title="贝壳管理平台", version="2.0.0")
+
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+app.include_router(auth.router)
+app.include_router(project.router)
+app.include_router(biz.router)
+
+@app.get("/api/health")
+def health():
+    return {"code": 200, "msg": "UP", "data": None}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)

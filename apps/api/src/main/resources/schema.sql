@@ -382,9 +382,12 @@ CREATE TABLE IF NOT EXISTS biz_clue_log (
 CREATE TABLE IF NOT EXISTS biz_project (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     project_name VARCHAR(256) NOT NULL COMMENT '项目名称',
+    project_number VARCHAR(32) COMMENT '项目编号',
     client_name VARCHAR(256) COMMENT '甲方公司',
     client_contact VARCHAR(64) COMMENT '甲方对接人',
-    project_manager VARCHAR(64) COMMENT '项目经理',
+    project_manager VARCHAR(64) COMMENT '一条龙经理',
+    delivery_manager VARCHAR(64) COMMENT '交付经理',
+    product_manager VARCHAR(64) COMMENT '产品经理',
     project_amount DECIMAL(14,2) DEFAULT 0 COMMENT '项目金额',
     project_level VARCHAR(16) DEFAULT 'B' COMMENT '项目等级(S/A/B/C)',
     project_status VARCHAR(32) DEFAULT '进行中' COMMENT '项目状态',
@@ -397,6 +400,8 @@ CREATE TABLE IF NOT EXISTS biz_project (
     ar_user_id BIGINT COMMENT 'AR负责人ID',
     sr_user_id BIGINT COMMENT 'SR负责人ID',
     fr_user_id BIGINT COMMENT 'FR负责人ID',
+    supplier VARCHAR(256) COMMENT '供应商',
+    risk_assessment TEXT COMMENT '风险评估',
     remark TEXT COMMENT '备注',
     stage VARCHAR(32) COMMENT '阶段',
     description TEXT COMMENT '描述',
@@ -405,6 +410,60 @@ CREATE TABLE IF NOT EXISTS biz_project (
     update_by BIGINT,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_deleted INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 项目月度期数表（每条记录=某项目某月的数据）
+CREATE TABLE IF NOT EXISTS biz_project_period (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT NOT NULL COMMENT '项目ID',
+    period_month VARCHAR(7) NOT NULL COMMENT '归属月份(YYYY-MM)',
+    period_status VARCHAR(16) DEFAULT '正式执行' COMMENT '本月状态',
+    -- 营收预计
+    estimated_revenue DECIMAL(14,2) DEFAULT 0 COMMENT '预计营收',
+    estimated_profit DECIMAL(14,2) DEFAULT 0 COMMENT '预期毛利',
+    estimated_profit_rate VARCHAR(8) COMMENT '毛利率预估',
+    estimated_cost DECIMAL(14,2) DEFAULT 0 COMMENT '执行成本预估',
+    estimated_labor_cost DECIMAL(14,2) DEFAULT 0 COMMENT '人员成本预估',
+    -- 营收实际
+    actual_revenue DECIMAL(14,2) DEFAULT 0 COMMENT '实际营收',
+    actual_profit DECIMAL(14,2) DEFAULT 0 COMMENT '实际净毛利',
+    actual_profit_rate VARCHAR(8) COMMENT '实际毛利率',
+    actual_cost DECIMAL(14,2) DEFAULT 0 COMMENT '实际执行成本',
+    actual_labor_cost DECIMAL(14,2) DEFAULT 0 COMMENT '实际人员成本',
+    profit_achievement_rate VARCHAR(8) COMMENT '毛利达成度',
+    -- 关键目标
+    goal_description VARCHAR(512) COMMENT '关键目标说明',
+    monthly_target VARCHAR(256) COMMENT '交付月目标',
+    monthly_actual VARCHAR(256) COMMENT '月实际数据',
+    monthly_progress VARCHAR(8) COMMENT '月完成进度',
+    goal_summary TEXT COMMENT '执行总结',
+    -- 四周进度
+    w1_target VARCHAR(128) COMMENT '第一周目标', w1_actual VARCHAR(128) COMMENT '第一周实际', w1_progress VARCHAR(8) COMMENT '第一周进度',
+    w2_target VARCHAR(128), w2_actual VARCHAR(128), w2_progress VARCHAR(8),
+    w3_target VARCHAR(128), w3_actual VARCHAR(128), w3_progress VARCHAR(8),
+    w4_target VARCHAR(128), w4_actual VARCHAR(128), w4_progress VARCHAR(8),
+    -- 人员（JSON数组）
+    personnel JSON COMMENT '人员分配 [{name,role,importanceWeight,efficiencyCalc}]',
+    -- 里程碑（JSON数组）
+    milestones JSON COMMENT '里程碑 [{description,rewardAmount,completed,paid,participants}]',
+    process_bonus VARCHAR(64) COMMENT '过程奖',
+    result_bonus VARCHAR(64) COMMENT '结果奖',
+    -- 风险 & 预警
+    alert_text TEXT COMMENT '预警提醒',
+    progress_interpretation TEXT COMMENT '进展解读',
+    monthly_profit_expectation VARCHAR(64) COMMENT '月毛利完成预期',
+    execution_staff VARCHAR(64) COMMENT '执行人员',
+    customer_info VARCHAR(256) COMMENT '甲方信息',
+    risk_assessment TEXT COMMENT '风险评估',
+    supplier VARCHAR(256) COMMENT '供应商',
+    create_by BIGINT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_by BIGINT,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_deleted INT DEFAULT 0,
+    INDEX idx_project_id (project_id),
+    INDEX idx_period_month (period_month),
+    UNIQUE KEY uk_project_month (project_id, period_month)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS biz_attachment (

@@ -1,31 +1,25 @@
 import request from '../utils/request';
 
-// ============================================================
-// 项目模块 API 层
-// 基础路径：/api/project（和单体后端 @RequestMapping 严格对齐）
-// 响应格式：后端 R<T> → {code, msg, data}，由 request.ts 拦截器统一解包
-// 字段命名：100% 对齐后端 ProjectVO / ProjectSaveDTO，前端零映射
-// ============================================================
-
 // ==================== 类型定义 ====================
 
-/** 项目列表查询参数 */
 export interface ProjectPageParams {
   pageNum: number;
   pageSize: number;
-  keyword?: string;       // 关键词：匹配项目名称/客户公司
-  status?: string;        // 项目状态：进行中/暂停/已交付/已终止
-  projectLevel?: string;  // 项目等级：S/A/B/C
-  deptBelong?: string;    // 所属部门
+  keyword?: string;
+  status?: string;
+  projectLevel?: string;
+  deptBelong?: string;
 }
 
-/** 项目视图对象（列表+详情同构） */
 export interface ProjectVO {
   id: number;
   projectName: string;
-  clientCompany: string;
+  projectNumber?: string;
+  clientName: string;
   clientContact?: string;
   projectManager: string;
+  deliveryManager?: string;
+  productManager?: string;
   projectAmount: number;
   projectLevel: string;
   projectStatus: string;
@@ -35,23 +29,28 @@ export interface ProjectVO {
   actualEndDate?: string;
   progress: number;
   sourceClueId?: number;
+  supplier?: string;
+  riskAssessment?: string;
   remark?: string;
+  stage?: string;
+  description?: string;
   createTime: string;
   updateTime: string;
 }
 
-/** 分页返回结构 */
 export interface ProjectPageResult {
   records: ProjectVO[];
   total: number;
 }
 
-/** 新增/编辑请求体 */
 export interface ProjectSaveDTO {
   projectName: string;
-  clientCompany: string;
+  projectNumber?: string;
+  clientName: string;
   clientContact?: string;
   projectManager: string;
+  deliveryManager?: string;
+  productManager?: string;
   projectAmount: number;
   projectLevel: string;
   projectStatus: string;
@@ -59,39 +58,93 @@ export interface ProjectSaveDTO {
   startDate: string;
   expectEndDate?: string;
   progress?: number;
+  supplier?: string;
+  riskAssessment?: string;
   remark?: string;
+  description?: string;
 }
 
-// ==================== 接口函数 ====================
+// ==================== 月度期数 ====================
 
-/** 1. 分页查询项目列表 */
+export interface ProjectPeriod {
+  id?: number;
+  projectId: number;
+  periodMonth: string;
+  periodStatus?: string;
+  estimatedRevenue?: number;
+  estimatedProfit?: number;
+  estimatedProfitRate?: string;
+  estimatedCost?: number;
+  estimatedLaborCost?: number;
+  actualRevenue?: number;
+  actualProfit?: number;
+  actualProfitRate?: string;
+  actualCost?: number;
+  actualLaborCost?: number;
+  profitAchievementRate?: string;
+  goalDescription?: string;
+  monthlyTarget?: string;
+  monthlyActual?: string;
+  monthlyProgress?: string;
+  goalSummary?: string;
+  w1Target?: string; w1Actual?: string; w1Progress?: string;
+  w2Target?: string; w2Actual?: string; w2Progress?: string;
+  w3Target?: string; w3Actual?: string; w3Progress?: string;
+  w4Target?: string; w4Actual?: string; w4Progress?: string;
+  personnel?: string;
+  milestones?: string;
+  processBonus?: string;
+  resultBonus?: string;
+  alertText?: string;
+  progressInterpretation?: string;
+  monthlyProfitExpectation?: string;
+  executionStaff?: string;
+  customerInfo?: string;
+  riskAssessment?: string;
+  supplier?: string;
+  createTime?: string;
+}
+
+// ==================== 项目接口 ====================
+
 export async function fetchProjectPage(params: ProjectPageParams): Promise<ProjectPageResult> {
   const res = await request.get('/api/project/page', { params });
   return res.data;
 }
 
-/** 2. 获取项目详情 */
 export async function fetchProjectDetail(id: number): Promise<ProjectVO> {
   const res = await request.get(`/api/project/${id}`);
   return res.data;
 }
 
-/** 3. 新增项目 */
 export async function createProject(data: ProjectSaveDTO): Promise<void> {
   await request.post('/api/project', data);
 }
 
-/** 4. 编辑项目 */
 export async function updateProject(id: number, data: ProjectSaveDTO): Promise<void> {
   await request.put(`/api/project/${id}`, data);
 }
 
-/** 5. 单条删除项目 */
 export async function deleteProject(id: number): Promise<void> {
   await request.delete(`/api/project/${id}`);
 }
 
-/** 6. 批量删除项目 */
 export async function deleteProjectBatch(ids: number[]): Promise<void> {
   await request.delete('/api/project/batch', { data: ids });
+}
+
+// ==================== 月度期数接口 ====================
+
+export async function fetchPeriods(projectId: number): Promise<ProjectPeriod[]> {
+  const res = await request.get(`/api/project-period/list/${projectId}`);
+  return res.data;
+}
+
+export async function savePeriod(data: ProjectPeriod): Promise<ProjectPeriod> {
+  const res = await request.post('/api/project-period', data);
+  return res.data;
+}
+
+export async function deletePeriod(id: number): Promise<void> {
+  await request.delete(`/api/project-period/${id}`);
 }

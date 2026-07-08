@@ -522,11 +522,10 @@ INSERT IGNORE INTO sys_permission (id, code, name, is_deleted) VALUES
 
 INSERT INTO sys_user (id, username, password, real_name, email, status, dept_id, role_type)
 VALUES
-(1, 'admin', '$2b$12$LiImHXSuUrccygtcxvQID.PUOLQK1Nve6./XjTklMgbPK3LEssONa', '管理员', 'admin@example.com', 1, 1, 'ADMIN'),
-(2, 'zhangming', '$2b$12$BxdG3GCUqNV/KdStLju3Rutj3XoahSY4MK6gbaZfLzEur5iF8FKZi', '张明', 'zhangming@example.com', 1, 1, 'MANAGER')
+(1, 'admin', '$2a$10$XF1Wu1LjJscsmLeXqOmLnuxdIyZzPPQ7xbDyIcP8rN7wcrlF1lse.', '管理员', 'admin@example.com', 1, 1, 'ADMIN')
 ON DUPLICATE KEY UPDATE username = VALUES(username);
 
-INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1), (2, 2);
+INSERT IGNORE INTO sys_user_role (user_id, role_id) VALUES (1, 1);
 INSERT IGNORE INTO sys_role_permission (role_id, permission_id)
 SELECT 1, id FROM sys_permission WHERE is_deleted = 0;
 INSERT IGNORE INTO sys_role_permission (role_id, permission_id)
@@ -536,7 +535,7 @@ SELECT 3, id FROM sys_permission WHERE is_deleted = 0 AND code LIKE '%:list';
 
 INSERT IGNORE INTO biz_campaign (id, name, start_date, end_date, target_count, target_amount, status, description, priority, manager_name)
 VALUES
-(1, '7月线索攻坚沙箱战役', '2026-07-01', '2026-07-31', 30, 3000000, 'ACTIVE', '用于沙箱环境验证线索录入、评审、转商机、看板同步链路。', 'HIGH', '张明');
+(1, '7月线索攻坚沙箱战役', '2026-07-01', '2026-07-31', 30, 3000000, 'ACTIVE', '用于沙箱环境验证线索录入、评审、转商机、看板同步链路。', 'HIGH', '管理员');
 
 INSERT IGNORE INTO biz_clue (
     id, clue_name, client_company, client_dept, client_contact, beike_owner,
@@ -546,13 +545,13 @@ INSERT IGNORE INTO biz_clue (
     client_circle, industry, value_quadrant, maintenance_freq, next_maintenance_date,
     health_status, opportunity_amount, convert_status, create_by, update_by
 ) VALUES
-(1, 'AI内容生产平台线索', '星河传媒', '数字化中心', '李总', '张明',
+(1, 'AI内容生产平台线索', '星河传媒', '数字化中心', '李总', '管理员',
  '100-300万', 180.00, 'A', '接触', '待评审', '否',
  '2026-07-02', '2026-07-02', '希望建设AI内容生产与审核工作台。', '内容生产周期长，审核分散。', '缩短内容制作周期并形成标准审核流程。',
  '销售一部', 'XS-202607-001', 1, '客户走访', '华东客户拜访',
  '第一圈层', '传媒', '核心', 7, '2026-07-09',
  'normal', 180.00, NULL, 1, 1),
-(2, '达人矩阵运营线索', '云启消费', '市场部', '王经理', '张明',
+(2, '达人矩阵运营线索', '云启消费', '市场部', '王经理', '管理员',
  '50-100万', 80.00, 'B', '沟通', '评审中', '是',
  '2026-07-03', '2026-07-03', '需要沉淀KOC达人矩阵和投放效果分析。', '达人资源分散，复盘口径不统一。', '统一达人资产管理和投放分析。',
  '销售一部', 'XS-202607-002', 1, '市场活动', '增长闭门会',
@@ -568,17 +567,17 @@ INSERT IGNORE INTO biz_pipeline
 (id, name, customer, stage, amount, win_rate, owner_id, dept_id, is_sea, description, next_action, create_by, update_by)
 VALUES
 (1, 'AI内容生产平台商机', '星河传媒', 'lead', 180.00, 40, 1, 1, 0, '由沙箱线索样例生成的商机。', '确认需求范围和评审材料。', 1, 1),
-(2, '品牌增长咨询商机', '云启消费', 'verify', 80.00, 55, 2, 1, 0, '用于验证线索看板阶段展示。', '安排二次沟通。', 1, 1);
+(2, '品牌增长咨询商机', '云启消费', 'verify', 80.00, 55, 1, 1, 0, '用于验证线索看板阶段展示。', '安排二次沟通。', 1, 1);
 
 INSERT IGNORE INTO biz_project
 (id, project_name, client_name, project_manager, project_amount, project_status, progress, start_date, stage, project_level, dept_belong, source_clue_id, risk_count, description, create_by, update_by)
 VALUES
-(1, '沙箱示例项目', '星河传媒', '张明', 180.00, '进行中', 35, '2026-07-05', '执行', 'A', '销售一部', 1, 1, '用于验证项目管理基础链路。', 1, 1);
+(1, '沙箱示例项目', '星河传媒', '管理员', 180.00, '进行中', 35, '2026-07-05', '执行', 'A', '销售一部', 1, 1, '用于验证项目管理基础链路。', 1, 1);
 
 INSERT IGNORE INTO biz_risk
 (id, project_id, type, level, description, solution, owner, status, create_by, update_by)
 VALUES
-(1, 1, '需求边界', 'medium', '客户仍在补充内容审核边界。', '推动本周完成需求确认会。', '张明', 'open', 1, 1);
+(1, 1, '需求边界', 'medium', '客户仍在补充内容审核边界。', '推动本周完成需求确认会。', '管理员', 'open', 1, 1);
 
 INSERT IGNORE INTO biz_talent
 (id, name, role, skills, current_project, utilization, status, create_by, update_by)
@@ -588,4 +587,4 @@ VALUES
 INSERT IGNORE INTO biz_alert
 (id, project_id, type, level, description, manager, status, create_by, update_by)
 VALUES
-(1, 1, '跟进提醒', 'medium', '线索健康度为黄灯，需要补齐评审材料。', '张明', 'open', 1, 1);
+(1, 1, '跟进提醒', 'medium', '线索健康度为黄灯，需要补齐评审材料。', '管理员', 'open', 1, 1);

@@ -1,0 +1,238 @@
+from datetime import datetime
+from sqlalchemy import Column, BigInteger, String, Integer, Text, Date, DateTime, DECIMAL, JSON, Boolean, ForeignKey, Index
+from sqlalchemy.orm import relationship
+from database import Base
+
+# ==================== 系统表 ====================
+
+class SysUser(Base):
+    __tablename__ = "sys_user"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    username = Column(String(64), unique=True, nullable=False)
+    password = Column(String(256), nullable=False)
+    real_name = Column("real_name", String(64))
+    email = Column(String(128))
+    phone = Column(String(16))
+    status = Column(Integer, default=1)
+    dept_id = Column("dept_id", BigInteger)
+    role_type = Column("role_type", String(16), default="USER")
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class SysDept(Base):
+    __tablename__ = "sys_dept"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class SysRole(Base):
+    __tablename__ = "sys_role"
+    id = Column(BigInteger, primary_key=True)
+    name = Column(String(64))
+    code = Column(String(64), unique=True)
+    description = Column(String(256))
+    sort = Column(Integer, default=0)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class SysUserRole(Base):
+    __tablename__ = "sys_user_role"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column("user_id", BigInteger, nullable=False)
+    role_id = Column("role_id", BigInteger, nullable=False)
+
+class SysRolePermission(Base):
+    __tablename__ = "sys_role_permission"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    role_id = Column("role_id", BigInteger, nullable=False)
+    permission_id = Column("permission_id", BigInteger, nullable=False)
+
+class SysPermission(Base):
+    __tablename__ = "sys_permission"
+    id = Column(BigInteger, primary_key=True)
+    code = Column(String(128), unique=True)
+    name = Column(String(64))
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+# ==================== 业务表 ====================
+
+class BizProject(Base):
+    __tablename__ = "biz_project"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    project_name = Column("project_name", String(256), nullable=False)
+    project_number = Column("project_number", String(32))
+    client_name = Column("client_name", String(256))
+    client_contact = Column("client_contact", String(64))
+    project_manager = Column("project_manager", String(64))
+    delivery_manager = Column("delivery_manager", String(64))
+    product_manager = Column("product_manager", String(64))
+    project_amount = Column("project_amount", DECIMAL(14, 2), default=0)
+    project_level = Column("project_level", String(16), default="B")
+    project_status = Column("project_status", String(32), default="进行中")
+    dept_belong = Column("dept_belong", String(64))
+    start_date = Column("start_date", Date)
+    expect_end_date = Column("expect_end_date", Date)
+    actual_end_date = Column("actual_end_date", Date)
+    progress = Column(Integer, default=0)
+    source_clue_id = Column("source_clue_id", BigInteger)
+    ar_user_id = Column("ar_user_id", BigInteger)
+    sr_user_id = Column("sr_user_id", BigInteger)
+    fr_user_id = Column("fr_user_id", BigInteger)
+    supplier = Column(String(256))
+    risk_assessment = Column("risk_assessment", Text)
+    remark = Column(Text)
+    stage = Column(String(32))
+    description = Column(Text)
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizProjectPeriod(Base):
+    __tablename__ = "biz_project_period"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    project_id = Column("project_id", BigInteger, nullable=False)
+    period_month = Column("period_month", String(7), nullable=False)
+    period_status = Column("period_status", String(16), default="正式执行")
+    estimated_revenue = Column("estimated_revenue", DECIMAL(14, 2), default=0)
+    estimated_profit = Column("estimated_profit", DECIMAL(14, 2), default=0)
+    estimated_profit_rate = Column("estimated_profit_rate", String(8))
+    estimated_cost = Column("estimated_cost", DECIMAL(14, 2), default=0)
+    estimated_labor_cost = Column("estimated_labor_cost", DECIMAL(14, 2), default=0)
+    actual_revenue = Column("actual_revenue", DECIMAL(14, 2), default=0)
+    actual_profit = Column("actual_profit", DECIMAL(14, 2), default=0)
+    actual_profit_rate = Column("actual_profit_rate", String(8))
+    actual_cost = Column("actual_cost", DECIMAL(14, 2), default=0)
+    actual_labor_cost = Column("actual_labor_cost", DECIMAL(14, 2), default=0)
+    profit_achievement_rate = Column("profit_achievement_rate", String(8))
+    goal_description = Column("goal_description", String(512))
+    monthly_target = Column("monthly_target", String(256))
+    monthly_actual = Column("monthly_actual", String(256))
+    monthly_progress = Column("monthly_progress", String(8))
+    goal_summary = Column("goal_summary", Text)
+    w1_target = Column("w1_target", String(128)); w1_actual = Column("w1_actual", String(128)); w1_progress = Column("w1_progress", String(8))
+    w2_target = Column("w2_target", String(128)); w2_actual = Column("w2_actual", String(128)); w2_progress = Column("w2_progress", String(8))
+    w3_target = Column("w3_target", String(128)); w3_actual = Column("w3_actual", String(128)); w3_progress = Column("w3_progress", String(8))
+    w4_target = Column("w4_target", String(128)); w4_actual = Column("w4_actual", String(128)); w4_progress = Column("w4_progress", String(8))
+    personnel = Column(JSON)
+    milestones = Column(JSON)
+    process_bonus = Column("process_bonus", String(64))
+    result_bonus = Column("result_bonus", String(64))
+    alert_text = Column("alert_text", Text)
+    progress_interpretation = Column("progress_interpretation", Text)
+    monthly_profit_expectation = Column("monthly_profit_expectation", String(64))
+    execution_staff = Column("execution_staff", String(64))
+    customer_info = Column("customer_info", String(256))
+    risk_assessment = Column("risk_assessment", Text)
+    supplier = Column(String(256))
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizClue(Base):
+    __tablename__ = "biz_clue"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    clue_name = Column("clue_name", String(128), nullable=False)
+    client_company = Column("client_company", String(128))
+    client_dept = Column("client_dept", String(128))
+    client_contact = Column("client_contact", String(64))
+    beike_owner = Column("beike_owner", String(64))
+    budget = Column(String(64))
+    budget_amount = Column("budget_amount", DECIMAL(12, 2))
+    clue_level = Column("clue_level", String(8))
+    clue_status = Column("clue_status", String(32), default="接触")
+    review_status = Column("review_status", String(32))
+    source_type = Column("source_type", String(32))
+    source_activity_name = Column("source_activity_name", String(128))
+    client_circle = Column("client_circle", String(16))
+    industry = Column(String(32))
+    value_quadrant = Column("value_quadrant", String(8))
+    health_status = Column("health_status", String(8), default="normal")
+    opportunity_amount = Column("opportunity_amount", DECIMAL(12, 2))
+    requirement_desc = Column("requirement_desc", Text)
+    remark = Column(Text)
+    dept_belong = Column("dept_belong", String(64))
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizTalent(Base):
+    __tablename__ = "biz_talent"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False)
+    role = Column(String(64))
+    skills = Column(String(512))
+    current_project = Column("current_project", String(256))
+    utilization = Column(Integer, default=0)
+    status = Column(String(16), default="normal")
+    talent_type = Column("talent_type", String(16), default="internal")
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizRisk(Base):
+    __tablename__ = "biz_risk"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    project_id = Column("project_id", BigInteger)
+    type = Column(String(128))
+    level = Column(String(16), default="medium")
+    description = Column(Text)
+    solution = Column(Text)
+    owner = Column(String(64))
+    status = Column(String(16), default="open")
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizAlert(Base):
+    __tablename__ = "biz_alert"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    project_id = Column("project_id", BigInteger)
+    type = Column(String(128))
+    level = Column(String(16), default="medium")
+    description = Column(Text)
+    manager = Column(String(64))
+    status = Column(String(16), default="open")
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizPipeline(Base):
+    __tablename__ = "biz_pipeline"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False)
+    customer = Column(String(128))
+    stage = Column(String(32), default="lead")
+    amount = Column(DECIMAL(12, 2), default=0)
+    win_rate = Column("win_rate", Integer, default=0)
+    owner_id = Column("owner_id", BigInteger)
+    dept_id = Column("dept_id", BigInteger)
+    description = Column(Text)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class BizCampaign(Base):
+    __tablename__ = "biz_campaign"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(128), nullable=False)
+    start_date = Column("start_date", Date)
+    end_date = Column("end_date", Date)
+    target_count = Column("target_count", Integer, default=0)
+    target_amount = Column("target_amount", DECIMAL(14, 2), default=0)
+    status = Column(String(16), default="ACTIVE")
+    description = Column(Text)
+    priority = Column(String(8), default="NORMAL")
+    manager_name = Column("manager_name", String(64))
+    is_deleted = Column("is_deleted", Integer, default=0)

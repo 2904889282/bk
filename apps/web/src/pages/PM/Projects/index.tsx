@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Table, Button, Tag, Input, Select, Space, Card, Typography, message, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, FundProjectionScreenOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { isMockTokenError } from '../../../utils/request';
 import Permission from '../../../components/auth/Permission';
@@ -31,6 +32,7 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 export default function PmProjects() {
+  const navigate = useNavigate();
   const { isMockMode } = useAuth();
   const demoMode = isMockMode();
   // 筛选
@@ -174,33 +176,23 @@ export default function PmProjects() {
     {
       title: '操作',
       key: 'action',
-      width: 160,
+      width: 200,
       fixed: 'right' as const,
       render: (_: unknown, r: ProjectVO) => (
         <Space>
+          <Button size="small" icon={<FundProjectionScreenOutlined />} onClick={() => navigate(`/projects/${r.id}`)}>
+            详情
+          </Button>
           <Permission code="project:edit">
-            <Button
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => openEdit(r.id)}
-            />
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r.id)} />
           </Permission>
           <Permission code="project:delete">
-            <Button
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-              onClick={() => {
-                Modal.confirm({
-                  title: '确认删除',
-                  content: `确定删除项目「${r.projectName}」？此操作不可撤销。`,
-                  okText: '确认删除',
-                  cancelText: '取消',
-                  okButtonProps: { danger: true },
-                  onOk: () => handleDelete(r.id),
-                });
-              }}
-            />
+            <Button size="small" danger icon={<DeleteOutlined />}
+              onClick={() => Modal.confirm({
+                title: '确认删除', content: `确定删除项目「${r.projectName}」？`,
+                okText: '确认删除', cancelText: '取消', okButtonProps: { danger: true },
+                onOk: () => handleDelete(r.id),
+              })} />
           </Permission>
         </Space>
       ),

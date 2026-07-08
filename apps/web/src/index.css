@@ -321,6 +321,12 @@ html.dark .ant-layout-header {
 .auth-field input::-ms-clear { display: none !important; }
 /* 关闭 Chrome password manager 内部眼睛图标 — -internal-keyboard-select-button */
 .auth-field input::-internal-keyboard-select-button { display: none !important; }
+/* 补充 WebKit 隐藏：凭证自动填充按钮、大写锁定指示器、文本框装饰容器 */
+.auth-field input[type="password"]::-webkit-credentials-auto-fill-button,
+.auth-field input[type="password"]::-webkit-caps-lock-indicator,
+.auth-field input[type="password"]::-webkit-textfield-decoration-container {
+  display: none !important;
+}
 /* 2) antd 输入框：仅外层 affix-wrapper 定高，内部 input 自适应，避免撑破重叠 */
 .auth-glass .ant-input-affix-wrapper {
   height: 48px !important;
@@ -351,7 +357,10 @@ html.dark .ant-layout-header {
   border: 1px solid rgba(255,255,255,0.12) !important;
   transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out) !important;
 }
-.auth-glass .ant-select .ant-select-selection-search-input { height: 46px !important; }
+.auth-glass .ant-select .ant-select-selection-search-input {
+  height: 46px !important;
+  color: #e2e8f0 !important;
+}
 .auth-glass .ant-select-focused .ant-select-selector {
   border-color: rgba(96,165,250,0.65) !important;
   box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important;
@@ -360,7 +369,7 @@ html.dark .ant-layout-header {
 /* 4) 图标 / placeholder / label / checkbox */
 .auth-glass .ant-input-prefix { color: rgba(226,232,240,0.42) !important; }
 .auth-glass .ant-select-arrow, .auth-glass .ant-input-password-icon { color: rgba(226,232,240,0.5) !important; }
-.auth-glass .ant-select-selection-placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-glass .ant-select-selection-placeholder { color: rgba(226,232,240,0.55) !important; }
 .auth-glass .ant-select-selection-item { color: #e2e8f0 !important; }
 .auth-glass .ant-form-item-label > label { color: rgba(226,232,240,0.72) !important; font-weight: 500; }
 .auth-glass .ant-checkbox-wrapper { color: rgba(226,232,240,0.78) !important; }
@@ -449,7 +458,14 @@ html.dark .ant-layout-header {
   box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14) !important;
   color: #e2e8f0 !important;
 }
-.auth-modal .ant-modal-header { background: transparent !important; }
+.auth-modal .ant-modal-body {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+.auth-modal .ant-modal-header, .auth-modal .ant-modal-footer { background: transparent !important; }
+.auth-modal .ant-modal-title { color: #f1f5f9 !important; font-size: 18px !important; }
+.auth-modal .ant-modal-close { color: rgba(255,255,255,0.5) !important; }
+.auth-modal .ant-modal-close:hover { color: #fff !important; background: rgba(255,255,255,0.08) !important; }
 .auth-modal .ant-modal-title,
 .auth-modal .ant-typography,
 .auth-modal .ant-steps-item-title { color: #e2e8f0 !important; }
@@ -472,7 +488,7 @@ html.dark .ant-layout-header {
   box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
   overflow: hidden;
 }
-.auth-dropdown .ant-select-item { color: rgba(226,232,240,0.85) !important; border-radius: 8px !important; }
+.auth-dropdown .ant-select-item { color: #f1f5f9 !important; border-radius: 8px !important; }
 .auth-dropdown .ant-select-item-option-active { background: rgba(255,255,255,0.06) !important; }
 .auth-dropdown .ant-select-item-option-selected { background: rgba(59,130,246,0.25) !important; color: #fff !important; }
 .auth-dropdown .ant-select-item-option-selected .ant-select-item-option-state { color: #93c5fd !important; }
@@ -494,32 +510,36 @@ html.dark .ant-layout-header {
 .auth-glass .ant-input-affix-wrapper-status-error { border-color: rgba(248,113,113,0.6) !important; background: rgba(248,113,113,0.06) !important; }
 .auth-glass .ant-input-affix-wrapper-status-error-focused { box-shadow: 0 0 0 3px rgba(248,113,113,0.15) !important; }
 
-/* 弹窗内输入控件深色（portal，非 .auth-glass 作用域） */
+/* 弹窗内输入控件深色 */
 .auth-modal .ant-input,
 .auth-modal .ant-input-affix-wrapper,
 .auth-modal .ant-input-password {
   height: 48px !important; border-radius: 12px !important;
-  background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.12) !important;
-  color: #e2e8f0 !important; transition: all .25s var(--ease-out) !important;
+  background: rgba(255,255,255,0.08) !important; border: 1px solid rgba(255,255,255,0.18) !important;
+  color: #f1f5f9 !important; font-size: 15px !important; transition: all .25s var(--ease-out) !important;
 }
-.auth-modal .ant-input::placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-modal .ant-input::placeholder { color: rgba(226,232,240,0.48) !important; }
 .auth-modal .ant-input:focus, .auth-modal .ant-input-affix-wrapper-focused {
-  border-color: rgba(96,165,250,0.65) !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important; background: rgba(255,255,255,0.09) !important;
+  border-color: rgba(96,165,250,0.65) !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important; background: rgba(255,255,255,0.12) !important;
 }
-.auth-modal .ant-input-prefix { color: rgba(226,232,240,0.42) !important; }
-.auth-modal .ant-input-password-icon { color: rgba(226,232,240,0.5) !important; }
-.auth-modal .ant-form-item-label > label { color: rgba(226,232,240,0.72) !important; font-weight: 500; }
-.auth-modal .ant-btn.auth-btn {
-  background: linear-gradient(135deg,#3b82f6,#2563eb) !important; border: none !important; color: #fff !important;
-  height: 48px !important; border-radius: 12px !important; font-weight: 600 !important;
-}
+.auth-modal .ant-input-prefix { color: rgba(226,232,240,0.55) !important; }
+.auth-modal .ant-input-password-icon { color: rgba(226,232,240,0.6) !important; }
+.auth-modal .ant-form-item-label > label { color: #e2e8f0 !important; font-weight: 500; font-size: 14px; }
+.auth-modal .ant-form-item-explain-error { color: #fca5a5 !important; }
+.auth-modal .ant-btn.auth-btn { background: linear-gradient(135deg,#3b82f6,#2563eb) !important; border: none !important; color: #fff !important; height: 48px !important; border-radius: 12px !important; font-weight: 600 !important; }
 .auth-modal .ant-btn.auth-btn:hover { filter: brightness(1.06); }
-.auth-modal .ant-btn-default { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.14) !important; color: #e2e8f0 !important; }
-.auth-modal .ant-btn-default:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
-.auth-modal .ant-steps-item-title { color: rgba(226,232,240,0.7) !important; }
+.auth-modal .ant-btn-default { background: rgba(255,255,255,0.08) !important; border: 1px solid rgba(255,255,255,0.18) !important; color: #93c5fd !important; }
+.auth-modal .ant-btn-default:hover { background: rgba(255,255,255,0.14) !important; color: #bfdbfe !important; border-color: rgba(147,197,253,0.4) !important; }
+.auth-modal .ant-btn-default:disabled { color: rgba(255,255,255,0.3) !important; background: rgba(255,255,255,0.04) !important; }
+/* 禁用输入框 */
+.auth-modal .ant-input-disabled, .auth-modal .ant-input[disabled] { background: rgba(255,255,255,0.04) !important; color: rgba(255,255,255,0.5) !important; }
+.auth-modal .ant-input-affix-wrapper-disabled { background: rgba(255,255,255,0.04) !important; }
+.auth-modal .ant-steps-item-title { color: rgba(226,232,240,0.6) !important; }
+.auth-modal .ant-steps-item-active .ant-steps-item-title,
+.auth-modal .ant-steps-item-finish .ant-steps-item-title { color: #e2e8f0 !important; }
 .auth-modal .ant-steps-item-finish > .ant-steps-item-container > .ant-steps-item-content > .ant-steps-item-title::after { background: rgba(96,165,250,0.5) !important; }
 .auth-modal .ant-result-title { color: #f1f5f9 !important; }
-.auth-modal .ant-result-subtitle { color: rgba(226,232,240,0.6) !important; }
+.auth-modal .ant-result-subtitle { color: rgba(226,232,240,0.65) !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .auth-blob, .auth-btn::before { animation: none !important; transition: none !important; }

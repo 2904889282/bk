@@ -19,6 +19,7 @@ const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
 const PipelineList = lazy(() => import('./pages/Pipeline/List'));
 const PmKanban = lazy(() => import('./pages/PM/Kanban'));
 const PmProjects = lazy(() => import('./pages/PM/Projects'));
+const ProjectDetail = lazy(() => import('./pages/PM/Projects/Detail'));
 const PmRisks = lazy(() => import('./pages/PM/Risks'));
 const PmTalent = lazy(() => import('./pages/PM/Talent'));
 const PmGantt = lazy(() => import('./pages/PM/Gantt'));
@@ -184,6 +185,7 @@ function AppContent() {
               <Route path="ltc/leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
               <Route path="pm/kanban" element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
               <Route path="pm/projects" element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
+              <Route path="projects/:id" element={withSuspense(<PermissionGuard permCode="project:list"><ProjectDetail /></PermissionGuard>)} />
               <Route path="pm/risks" element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
               <Route path="pm/talent" element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
               <Route path="pm/gantt" element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />

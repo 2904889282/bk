@@ -118,6 +118,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -227,7 +228,7 @@ export default function LoginPage() {
     if (!email.trim()) { setError("请输入用户名或邮箱"); return; }
     if (password.length < 6) { setError("密码至少 6 位"); return; }
     setIsLoading(true);
-    const result = await login(email.trim(), password, true);
+    const result = await login(email.trim(), password, remember);
     setIsLoading(false);
     if (result.success) {
       message.success("登录成功");
@@ -236,7 +237,7 @@ export default function LoginPage() {
     } else {
       setError(result.msg || "登录失败，请检查账号密码");
     }
-  }, [email, password, login, message, navigate, redirectUrl]);
+  }, [email, password, remember, login, message, navigate, redirectUrl]);
 
   return (
     <div className="auth-page min-h-screen grid lg:grid-cols-2">
@@ -366,20 +367,19 @@ export default function LoginPage() {
 
                 <div className="space-y-2 relative">
                   <Label htmlFor="password" className="text-sm font-medium" style={{ color: "rgba(226,232,240,0.72)" }}>密码</Label>
-                  {/* 永远用 type="text" + 字符遮蔽：彻底绕开浏览器对 type="password" 的内置 reveal 按钮渲染 */}
+                  {/* type 动态切换：showPassword 时 text，否则 password；由 CSS 隐藏浏览器内置 reveal 按钮 */}
                   <Input
                     id="password"
-                    type="text"
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    inputMode="text"
                     placeholder="请输入密码"
-                    value={showPassword ? password : password.replace(/./g, '•')}
+                    value={password}
                     onChange={e => { setPassword(e.target.value); setError(""); }}
                     required
                     className="pr-12 h-12 rounded-xl border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-400/40 focus-visible:ring-0 focus-visible:border-blue-400/60 focus-visible:bg-white/10"
                   />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 bottom-0 h-12 w-10 flex items-center justify-center text-[#E2E8F0] hover:text-white transition-colors rounded-lg"
+                    className="absolute right-2 bottom-0 h-12 w-10 flex items-center justify-center text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors rounded-lg"
                     aria-label={showPassword ? "隐藏密码" : "显示密码"}>
                     {showPassword ? <EyeOff className="size-[18px] shrink-0" /> : <Eye className="size-[18px] shrink-0" />}
                   </button>
@@ -387,7 +387,7 @@ export default function LoginPage() {
 
                 <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center space-x-2">
-                    <Checkbox id="remember" defaultChecked />
+                    <Checkbox id="remember" checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
                     <Label htmlFor="remember" className="text-xs font-normal cursor-pointer" style={{ color: "rgba(226,232,240,0.6)" }}>保持登录（30天）</Label>
                   </div>
                   <a className="auth-link text-xs" onClick={() => setForgotOpen(true)}>忘记密码？</a>
@@ -421,7 +421,7 @@ export default function LoginPage() {
               </div>
 
               <div className="text-center text-xs mt-4" style={{ color: "rgba(226,232,240,0.38)" }}>
-                演示账号：admin / admin123 · zhangming / zm2026
+                演示账号：admin / admin
               </div>
             </>
           )}

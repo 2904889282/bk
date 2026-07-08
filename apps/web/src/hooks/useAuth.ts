@@ -70,8 +70,7 @@ export const useAuth = create<AuthState>((set, get) => ({
 
     // 后端不可用 → 降级模拟登录
     const DEMO_USERS: Record<string, { password: string; name: string; roles: string[]; avatar: string; permissions: string[] }> = {
-      admin: { password: 'admin123', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['*'] },
-      zhangming: { password: 'zm2026', name: '张明', roles: ['ROLE_MANAGER'], avatar: '👤', permissions: ['pipeline:list', 'pipeline:create', 'pipeline:import', 'pipeline:batch-delete', 'pipeline:batch-modify', 'pipeline:edit', 'pipeline:delete'] },
+      admin: { password: 'admin', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['*'] },
     };
 
     const demoUser = DEMO_USERS[username];

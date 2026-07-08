@@ -14,22 +14,28 @@ public class Project {
     private Long id;
 
     private String projectName;
+    private String projectNumber;       // 项目编号
     private String clientName;
-    private String projectManager;
+    private String clientContact;       // 甲方对接人
+    private String projectManager;      // 一条龙经理
+    private String deliveryManager;     // 交付经理
+    private String productManager;      // 产品经理
     private BigDecimal projectAmount;
-    private String projectStatus;       // 进行中/已完成/已暂停
-    private Integer progress;
-    private LocalDate startDate;
-    private LocalDate expectedEnd;
-    private LocalDate actualEnd;
-    private String stage;               // 立项/计划/执行/监控/收尾
-    private String projectLevel;        // A/B/C
+    private String projectLevel;        // S/A/B/C
+    private String projectStatus;       // 进行中/暂停/已交付/已终止
     private String deptBelong;
-    private Long sourceClueId;          // 来源线索ID
+    private LocalDate startDate;
+    private LocalDate expectEndDate;
+    private LocalDate actualEndDate;
+    private Integer progress;
+    private Long sourceClueId;
     private Long arUserId;
     private Long srUserId;
     private Long frUserId;
-    private Integer riskCount;
+    private String supplier;            // 供应商
+    private String riskAssessment;      // 风险评估
+    private String remark;
+    private String stage;
     private String description;
 
     @TableField(fill = FieldFill.INSERT)
