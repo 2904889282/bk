@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { Input, Button, Checkbox, Progress, Select, App } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Input, Button, Checkbox, Progress, Select, Divider, Space, App } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
 import request from '../../utils/request';
+import { fetchDeptList, type DeptOption } from '../../api/dept';
 import AgreementModal from './AgreementModal';
 
 interface Props { onSuccess: () => void; onBack: () => void; }
@@ -13,25 +14,32 @@ const PWD_RULES = [
   { re: /[!@#$%^&*]/, label: '含特殊字符' },
 ];
 
-const DEPT_OPTIONS = [
-  { value: 1, label: '平台一部' },
-  { value: 2, label: '平台二部' },
-  { value: 3, label: '平台三部' },
+// 默认部门（后端不可用时降级使用）
+const DEFAULT_DEPTS: DeptOption[] = [
+  { id: 1, name: '平台一部' },
+  { id: 2, name: '平台二部' },
+  { id: 3, name: '平台三部' },
 ];
+
+const ERR_COLOR = '#fca5a5';
+const SUB_COLOR = 'rgba(226,232,240,0.55)';
 
 function getPwdStrength(pwd: string) {
   const score = PWD_RULES.filter(r => r.re.test(pwd)).length;
-  if (score <= 1) return { level: '弱', color: '#ef4444', pct: 25 };
-  if (score <= 2) return { level: '中', color: '#f59e0b', pct: 50 };
-  if (score <= 3) return { level: '强', color: '#10b981', pct: 75 };
-  return { level: '很强', color: '#10b981', pct: 100 };
+  if (score <= 1) return { level: '弱', color: '#f87171', pct: 25 };
+  if (score <= 2) return { level: '中', color: '#fbbf24', pct: 50 };
+  if (score <= 3) return { level: '强', color: '#34d399', pct: 75 };
+  return { level: '很强', color: '#34d399', pct: 100 };
 }
 
 export default function RegisterForm({ onSuccess, onBack }: Props) {
   const { message } = App.useApp();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [depts, setDepts] = useState<DeptOption[]>(DEFAULT_DEPTS);
   const [deptId, setDeptId] = useState<number | undefined>(undefined);
+  const [deptName, setDeptName] = useState<string>('');        // 自定义部门名（选中已有部门时为空）
+  const [customInput, setCustomInput] = useState('');          // 下拉自定义输入框临时值
   const [password, setPassword] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -41,6 +49,29 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
   const [agreementType, setAgreementType] = useState<'terms' | 'privacy' | null>(null);
 
   const strength = getPwdStrength(password);
+
+  // 动态加载部门列表（后端不可用时降级默认 + localStorage 自定义部门）
+  useEffect(() => {
+    fetchDeptList()
+      .then(list => {
+        if (list && list.length) setDepts(list);
+      })
+      .catch(() => {
+        try {
+          const custom = JSON.parse(localStorage.getItem('beike_custom_depts') || '[]') as string[];
+          if (custom.length) {
+            setDepts(prev => {
+              const names = new Set(prev.map(d => d.name));
+              const merged = [...prev];
+              custom.forEach((name, i) => {
+                if (!names.has(name)) merged.push({ id: -1 - i, name });
+              });
+              return merged;
+            });
+          }
+        } catch { /* ignore */ }
+      });
+  }, []);
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -66,7 +97,8 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
           email: email.trim(),
           password,
           confirmPassword: confirmPwd,
-          deptId: deptId || null,
+          deptId: deptId != null && deptId > 0 ? deptId : null,
+          deptName: deptName.trim() || null,
         });
       } catch {
         // 后端不可用时降级
@@ -74,8 +106,25 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
         if (users.find((u: { username: string }) => u.username === username.trim())) {
           message.error('用户名已存在'); setLoading(false); return;
         }
-        users.push({ username: username.trim(), email: email.trim(), password, createdAt: new Date().toISOString() });
+        const finalDept = deptName.trim() || depts.find(d => d.id === deptId)?.name || '';
+        users.push({
+          username: username.trim(), email: email.trim(), password,
+          createdAt: new Date().toISOString(),
+          deptId: deptId != null && deptId > 0 ? deptId : null,
+          deptName: deptName.trim() || null,
+          dept: finalDept,
+        });
         localStorage.setItem('beike_registered_users', JSON.stringify(users));
+        // 自定义部门降级保存，便于用户管理 / 人才池同步展示
+        if (deptName.trim()) {
+          try {
+            const custom = JSON.parse(localStorage.getItem('beike_custom_depts') || '[]') as string[];
+            if (!custom.includes(deptName.trim())) {
+              custom.push(deptName.trim());
+              localStorage.setItem('beike_custom_depts', JSON.stringify(custom));
+            }
+          } catch { /* ignore */ }
+        }
       }
       setCountdown(3);
       const timer = setInterval(() => {
@@ -93,38 +142,91 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
 
   if (countdown > 0) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
-        <div style={{ fontSize: 16, fontWeight: 600 }}>注册成功</div>
-        <div style={{ color: '#999', marginTop: 8 }}>{countdown} 秒后跳转到登录</div>
+      <div style={{ textAlign: 'center', padding: '32px 0' }}>
+        <div style={{ fontSize: 44, marginBottom: 14, filter: 'drop-shadow(0 6px 18px rgba(52,211,153,0.4))' }}>✅</div>
+        <div className="auth-title" style={{ fontSize: 18, color: '#f1f5f9' }}>注册成功</div>
+        <div style={{ color: SUB_COLOR, marginTop: 8, fontSize: 13 }}>{countdown} 秒后跳转到登录</div>
       </div>
     );
   }
 
+  // 部门下拉统一 value：已有部门用 id 字符串，自定义部门用 'custom:' 前缀
+  const deptValue = deptName ? 'custom:' + deptName : (deptId != null ? String(deptId) : undefined);
+  const deptOptions = [
+    ...depts.map(d => ({ value: String(d.id), label: d.name })),
+    ...(deptName ? [{ value: 'custom:' + deptName, label: deptName + '（新部门）' }] : []),
+  ];
+
+  const errStyle = { color: ERR_COLOR, fontSize: 12, marginBottom: 8, marginTop: -4 } as const;
+
   return (
     <div style={{ opacity: 1, transition: 'opacity 0.2s' }}>
       {/* 返回按钮 */}
-      <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} style={{ padding: 0, marginBottom: 16 }}>
+      <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack}
+        style={{ padding: 0, marginBottom: 18, color: 'rgba(226,232,240,0.6)', height: 32 }}>
         返回登录
       </Button>
 
-      <Input size="large" prefix={<UserOutlined />} placeholder="用户名（至少3位）" value={username}
+      <Input prefix={<UserOutlined />} placeholder="用户名（至少3位）" value={username}
         onChange={e => { setUsername(e.target.value); setErrors(p => ({ ...p, username: '' })); }}
-        status={errors.username ? 'error' : undefined} style={{ marginBottom: 8 }} />
-      {errors.username && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.username}</div>}
+        status={errors.username ? 'error' : undefined} style={{ marginBottom: 16 }} />
+      {errors.username && <div style={errStyle}>{errors.username}</div>}
 
-      <Select size="large" placeholder="选择部门" value={deptId} onChange={v => setDeptId(v)}
-        options={DEPT_OPTIONS} style={{ width: '100%', marginBottom: 16 }} />
+      <Select
+        placeholder="选择或自定义部门"
+        value={deptValue}
+        onChange={(v: string) => {
+          if (typeof v === 'string' && v.startsWith('custom:')) {
+            setDeptName(v.slice(7));
+            setDeptId(undefined);
+          } else {
+            setDeptId(Number(v));
+            setDeptName('');
+          }
+        }}
+        options={deptOptions}
+        style={{ width: '100%', marginBottom: 16 }}
+        optionFilterProp="label"
+        showSearch
+        popupClassName="auth-dropdown"
+        dropdownRender={(menu) => (
+          <>
+            {menu}
+            <Divider style={{ margin: '8px 0' }} />
+            <Space style={{ padding: '0 8px 4px', width: '100%' }}>
+              <Input
+                placeholder="输入新部门名称"
+                value={customInput}
+                onChange={e => setCustomInput(e.target.value)}
+                onKeyDown={e => e.stopPropagation()}
+              />
+              <Button
+                type="text"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  const v = customInput.trim();
+                  if (!v) { message.warning('请输入部门名称'); return; }
+                  setDeptName(v);
+                  setDeptId(undefined);
+                  setCustomInput('');
+                }}
+              >
+                添加
+              </Button>
+            </Space>
+          </>
+        )}
+      />
 
-      <Input size="large" prefix={<MailOutlined />} placeholder="绑定邮箱（用于找回密码）" value={email}
+      <Input prefix={<MailOutlined />} placeholder="绑定邮箱（用于找回密码）" value={email}
         onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }}
         status={errors.email ? 'error' : undefined} style={{ marginBottom: 8 }} />
-      {errors.email && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.email}</div>}
+      {errors.email && <div style={errStyle}>{errors.email}</div>}
 
-      <Input.Password size="large" prefix={<LockOutlined />} placeholder="密码（至少6位）" value={password}
+      <Input.Password prefix={<LockOutlined />} placeholder="密码（至少6位）" value={password}
         onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }}
-        status={errors.password ? 'error' : undefined} style={{ marginBottom: password ? 8 : 16 }} />
-      {errors.password && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.password}</div>}
+        status={errors.password ? 'error' : undefined} style={{ marginBottom: 16 }} />
+      {errors.password && <div style={errStyle}>{errors.password}</div>}
       {password && (
         <div style={{ marginBottom: 16 }}>
           <Progress percent={strength.pct} showInfo={false} strokeColor={strength.color} size="small" />
@@ -132,19 +234,19 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
         </div>
       )}
 
-      <Input.Password size="large" prefix={<LockOutlined />} placeholder="确认密码" value={confirmPwd}
+      <Input.Password prefix={<LockOutlined />} placeholder="确认密码" value={confirmPwd}
         onChange={e => { setConfirmPwd(e.target.value); setErrors(p => ({ ...p, confirmPwd: '' })); }}
-        status={errors.confirmPwd ? 'error' : undefined} style={{ marginBottom: 8 }} />
-      {errors.confirmPwd && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.confirmPwd}</div>}
+        status={errors.confirmPwd ? 'error' : undefined} style={{ marginBottom: 16 }} />
+      {errors.confirmPwd && <div style={errStyle}>{errors.confirmPwd}</div>}
 
       <Checkbox checked={agreed} onChange={e => { setAgreed(e.target.checked); setErrors(p => ({ ...p, agreed: '' })); }} style={{ marginBottom: 8 }}>
         已阅读并同意
-        <a onClick={() => setAgreementType('terms')}>《用户协议》</a>
+        <a className="auth-link" onClick={() => setAgreementType('terms')}>《用户协议》</a>
       </Checkbox>
-      {errors.agreed && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.agreed}</div>}
+      {errors.agreed && <div style={errStyle}>{errors.agreed}</div>}
 
-      <Button type="primary" size="large" block loading={loading} onClick={handleRegister}>注 册</Button>
-      <p style={{ textAlign: 'center', color: '#999', fontSize: 12, marginTop: 16 }}>注册即默认绑定普通员工角色</p>
+      <Button className="auth-btn" block loading={loading} onClick={handleRegister}>注 册</Button>
+      <p style={{ textAlign: 'center', color: 'rgba(226,232,240,0.4)', fontSize: 12, marginTop: 16 }}>注册即默认绑定普通员工角色</p>
 
       <AgreementModal open={!!agreementType} type={agreementType!} onClose={() => setAgreementType(null)} />
     </div>

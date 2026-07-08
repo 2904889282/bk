@@ -5,9 +5,11 @@ import com.beike.platform.common.BizException;
 import com.beike.platform.common.JwtUtil;
 import com.beike.platform.common.VerifyCodeStore;
 import com.beike.platform.entity.LoginDevice;
+import com.beike.platform.entity.SysDept;
 import com.beike.platform.entity.SysUser;
 import com.beike.platform.entity.Talent;
 import com.beike.platform.mapper.LoginDeviceMapper;
+import com.beike.platform.mapper.SysDeptMapper;
 import com.beike.platform.mapper.SysUserMapper;
 import com.beike.platform.mapper.TalentMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final SysUserMapper userMapper;
+    private final SysDeptMapper deptMapper;
     private final TalentMapper talentMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
@@ -86,9 +89,21 @@ public class AuthService {
     // ==================== 注册 ====================
 
     @Transactional(rollbackFor = Exception.class)
-    public void register(String username, String password, String realName, String email, Long deptId) {
+    public void register(String username, String password, String realName, String email, Long deptId, String deptName) {
         if (userMapper.exists(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username))) {
             throw new BizException("用户名已存在");
+        }
+        // 自定义部门：优先按名称处理（已存在则复用，不存在则新建），再回填 deptId
+        if (deptName != null && !deptName.trim().isEmpty()) {
+            String name = deptName.trim();
+            SysDept dept = deptMapper.selectOne(
+                    new LambdaQueryWrapper<SysDept>().eq(SysDept::getName, name));
+            if (dept == null) {
+                dept = new SysDept();
+                dept.setName(name);
+                deptMapper.insert(dept);
+            }
+            deptId = dept.getId();
         }
         SysUser user = new SysUser();
         user.setUsername(username);
@@ -101,10 +116,10 @@ public class AuthService {
         userMapper.insertUserRole(user.getId(), 3L);
 
         // 自动加入人才池（外部人员），部门信息写入角色字段
-        String deptName = resolveDeptName(deptId);
+        String resolvedDeptName = resolveDeptName(deptId);
         Talent talent = new Talent();
         talent.setName(realName != null ? realName : username);
-        talent.setRole(deptName != null ? deptName + "-外部人员" : "外部人员");
+        talent.setRole(resolvedDeptName != null ? resolvedDeptName + "-外部人员" : "外部人员");
         talent.setTalentType("external");
         talent.setStatus("normal");
         talent.setUtilization(0);
@@ -113,12 +128,8 @@ public class AuthService {
 
     private String resolveDeptName(Long deptId) {
         if (deptId == null) return null;
-        return switch (deptId.intValue()) {
-            case 1 -> "平台一部";
-            case 2 -> "平台二部";
-            case 3 -> "平台三部";
-            default -> null;
-        };
+        SysDept dept = deptMapper.selectById(deptId);
+        return dept != null ? dept.getName() : null;
     }
 
     // ==================== 邮箱验证码登录 ====================

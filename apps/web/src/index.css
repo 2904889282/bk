@@ -213,3 +213,315 @@ html.dark .ant-layout-header {
   background: var(--color-surface) !important;
   border-bottom: 1px solid var(--color-border-el);
 }
+
+/* ============================================================
+   登录页 — 沉浸式深色空间 + 玻璃拟态
+   登录页锁定深色沉浸基调，营造景深 / 空间镜头感 / 模糊过渡
+   ============================================================ */
+.auth-page {
+  position: relative;
+  min-height: 100dvh;
+  background:
+    radial-gradient(120% 130% at 18% 12%, #16203c 0%, rgba(22, 32, 60, 0) 45%),
+    radial-gradient(110% 120% at 85% 88%, #0c1a2e 0%, rgba(12, 26, 46, 0) 50%),
+    linear-gradient(160deg, #0a0f1f 0%, #070a14 60%, #05070d 100%);
+  overflow: hidden;
+}
+
+/* 漂浮光斑 — 营造景深与空间层次 */
+.auth-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+  will-change: transform;
+  z-index: 0;
+}
+.auth-blob--blue   { width: 520px; height: 520px; background: #1e40af; opacity: 0.42; top: -140px; left: -90px;  animation: authFloat1 20s ease-in-out infinite; }
+.auth-blob--cyan   { width: 400px; height: 400px; background: #0e7490; opacity: 0.34; bottom: -120px; right: 16%; animation: authFloat2 24s ease-in-out infinite; }
+.auth-blob--violet { width: 340px; height: 340px; background: #4338ca; opacity: 0.28; top: 28%; right: -80px; animation: authFloat3 28s ease-in-out infinite; }
+.auth-blob--ember  { width: 280px; height: 280px; background: #b45309; opacity: 0.20; bottom: 18%; left: 8%; animation: authFloat1 26s ease-in-out infinite reverse; }
+
+@keyframes authFloat1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(44px,32px) scale(1.06); } }
+@keyframes authFloat2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-34px,-42px) scale(0.96); } }
+@keyframes authFloat3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-24px,34px) scale(1.04); } }
+
+/* 噪点纹理 — 胶片质感 */
+.auth-grain {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* 左右交界模糊过渡边界 — 取消硬切 */
+.auth-bridge {
+  position: absolute; top: 0; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 2px; z-index: 4; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.16), transparent);
+  filter: blur(1.5px);
+}
+.auth-bridge::after {
+  content: ""; position: absolute; inset: 0 -60px 0 -60px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  filter: blur(8px);
+}
+
+/* 玻璃面板 */
+.auth-glass {
+  position: relative;
+  background: linear-gradient(160deg, rgba(255,255,255,0.085), rgba(255,255,255,0.025));
+  backdrop-filter: blur(30px) saturate(155%);
+  -webkit-backdrop-filter: blur(30px) saturate(155%);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 0 0 1px rgba(255,255,255,0.03),
+    0 30px 80px rgba(0,0,0,0.50),
+    0 8px 24px rgba(0,0,0,0.30);
+  border-radius: 24px;
+}
+
+/* 字体空间感 — 重标题浮前 / 轻副文退后 */
+.auth-title { font-weight: 700; letter-spacing: -0.025em; line-height: 1.08; }
+.auth-subtitle { font-weight: 400; letter-spacing: 0.012em; }
+
+/* 统一输入控件 — shadcn 原生 input（登录页）与 antd（注册页）精确对齐 */
+/* 1) shadcn 原生 input：直接定高 */
+.auth-field input {
+  height: 48px !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  color: #e2e8f0 !important;
+  padding: 0 14px !important;
+  font-size: 14px !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out) !important;
+}
+.auth-field input::placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-field input:focus {
+  outline: none !important;
+  border-color: rgba(96,165,250,0.65) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important;
+  background: rgba(255,255,255,0.09) !important;
+}
+/* 修复浏览器密码管理器自动填充的强制白底 */
+.auth-field input:-webkit-autofill,
+.auth-field input:-webkit-autofill:hover,
+.auth-field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e2e8f0 !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255,255,255,0.05) inset !important;
+  box-shadow: 0 0 0 1000px rgba(255,255,255,0.05) inset !important;
+  background: rgba(255,255,255,0.05) !important;
+  caret-color: #e2e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+/* 关闭 Edge / IE 浏览器内置的"显示密码"控件（与 lucide 眼睛按钮冲突的元凶） */
+.auth-field input::-ms-reveal,
+.auth-field input::-ms-clear { display: none !important; }
+/* 关闭 Chrome password manager 内部眼睛图标 — -internal-keyboard-select-button */
+.auth-field input::-internal-keyboard-select-button { display: none !important; }
+/* 2) antd 输入框：仅外层 affix-wrapper 定高，内部 input 自适应，避免撑破重叠 */
+.auth-glass .ant-input-affix-wrapper {
+  height: 48px !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  padding: 0 14px !important;
+  transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out) !important;
+}
+.auth-glass .ant-input-affix-wrapper > input.ant-input {
+  height: auto !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #e2e8f0 !important;
+}
+.auth-glass .ant-input-affix-wrapper > input.ant-input::placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-glass .ant-input-affix-wrapper-focused {
+  border-color: rgba(96,165,250,0.65) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important;
+  background: rgba(255,255,255,0.09) !important;
+}
+/* 3) antd Select */
+.auth-glass .ant-select .ant-select-selector {
+  height: 48px !important;
+  border-radius: 12px !important;
+  background: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  transition: border-color var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out) !important;
+}
+.auth-glass .ant-select .ant-select-selection-search-input { height: 46px !important; }
+.auth-glass .ant-select-focused .ant-select-selector {
+  border-color: rgba(96,165,250,0.65) !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important;
+  background: rgba(255,255,255,0.09) !important;
+}
+/* 4) 图标 / placeholder / label / checkbox */
+.auth-glass .ant-input-prefix { color: rgba(226,232,240,0.42) !important; }
+.auth-glass .ant-select-arrow, .auth-glass .ant-input-password-icon { color: rgba(226,232,240,0.5) !important; }
+.auth-glass .ant-select-selection-placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-glass .ant-select-selection-item { color: #e2e8f0 !important; }
+.auth-glass .ant-form-item-label > label { color: rgba(226,232,240,0.72) !important; font-weight: 500; }
+.auth-glass .ant-checkbox-wrapper { color: rgba(226,232,240,0.78) !important; }
+.auth-glass .ant-checkbox-inner { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.22) !important; }
+.auth-glass .ant-checkbox-checked .ant-checkbox-inner { background: #3b82f6 !important; border-color: #3b82f6 !important; }
+
+/* shadcn Checkbox（登录页）— 呈现与注册页 antd Checkbox 一致的深色玻璃风 */
+.auth-glass button[role="checkbox"] {
+  border-color: rgba(255,255,255,0.22) !important;
+  background: rgba(255,255,255,0.08) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out) !important;
+}
+.auth-glass button[role="checkbox"][data-state="checked"] {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+.auth-glass button[role="checkbox"]:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important;
+}
+
+/* 丝滑主按钮 — 光泽扫过 + hover/active 物理反馈 */
+.auth-btn {
+  position: relative;
+  overflow: hidden;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid rgba(96,165,250,0.5);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 10px 30px rgba(37,99,235,0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  transition: transform var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out),
+              filter var(--duration-normal) var(--ease-out);
+  cursor: pointer;
+}
+.auth-btn::before {
+  content: "";
+  position: absolute; top: 0; left: -120%;
+  width: 60%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.32), transparent);
+  transform: skewX(-18deg);
+  transition: left 0.6s var(--ease-out);
+}
+.auth-btn:hover { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(37,99,235,0.45), inset 0 1px 0 rgba(255,255,255,0.3); filter: brightness(1.05); }
+.auth-btn:hover::before { left: 130%; }
+.auth-btn:active { transform: translateY(0) scale(0.985); }
+.auth-btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; filter: saturate(0.8); }
+
+/* 文字链接微交互 */
+.auth-link {
+  color: #93c5fd;
+  transition: color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+  cursor: pointer;
+}
+.auth-link:hover { color: #bfdbfe; opacity: 0.9; }
+
+/* 表单入场 */
+@keyframes authFormIn {
+  0% { opacity: 0; transform: translateY(18px) scale(0.985); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.auth-form-in { animation: authFormIn 0.6s var(--ease-out) both; }
+
+/* 角色脚下光晕 — 强化空间感 */
+.auth-stage-glow {
+  position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%);
+  width: 440px; height: 70px;
+  background: radial-gradient(ellipse at center, rgba(124,77,255,0.32), transparent 70%);
+  filter: blur(18px); pointer-events: none; z-index: 0;
+}
+
+/* 弹窗玻璃质感（antd Modal） */
+.auth-modal .ant-modal-content {
+  background: linear-gradient(160deg, rgba(20,28,48,0.92), rgba(12,18,34,0.92)) !important;
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+  color: #e2e8f0 !important;
+}
+.auth-modal .ant-modal-header { background: transparent !important; }
+.auth-modal .ant-modal-title,
+.auth-modal .ant-typography,
+.auth-modal .ant-steps-item-title { color: #e2e8f0 !important; }
+.auth-modal .ant-typography h4 { color: #f1f5f9 !important; }
+.auth-modal .ant-steps-item-process > .ant-steps-item-container > .ant-steps-item-content > .ant-steps-item-title::after { background: rgba(255,255,255,0.18) !important; }
+.auth-modal .ant-typography-secondary,
+.auth-modal .ant-result-subtitle { color: rgba(226,232,240,0.6) !important; }
+.auth-modal .ant-divider { border-color: rgba(255,255,255,0.1) !important; }
+
+/* 进度条深色适配（注册密码强度） */
+.auth-glass .ant-progress-bg { background: rgba(255,255,255,0.12) !important; }
+
+/* Select 下拉面板（portal，独立深色玻璃） */
+.auth-dropdown {
+  background: rgba(15,21,38,0.96) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5) !important;
+  overflow: hidden;
+}
+.auth-dropdown .ant-select-item { color: rgba(226,232,240,0.85) !important; border-radius: 8px !important; }
+.auth-dropdown .ant-select-item-option-active { background: rgba(255,255,255,0.06) !important; }
+.auth-dropdown .ant-select-item-option-selected { background: rgba(59,130,246,0.25) !important; color: #fff !important; }
+.auth-dropdown .ant-select-item-option-selected .ant-select-item-option-state { color: #93c5fd !important; }
+.auth-dropdown .ant-divider { border-color: rgba(255,255,255,0.1) !important; }
+.auth-dropdown .ant-input { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.14) !important; color: #e2e8f0 !important; }
+
+/* antd Button 使用 .auth-btn 时覆盖默认 primary */
+.auth-glass .ant-btn.auth-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+  border: none !important; color: #fff !important;
+  height: 48px !important; border-radius: 12px !important;
+  font-weight: 600 !important; letter-spacing: 0.02em;
+}
+.auth-glass .ant-btn.auth-btn:hover { filter: brightness(1.06); }
+.auth-glass .ant-btn.auth-btn:active { transform: scale(0.985); }
+
+/* error 状态边框（深色适配） */
+.auth-glass .ant-input-status-error,
+.auth-glass .ant-input-affix-wrapper-status-error { border-color: rgba(248,113,113,0.6) !important; background: rgba(248,113,113,0.06) !important; }
+.auth-glass .ant-input-affix-wrapper-status-error-focused { box-shadow: 0 0 0 3px rgba(248,113,113,0.15) !important; }
+
+/* 弹窗内输入控件深色（portal，非 .auth-glass 作用域） */
+.auth-modal .ant-input,
+.auth-modal .ant-input-affix-wrapper,
+.auth-modal .ant-input-password {
+  height: 48px !important; border-radius: 12px !important;
+  background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.12) !important;
+  color: #e2e8f0 !important; transition: all .25s var(--ease-out) !important;
+}
+.auth-modal .ant-input::placeholder { color: rgba(226,232,240,0.38) !important; }
+.auth-modal .ant-input:focus, .auth-modal .ant-input-affix-wrapper-focused {
+  border-color: rgba(96,165,250,0.65) !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.16) !important; background: rgba(255,255,255,0.09) !important;
+}
+.auth-modal .ant-input-prefix { color: rgba(226,232,240,0.42) !important; }
+.auth-modal .ant-input-password-icon { color: rgba(226,232,240,0.5) !important; }
+.auth-modal .ant-form-item-label > label { color: rgba(226,232,240,0.72) !important; font-weight: 500; }
+.auth-modal .ant-btn.auth-btn {
+  background: linear-gradient(135deg,#3b82f6,#2563eb) !important; border: none !important; color: #fff !important;
+  height: 48px !important; border-radius: 12px !important; font-weight: 600 !important;
+}
+.auth-modal .ant-btn.auth-btn:hover { filter: brightness(1.06); }
+.auth-modal .ant-btn-default { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.14) !important; color: #e2e8f0 !important; }
+.auth-modal .ant-btn-default:hover { background: rgba(255,255,255,0.1) !important; color: #fff !important; }
+.auth-modal .ant-steps-item-title { color: rgba(226,232,240,0.7) !important; }
+.auth-modal .ant-steps-item-finish > .ant-steps-item-container > .ant-steps-item-content > .ant-steps-item-title::after { background: rgba(96,165,250,0.5) !important; }
+.auth-modal .ant-result-title { color: #f1f5f9 !important; }
+.auth-modal .ant-result-subtitle { color: rgba(226,232,240,0.6) !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob, .auth-btn::before { animation: none !important; transition: none !important; }
+  .auth-form-in { animation: none !important; }
+}

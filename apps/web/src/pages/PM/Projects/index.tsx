@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Tag, Input, Select, Space, Card, Typography, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useAuth } from '../../../hooks/useAuth';
+import { isMockTokenError } from '../../../utils/request';
 import Permission from '../../../components/auth/Permission';
 import ProjectForm from './Form';
 import {
@@ -68,7 +69,7 @@ export default function PmProjects() {
       setList(res.records);
       setTotal(res.total);
     } catch (err: unknown) {
-      if (!(err as { __mockToken?: boolean }).__mockToken) {
+      if (!isMockTokenError(err)) {
         message.error('加载项目数据失败');
       }
     } finally {

@@ -61,6 +61,10 @@ const isMockAllowedAuthUrl = (url: string) =>
 let mockTokenNotified = false;
 const resetMockTokenNotified = () => { mockTokenNotified = false; };
 
+/** 判断是否为 mock 令牌错误（供各页面 catch 块使用） */
+export const isMockTokenError = (err: unknown): boolean =>
+  !!(err as { __mockToken?: boolean }).__mockToken;
+
 const request = axios.create({
   baseURL: '',
   timeout: 15000,

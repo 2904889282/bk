@@ -48,16 +48,8 @@ public class ClueServiceImpl implements ClueService {
 
     @Override
     public IPage<ClueVO> page(CluePageDTO dto) {
-        // 普通用户只看自己负责的线索
-        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
-        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
-            SysUser user = userMapper.selectById(loginUser.getUserId());
-            if (user != null) {
-                // 责任人标识：优先用 realName，兜底用 username
-                String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
-                dto.setOwner(ownerKey);
-            }
-        }
+        String ownerKey = SecurityUtils.getCurrentOwnerKey();
+        if (ownerKey != null) dto.setOwner(ownerKey);
         Page<Clue> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         IPage<Clue> result = clueMapper.selectPageWithFilter(page, dto);
         return result.convert(this::toVO);
@@ -78,15 +70,9 @@ public class ClueServiceImpl implements ClueService {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> create(ClueSaveDTO dto) {
         // 普通用户自动填充责任人为自己
-        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
-        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
-            SysUser user = userMapper.selectById(loginUser.getUserId());
-            if (user != null) {
-                // 责任人标识：优先用 realName，兜底用 username
-                String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
-                dto.setBeikeOwner(ownerKey);
-            }
-        }
+        String ownerKey = SecurityUtils.getCurrentOwnerKey();
+        if (ownerKey != null) dto.setBeikeOwner(ownerKey);
+
         Clue clue = new Clue();
         BeanUtils.copyProperties(dto, clue);
         clue.setCreateDate(LocalDate.now());
@@ -603,16 +589,10 @@ public class ClueServiceImpl implements ClueService {
      * 管理员和经理不受限制。
      */
     private void checkDataPermission(Clue clue) {
-        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
-        if (loginUser == null) return;
-        if ("ADMIN".equals(loginUser.getRoleType()) || "MANAGER".equals(loginUser.getRoleType())) return;
+        SysUser user = SecurityUtils.getCurrentUser();
+        if (user == null) return;
+        if ("ADMIN".equals(user.getRoleType()) || "MANAGER".equals(user.getRoleType())) return;
 
-        // 普通用户：只能操作自己负责的线索
-        SysUser user = userMapper.selectById(loginUser.getUserId());
-        if (user == null) {
-            throw BizException.noPermission();
-        }
-        // 线索责任人标识：优先用 realName，兜底用 username
         String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
         if (clue.getBeikeOwner() == null) {
             throw new BizException(403, "该线索尚未分配责任人（beikeOwner 为空），请联系管理员分配后重试");

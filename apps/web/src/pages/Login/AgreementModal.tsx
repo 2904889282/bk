@@ -14,14 +14,15 @@ export default function AgreementModal({ open, type, onClose }: Props) {
     <Modal
       title={
         type === 'terms'
-          ? <span><FileProtectOutlined style={{ marginRight: 8, color: '#1677ff' }} />用户服务协议</span>
-          : <span><LockOutlined style={{ marginRight: 8, color: '#52c41a' }} />隐私权政策</span>
+          ? <span><FileProtectOutlined style={{ marginRight: 8, color: '#60a5fa' }} />用户服务协议</span>
+          : <span><LockOutlined style={{ marginRight: 8, color: '#34d399' }} />隐私权政策</span>
       }
       open={open} onCancel={onClose} footer={null} width={640}
+      className="auth-modal"
       styles={{ body: { maxHeight: '70vh', overflowY: 'auto', padding: 24 } }}
     >
       {type === 'terms' ? (
-        <Typography style={{ lineHeight: 1.8, color: '#444' }}>
+        <Typography style={{ lineHeight: 1.8, color: 'rgba(226,232,240,0.85)' }}>
           <Title level={4}>一、总则</Title>
           <Paragraph>
             欢迎您使用贝壳统一管理平台（以下简称"本系统"）。本协议是您与本系统开发者之间关于您使用本系统服务所订立的协议。请您仔细阅读本协议的全部内容。
@@ -48,7 +49,7 @@ export default function AgreementModal({ open, type, onClose }: Props) {
           <Text type="secondary">最后更新日期：2026年7月1日</Text>
         </Typography>
       ) : (
-        <Typography style={{ lineHeight: 1.8, color: '#444' }}>
+        <Typography style={{ lineHeight: 1.8, color: 'rgba(226,232,240,0.85)' }}>
           <Title level={4}>一、我们收集的信息</Title>
           <Paragraph>
             在您使用本系统服务时，我们可能会收集以下信息：<br />

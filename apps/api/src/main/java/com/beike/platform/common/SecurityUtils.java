@@ -23,6 +23,42 @@ public class SecurityUtils {
             this.roleType = roleType;
             this.deptId = deptId;
         }
+
+        /** 是否为管理员或经理 */
+        public boolean isAdminOrManager() {
+            return "ADMIN".equals(roleType) || "MANAGER".equals(roleType);
+        }
+
+        /** 是否为普通用户 */
+        public boolean isRegularUser() {
+            return "USER".equals(roleType);
+        }
+    }
+
+    /**
+     * 获取当前登录用户实体（完整 SysUser 对象），包含 realName、username 等。
+     * 封装了 getLoginUser() + userMapper.selectById() 两步操作。
+     * 若未登录或 DB 不可用则返回 null。
+     */
+    public static SysUser getCurrentUser() {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null) return null;
+        try {
+            SysUserMapper userMapper = SpringContextHolder.getBean(SysUserMapper.class);
+            return userMapper.selectById(loginUser.getUserId());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /**
+     * 从当前用户获取责任人标识：优先 realName，兜底 username。
+     * 用于线索/项目等关联字段的比对和填充。
+     */
+    public static String getCurrentOwnerKey() {
+        SysUser user = getCurrentUser();
+        if (user == null) return null;
+        return user.getRealName() != null ? user.getRealName() : user.getUsername();
     }
 
     /**

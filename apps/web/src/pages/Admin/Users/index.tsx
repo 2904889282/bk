@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Space, Modal, Form, Input, Select, message, Popconfirm, Tag, Card, Switch } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, RedoOutlined } from '@ant-design/icons';
 import request from '../../../utils/request';
+import { fetchDeptList, type DeptOption } from '../../../api/dept';
 
 interface UserRow {
   id: string; username: string; realName: string; status: number;
   avatar?: string; createdAt: string;
+  deptId?: number; deptName?: string;
 }
 
 export default function AdminUsers() {
@@ -17,6 +19,8 @@ export default function AdminUsers() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form] = Form.useForm();
+  const [depts, setDepts] = useState<DeptOption[]>([]);
+  useEffect(() => { fetchDeptList().then(setDepts).catch(() => {}); }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -33,11 +37,11 @@ export default function AdminUsers() {
           { id: 'U002', username: 'zhangming', realName: '张明', status: 1, createdAt: '2026-01-01' },
         ];
       }
-      // 合并注册用户
+      // 合并注册用户（含自定义部门信息）
       const registered = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
-      registered.forEach((r: { username: string; email?: string; createdAt?: string }) => {
+      registered.forEach((r: { username: string; email?: string; createdAt?: string; deptId?: number; deptName?: string; dept?: string }) => {
         if (!stored.find((u: UserRow) => u.username === r.username)) {
-          stored.push({ id: 'U' + Date.now(), username: r.username, realName: r.username, status: 1, createdAt: r.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10) });
+          stored.push({ id: 'U' + Date.now(), username: r.username, realName: r.username, status: 1, createdAt: r.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10), deptId: r.deptId ?? undefined, deptName: r.deptName || r.dept || '' });
         }
       });
       let filtered = stored;
@@ -108,6 +112,13 @@ export default function AdminUsers() {
   const columns = [
     { title: '用户名', dataIndex: 'username', key: 'username', width: 120, render: (v: string) => <strong>{v}</strong> },
     { title: '姓名', dataIndex: 'realName', key: 'realName', width: 100 },
+    {
+      title: '部门', key: 'dept', width: 110,
+      render: (_: unknown, r: UserRow) => {
+        const name = r.deptName || depts.find(d => d.id === r.deptId)?.name;
+        return name ? <Tag color="blue">{name}</Tag> : <span style={{ color: '#bbb' }}>-</span>;
+      },
+    },
     { title: '状态', dataIndex: 'status', key: 'status', width: 80, render: (v: number) => <Tag color={v === 1 ? 'green' : 'red'}>{v === 1 ? '正常' : '禁用'}</Tag> },
     { title: '创建时间', dataIndex: 'createdAt', key: 'createdAt', width: 180 },
     {

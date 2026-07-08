@@ -27,7 +27,8 @@ public class AuthController {
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterDTO dto) {
-        authService.register(dto.getUsername(), dto.getPassword(), dto.getRealName(), dto.getEmail(), dto.getDeptId());
+        authService.register(dto.getUsername(), dto.getPassword(), dto.getRealName(), dto.getEmail(),
+                dto.getDeptId(), dto.getDeptName());
         return Result.success();
     }
 
@@ -107,7 +108,8 @@ public class AuthController {
         @NotBlank private String password;
         @NotBlank(message = "真实姓名不能为空") private String realName;
         @NotBlank private String email;
-        private Long deptId;             // 所属部门ID
+        private Long deptId;             // 所属部门ID（选择已有部门时传）
+        private String deptName;         // 自定义部门名称（新增部门时传，优先于 deptId）
     }
 
     @Data

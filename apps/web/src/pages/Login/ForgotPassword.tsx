@@ -95,6 +95,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
       footer={null}
       destroyOnHidden
       width={480}
+      className="auth-modal"
     >
       <Steps current={current} items={stepItems} size="small"
         style={{ marginBottom: 28, marginTop: 12 }} />
@@ -113,7 +114,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
             >
               <Input prefix={<MailOutlined />} placeholder="请输入注册时绑定的邮箱" />
             </Form.Item>
-            <Button type="primary" block loading={loading} onClick={handleSendCode}>
+            <Button type="primary" className="auth-btn" block loading={loading} onClick={handleSendCode}>
               获取验证码
             </Button>
           </>
@@ -128,7 +129,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
                   rules={[{ required: true, message: '请输入验证码' }]}>
                   <Input prefix={<SafetyOutlined />} placeholder="6位验证码" style={{ width: '58%' }} maxLength={6} />
                 </Form.Item>
-                <Button disabled={countdown > 0} onClick={resendCode} style={{ width: '42%' }}>
+                <Button disabled={countdown > 0} onClick={resendCode} style={{ width: '42%', height: 48 }}>
                   {countdown > 0 ? `${countdown}s 后重发` : '重新获取'}
                 </Button>
               </Input.Group>
@@ -159,7 +160,7 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
               <Input.Password prefix={<LockOutlined />} placeholder="再次输入新密码" />
             </Form.Item>
 
-            <Button type="primary" block loading={loading} onClick={handleReset}>
+            <Button type="primary" className="auth-btn" block loading={loading} onClick={handleReset}>
               确认重置
             </Button>
           </>
@@ -169,11 +170,11 @@ export default function ForgotPasswordModal({ open, onClose }: Props) {
         {current === 2 && (
           <Result
             status="success"
-            icon={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+            icon={<CheckCircleOutlined style={{ color: '#34d399' }} />}
             title="密码重置成功"
             subTitle="您的密码已更新，请使用新密码登录。"
             extra={[
-              <Button type="primary" key="login" onClick={handleClose}>
+              <Button type="primary" className="auth-btn" key="login" onClick={handleClose}>
                 返回登录
               </Button>,
             ]}

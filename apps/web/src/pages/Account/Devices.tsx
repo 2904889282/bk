@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Table, Button, Popconfirm, Typography, message, Tag, Card, Space } from 'antd';
 import { DesktopOutlined, MobileOutlined, GlobalOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../hooks/useAuth';
+import { isMockTokenError } from '../../utils/request';
 import { fetchDevices, kickDevice, kickAllDevices } from '../../api/account';
 import type { LoginDevice } from '../../api/account';
 
@@ -48,7 +49,7 @@ export default function DevicesPage() {
       const data = await fetchDevices();
       setDevices(data);
     } catch (err: unknown) {
-      if (!(err as { __mockToken?: boolean }).__mockToken) {
+      if (!isMockTokenError(err)) {
         message.error('加载设备列表失败');
       }
     }

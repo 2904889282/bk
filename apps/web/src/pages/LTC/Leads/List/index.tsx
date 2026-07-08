@@ -23,6 +23,7 @@ import type {
   ClueVO, ClueSaveDTO, CampaignDashboardVO, CampaignItem,
 } from '../../../../api/clue';
 import { fetchDeptList, fetchUserOptions, type DeptOption, type UserOption } from '../../../../api/dept';
+import { isMockTokenError } from '../../../../utils/request';
 import ClueFormFields from '../../../../features/clue/ClueFormFields';
 import {
   CLIENT_CIRCLE_COLORS,
@@ -261,7 +262,7 @@ export default function LeadsList() {
       setPagination({ current: page, pageSize: size });
     } catch (err: unknown) {
       // mock 令牌拦截错误：拦截器已弹 toast，此处不再重复
-      if (!(err as { __mockToken?: boolean }).__mockToken) {
+      if (!isMockTokenError(err)) {
         message.error('加载数据失败');
       }
     } finally { setLoading(false); }

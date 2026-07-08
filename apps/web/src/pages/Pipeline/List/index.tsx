@@ -5,6 +5,7 @@ import {
   Modal,
 } from 'antd';
 import { useAuth } from '../../../hooks/useAuth';
+import { isMockTokenError } from '../../../utils/request';
 import {
   SearchOutlined, ReloadOutlined, PlusOutlined, DownloadOutlined,
   SettingOutlined, DownOutlined, UpOutlined, ExpandOutlined, CompressOutlined,
@@ -125,7 +126,7 @@ const PipelineList: React.FC = () => {
       setTotal(res.total || 0);
       setPagination({ current: page, pageSize: size });
     } catch (err: unknown) {
-      if (!(err as { __mockToken?: boolean }).__mockToken) {
+      if (!isMockTokenError(err)) {
         message.error('加载数据失败');
       }
     } finally {

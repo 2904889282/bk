@@ -40,6 +40,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { isMockTokenError } from '../../../../utils/request';
 import {
   createClueFollow,
   decideClueReview,
@@ -155,7 +156,7 @@ export default function LeadsDetail() {
       setDetail(data);
     } catch (err: unknown) {
       // mock 令牌拦截错误：拦截器已弹 toast，此处不再重复
-      if ((err as { __mockToken?: boolean }).__mockToken) {
+      if (isMockTokenError(err)) {
         setErrorCode('mock');
       } else {
         // axios 错误对象结构：err.response.status = HTTP状态码，err.response.data.code = 业务错误码

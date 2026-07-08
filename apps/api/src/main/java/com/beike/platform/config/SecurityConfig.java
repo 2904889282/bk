@@ -49,6 +49,7 @@ public class SecurityConfig {
             "/api/auth/login", "/api/auth/register",
             "/api/auth/refresh", "/api/auth/send-code",
             "/api/auth/reset-password", "/api/auth/login-by-email",
+            "/api/dept/list",
             "/api/health", "/api/pipeline/stages",
             "/error", "/actuator/**"
     };

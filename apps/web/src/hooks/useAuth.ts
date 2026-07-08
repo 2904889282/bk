@@ -41,7 +41,6 @@ export const useAuth = create<AuthState>((set, get) => ({
   isLoggedIn: false,
 
   login: async (username, password, remember = true) => {
-    // 1. 尝试后端登录
     try {
       const res = await request.post('/api/auth/login', { username, password });
       const data = res.data;
@@ -61,52 +60,16 @@ export const useAuth = create<AuthState>((set, get) => ({
       const isAdminOrManager = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_MANAGER');
       set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : (isAdminOrManager ? FALLBACK_MENUS : REGULAR_USER_MENUS) });
       return { success: true };
-    } catch {
-      // 2. 后端不可用 → 降级模拟登录
+    } catch (err: unknown) {
+      // 仅走真实后端，失败则返回错误信息
+      const msg = (err as { response?: { data?: { msg?: string; message?: string } } })?.response?.data?.msg
+        || (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || '登录失败，请检查账号密码或确认后端服务已启动';
+      return { success: false, msg };
     }
-
-    // 演示账号
-    const DEMO_USERS: Record<string, { password: string; name: string; roles: string[]; avatar: string; permissions: string[] }> = {
-      admin: { password: 'admin123', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['*'] },
-      zhangming: { password: 'zm2026', name: '张明', roles: ['ROLE_MANAGER'], avatar: '👤', permissions: ['pipeline:list', 'pipeline:create', 'pipeline:import', 'pipeline:batch-delete', 'pipeline:batch-modify', 'pipeline:edit', 'pipeline:delete'] },
-    };
-
-    const demoUser = DEMO_USERS[username];
-    if (demoUser && demoUser.password === password) {
-      const token = 'mock_' + Date.now();
-      const user = { id: username, username, name: demoUser.name, avatar: demoUser.avatar, roles: demoUser.roles };
-      const s = remember ? localStorage : sessionStorage;
-      s.setItem('beike_token', token);
-      localStorage.setItem('beike_user', JSON.stringify(user));
-      if (remember) { localStorage.setItem('beike_remember', '1'); localStorage.setItem('beike_username', username); }
-      set({ token, user, isLoggedIn: true, permissions: demoUser.permissions, menus: FALLBACK_MENUS });
-      return { success: true };
-    }
-
-    // 检查 localStorage 注册用户
-    const registered = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
-    const regUser = registered.find((u: { username: string; password: string }) => u.username === username && u.password === password);
-    if (regUser) {
-      const token = 'mock_' + Date.now();
-      const user = { id: username, username, name: regUser.realName || username, avatar: '👤', roles: ['ROLE_USER'] };
-      const s = remember ? localStorage : sessionStorage;
-      s.setItem('beike_token', token);
-      localStorage.setItem('beike_user', JSON.stringify(user));
-      if (remember) { localStorage.setItem('beike_remember', '1'); localStorage.setItem('beike_username', username); }
-      set({ token, user, isLoggedIn: true, permissions: ['clue:list', 'project:list'], menus: REGULAR_USER_MENUS });
-      return { success: true };
-    }
-
-    return { success: false, msg: '用户名或密码错误' };
   },
 
   fetchUserInfo: async () => {
-    const token = get().token || '';
-    // mock 令牌：从 localStorage 恢复
-    if (token.startsWith('mock_')) {
-      restoreMockUser(token, set);
-      return;
-    }
     try {
       const res = await request.get('/api/auth/userinfo');
       const data = res.data;
@@ -157,39 +120,4 @@ function normalizePermissions(data: any): string[] {
   return data?.permissions ?? data?.user?.permissions ?? [];
 }
 
-/** 演示账号完整权限集 */
-function getDemoPermissions(username: string): { permissions: string[] } | null {
-  const map: Record<string, string[]> = {
-    admin: ['*'],
-    zhangming: [
-      'clue:list', 'clue:create', 'clue:edit', 'clue:delete', 'clue:batch', 'clue:convert',
-      'pipeline:list', 'pipeline:create', 'pipeline:edit', 'pipeline:delete',
-      'pipeline:import', 'pipeline:batch-delete', 'pipeline:batch-modify',
-      'project:list', 'project:create', 'project:edit', 'project:delete',
-      'risk:list', 'risk:create', 'risk:edit', 'risk:delete',
-      'talent:list', 'talent:create', 'talent:edit', 'talent:delete',
-      'alert:list', 'recycle:list', 'system:user:list',
-    ],
-  };
-  return map[username] ? { permissions: map[username] } : null;
-}
 
-/** mock 令牌：从 localStorage 恢复用户状态 */
-function restoreMockUser(_token: string, set: (state: Partial<AuthState>) => void) {
-  const saved = localStorage.getItem('beike_user');
-  if (saved) {
-    try {
-      const user = JSON.parse(saved);
-      const isAdmin = user.roles?.includes('ROLE_ADMIN') || user.username === 'admin';
-      const isManager = user.roles?.includes('ROLE_MANAGER');
-      if (isAdmin || isManager) {
-        const demo = getDemoPermissions(user.username) || { permissions: ['clue:list'] };
-        set({ user, isLoggedIn: true, permissions: demo.permissions, menus: FALLBACK_MENUS });
-      } else {
-        set({ user, isLoggedIn: true, permissions: ['clue:list', 'project:list'], menus: REGULAR_USER_MENUS });
-      }
-      return;
-    } catch {}
-  }
-  set({ user: null, isLoggedIn: false, permissions: [], menus: [] });
-}

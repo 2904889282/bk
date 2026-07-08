@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect, lazy, Suspense, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, lazy, Suspense } from 'react';
 import { App as AntdApp, ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuth } from './hooks/useAuth';
@@ -52,30 +52,10 @@ function MessageInjector() {
 }
 
 function AppInit() {
-  const { token, isLoggedIn, fetchUserInfo, logout } = useAuth();
-  const navigate = useNavigate();
-  const [transitioning, setTransitioning] = useState(false);
+  const { token, isLoggedIn, fetchUserInfo } = useAuth();
 
   useEffect(() => {
-    // mock 令牌检测：后端在线则自动清除，强制重新登录获取真实 JWT
-    if (!token || transitioning) return;
-    if (!token.startsWith('mock_')) { setTransitioning(true); return; }
-    
-    // mock 令牌 + 尝试检测后端
-    fetch('/api/health')
-      .then(resp => {
-        if (resp.ok) {
-          // 后端在线 → 清除 mock 令牌 → 跳转登录页获取真实 JWT
-          logout();
-          setTimeout(() => { navigate('/login', { replace: true }); }, 100);
-        }
-      })
-      .catch(() => { /* 后端不可用，mock 模式 */ });
-    setTransitioning(true);
-  }, [token, transitioning]);
-
-  useEffect(() => {
-    if (token && !isLoggedIn && !token.startsWith('mock_')) fetchUserInfo();
+    if (token && !isLoggedIn) fetchUserInfo();
   }, [token, isLoggedIn, fetchUserInfo]);
   useEffect(() => {
     initStageMapping();

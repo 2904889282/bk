@@ -7,14 +7,14 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../store/useTheme";
 import { App } from "antd";
-import { Eye, EyeOff, Sun, Moon } from "lucide-react";
+import { Eye, EyeOff, Sun } from "lucide-react";
 import Logo from "../../components/ui/Logo";
 import RegisterForm from "./RegisterForm";
 import ForgotPassword from "./ForgotPassword";
 import AgreementModal from "./AgreementModal";
 
 // ============================================================
-// 动画角色子组件（Pupil / EyeBall）
+// 动画角色子组件（Pupil / EyeBall）— 完整保留
 // ============================================================
 
 interface PupilProps {
@@ -37,13 +37,16 @@ function Pupil({ size = 12, maxDistance = 5, pupilColor = "black", forceLookX, f
   }, []);
 
   const pupilPosition = (() => {
-    if (!pupilRef.current) return { x: 0, y: 0 };
-    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
-    const r = pupilRef.current.getBoundingClientRect();
-    const dx = mouseX - (r.left + r.width / 2), dy = mouseY - (r.top + r.height / 2);
-    const d = Math.min(Math.sqrt(dx ** 2 + dy ** 2), maxDistance);
-    const a = Math.atan2(dy, dx);
-    return { x: Math.cos(a) * d, y: Math.sin(a) * d };
+    try {
+      if (!pupilRef.current) return { x: 0, y: 0 };
+      if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
+      const r = pupilRef.current.getBoundingClientRect();
+      if (!r) return { x: 0, y: 0 };
+      const dx = mouseX - (r.left + r.width / 2), dy = mouseY - (r.top + r.height / 2);
+      const d = Math.min(Math.sqrt(dx ** 2 + dy ** 2), maxDistance);
+      const a = Math.atan2(dy, dx);
+      return { x: Math.cos(a) * d, y: Math.sin(a) * d };
+    } catch { return { x: 0, y: 0 }; }
   })();
 
   return (
@@ -72,13 +75,16 @@ function EyeBall({ size = 48, pupilSize = 16, maxDistance = 10, eyeColor = "whit
   }, []);
 
   const pupilPos = (() => {
-    if (!eyeRef.current) return { x: 0, y: 0 };
-    if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
-    const r = eyeRef.current.getBoundingClientRect();
-    const dx = mouseX - (r.left + r.width / 2), dy = mouseY - (r.top + r.height / 2);
-    const d = Math.min(Math.sqrt(dx ** 2 + dy ** 2), maxDistance);
-    const a = Math.atan2(dy, dx);
-    return { x: Math.cos(a) * d, y: Math.sin(a) * d };
+    try {
+      if (!eyeRef.current) return { x: 0, y: 0 };
+      if (forceLookX !== undefined && forceLookY !== undefined) return { x: forceLookX, y: forceLookY };
+      const r = eyeRef.current.getBoundingClientRect();
+      if (!r) return { x: 0, y: 0 };
+      const dx = mouseX - (r.left + r.width / 2), dy = mouseY - (r.top + r.height / 2);
+      const d = Math.min(Math.sqrt(dx ** 2 + dy ** 2), maxDistance);
+      const a = Math.atan2(dy, dx);
+      return { x: Math.cos(a) * d, y: Math.sin(a) * d };
+    } catch { return { x: 0, y: 0 }; }
   })();
 
   return (
@@ -97,7 +103,7 @@ function EyeBall({ size = 48, pupilSize = 16, maxDistance = 10, eyeColor = "whit
 }
 
 // ============================================================
-// 登录页主组件 – 接入真实 auth 系统
+// 登录页主组件 – 接入真实 auth 系统（逻辑完整保留，视觉重构）
 // ============================================================
 
 export default function LoginPage() {
@@ -106,7 +112,7 @@ export default function LoginPage() {
   const location = useLocation();
   const login = useAuth(s => s.login);
   const isLoggedIn = useAuth(s => s.isLoggedIn);
-  const { isDark, toggleTheme } = useTheme();
+  const { toggleTheme } = useTheme();
 
   const redirectUrl = (location.state as { from?: { pathname: string } })?.from?.pathname || "/";
 
@@ -138,6 +144,19 @@ export default function LoginPage() {
 
   // 已登录直接跳转
   useEffect(() => { if (isLoggedIn) navigate("/", { replace: true }); }, [isLoggedIn, navigate]);
+
+  // 登录页强制深色沉浸 — 锁定 body 深色 + html.dark，离开后恢复
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevBodyBg = body.style.background;
+    body.style.background = '#070a14';
+    html.classList.add('dark');
+    return () => {
+      body.style.background = prevBodyBg;
+      html.classList.remove('dark');
+    };
+  }, []);
 
   // 鼠标跟踪
   useEffect(() => {
@@ -184,16 +203,19 @@ export default function LoginPage() {
     } else setIsPurplePeeking(false);
   }, [password, showPassword]);
 
-  // 计算角色位置
+  // 计算角色位置（try-catch 兜底 React 19 并发模式下 DOM 瞬时分离）
   const calc = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
-    const r = ref.current.getBoundingClientRect();
-    const cX = r.left + r.width / 2, cY = r.top + r.height / 3;
-    return {
-      faceX: Math.max(-15, Math.min(15, (mouseX - cX) / 20)),
-      faceY: Math.max(-10, Math.min(10, (mouseY - cY) / 30)),
-      bodySkew: Math.max(-6, Math.min(6, -(mouseX - cX) / 120)),
-    };
+    try {
+      if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 };
+      const r = ref.current.getBoundingClientRect();
+      if (!r) return { faceX: 0, faceY: 0, bodySkew: 0 };
+      const cX = r.left + r.width / 2, cY = r.top + r.height / 3;
+      return {
+        faceX: Math.max(-15, Math.min(15, (mouseX - cX) / 20)),
+        faceY: Math.max(-10, Math.min(10, (mouseY - cY) / 30)),
+        bodySkew: Math.max(-6, Math.min(6, -(mouseX - cX) / 120)),
+      };
+    } catch { return { faceX: 0, faceY: 0, bodySkew: 0 }; }
   };
   const purplePos = calc(purpleRef), blackPos = calc(blackRef);
   const yellowPos = calc(yellowRef), orangePos = calc(orangeRef);
@@ -216,21 +238,25 @@ export default function LoginPage() {
     }
   }, [email, password, login, message, navigate, redirectUrl]);
 
-  // 主题色
-  const darkBg = "#0f172a";
-  const leftGradient = isDark
-    ? "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)"
-    : "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)";
-
   return (
-    <div className="min-h-screen grid lg:grid-cols-2" style={{ background: isDark ? darkBg : "#f1f5f9", position: "relative", overflow: "hidden" }}>
+    <div className="auth-page min-h-screen grid lg:grid-cols-2">
+      {/* 景深光斑层 */}
+      <div className="auth-blob auth-blob--blue" />
+      <div className="auth-blob auth-blob--cyan" />
+      <div className="auth-blob auth-blob--violet" />
+      <div className="auth-blob auth-blob--ember" />
+      <div className="auth-grain" />
+      <div className="auth-bridge" />
+
       {/* 主题切换按钮 */}
-      <button onClick={toggleTheme} className="absolute top-6 right-6 z-50 w-10 h-10 rounded-full flex items-center justify-center border-0 cursor-pointer" style={{ background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" }}>
-        {isDark ? <Sun className="size-5 text-yellow-400" /> : <Moon className="size-5 text-slate-600" />}
+      <button onClick={toggleTheme} aria-label="切换主题"
+        className="absolute top-6 right-6 z-50 w-11 h-11 rounded-full flex items-center justify-center cursor-pointer transition-all duration-300"
+        style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)", backdropFilter: "blur(12px)", color: "#e2e8f0" }}>
+        <Sun className="size-5" />
       </button>
 
-      {/* 左侧 — 品牌区 + 动画角色 */}
-      <div className={`hidden lg:flex flex-col justify-between p-12 ${isExiting ? "login-exit-left" : ""}`} style={{ background: leftGradient, color: "#fff" }}>
+      {/* 左侧 — 品牌区 + 动画角色（完整保留） */}
+      <div className={`hidden lg:flex flex-col justify-between p-12 relative z-20 ${isExiting ? "login-exit-left" : ""}`}>
         <div className="relative z-20">
           <Logo size={36} forceLight />
         </div>
@@ -238,6 +264,8 @@ export default function LoginPage() {
         {/* 四色动画角色 */}
         <div className="relative z-20 flex items-end justify-center h-[460px] mt-[-40px]">
           <div className="relative" style={{ width: 550, height: 400 }}>
+            {/* 角色脚下光晕 — 空间感 */}
+            <div className="auth-stage-glow" />
             {/* Purple */}
             <div ref={purpleRef} className="absolute bottom-0 transition-all duration-700 ease-in-out"
               style={{ left: 70, width: 180, height: isTyping || (password.length > 0 && !showPassword) ? 440 : 400, backgroundColor: "#6C3FF5", borderRadius: "10px 10px 0 0", zIndex: 1,
@@ -297,24 +325,24 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="relative z-20 text-sm opacity-60">
+        <div className="relative z-20 text-sm" style={{ color: "rgba(226,232,240,0.5)", letterSpacing: "0.04em" }}>
           LTC 线索 · 项目一体化管理 · 线索攻坚战
         </div>
       </div>
 
-      {/* 右侧 — 登录/注册表单 */}
-      <div className={`flex items-center justify-center p-8 ${isExiting ? "login-exit-right" : ""}`}>
-        <div className="w-full max-w-[400px]">
+      {/* 右侧 — 登录/注册表单（玻璃面板） */}
+      <div className={`flex items-center justify-center p-6 md:p-8 relative z-20 ${isExiting ? "login-exit-right" : ""}`}>
+        <div className="auth-glass auth-form-in w-full max-w-[420px] p-8 md:p-10">
           {/* 移动端 Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2 text-lg font-semibold mb-10">
-            <span>贝壳管理平台</span>
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+            <Logo size={30} forceLight />
           </div>
 
           {isRegister ? (
             <>
-              <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: isDark ? "#f1f5f9" : "#0f172a" }}>创建新账号</h1>
-                <p className="text-sm" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>加入贝壳统一管理平台</p>
+              <div className="mb-6">
+                <h1 className="auth-title text-[26px]" style={{ color: "#f1f5f9" }}>创建新账号</h1>
+                <p className="auth-subtitle text-sm mt-2" style={{ color: "rgba(226,232,240,0.55)" }}>加入贝壳统一管理平台</p>
               </div>
               <RegisterForm
                 onSuccess={() => { setIsRegister(false); message.success("注册成功，请登录"); }}
@@ -322,68 +350,77 @@ export default function LoginPage() {
             </>
           ) : (
             <>
-              <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold tracking-tight mb-2" style={{ color: isDark ? "#f1f5f9" : "#0f172a" }}>欢迎回来</h1>
-                <p className="text-sm" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>请输入账号信息</p>
+              <div className="mb-8">
+                <h1 className="auth-title text-[28px]" style={{ color: "#f1f5f9" }}>欢迎回来</h1>
+                <p className="auth-subtitle text-sm mt-2" style={{ color: "rgba(226,232,240,0.55)" }}>请输入账号信息登录</p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="space-y-4 auth-field">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">用户名 / 邮箱</Label>
+                  <Label htmlFor="email" className="text-sm font-medium" style={{ color: "rgba(226,232,240,0.72)" }}>用户名 / 邮箱</Label>
                   <Input id="email" type="text" placeholder="admin" value={email} autoComplete="username"
                     onChange={e => { setEmail(e.target.value); setError(""); }}
                     onFocus={() => setIsTyping(true)} onBlur={() => setIsTyping(false)}
-                    required className="h-11" />
+                    required className="h-12 rounded-xl border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-400/40 focus-visible:ring-0 focus-visible:border-blue-400/60 focus-visible:bg-white/10" />
                 </div>
 
                 <div className="space-y-2 relative">
-                  <Label htmlFor="password" className="text-sm font-medium">密码</Label>
-                  <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password}
+                  <Label htmlFor="password" className="text-sm font-medium" style={{ color: "rgba(226,232,240,0.72)" }}>密码</Label>
+                  {/* 永远用 type="text" + 字符遮蔽：彻底绕开浏览器对 type="password" 的内置 reveal 按钮渲染 */}
+                  <Input
+                    id="password"
+                    type="text"
+                    autoComplete="current-password"
+                    inputMode="text"
+                    placeholder="请输入密码"
+                    value={showPassword ? password : password.replace(/./g, '•')}
                     onChange={e => { setPassword(e.target.value); setError(""); }}
-                    required className="h-11 pr-10" />
+                    required
+                    className="pr-12 h-12 rounded-xl border-white/10 bg-white/5 text-slate-200 placeholder:text-slate-400/40 focus-visible:ring-0 focus-visible:border-blue-400/60 focus-visible:bg-white/10"
+                  />
                   <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 bottom-0 h-11 flex items-center text-muted-foreground hover:text-foreground transition-colors">
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    className="absolute right-2 bottom-0 h-12 w-10 flex items-center justify-center text-[#E2E8F0] hover:text-white transition-colors rounded-lg"
+                    aria-label={showPassword ? "隐藏密码" : "显示密码"}>
+                    {showPassword ? <EyeOff className="size-[18px] shrink-0" /> : <Eye className="size-[18px] shrink-0" />}
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-1">
                   <div className="flex items-center space-x-2">
                     <Checkbox id="remember" defaultChecked />
-                    <Label htmlFor="remember" className="text-xs font-normal cursor-pointer">保持登录（30天）</Label>
+                    <Label htmlFor="remember" className="text-xs font-normal cursor-pointer" style={{ color: "rgba(226,232,240,0.6)" }}>保持登录（30天）</Label>
                   </div>
-                  <a className="text-xs hover:underline cursor-pointer" style={{ color: "var(--color-primary)" }}
-                    onClick={() => setForgotOpen(true)}>忘记密码？</a>
+                  <a className="auth-link text-xs" onClick={() => setForgotOpen(true)}>忘记密码？</a>
                 </div>
 
                 {error && (
-                  <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-lg dark:bg-red-950/20 dark:border-red-900/30">
+                  <div className="p-3 text-sm rounded-xl"
+                    style={{ color: "#fca5a5", background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>
                     {error}
                   </div>
                 )}
 
                 <div className="flex items-center space-x-2">
                   <Checkbox id="agreed" checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} />
-                  <Label htmlFor="agreed" className="text-xs font-normal cursor-pointer">
-                    <span style={{ color: isDark ? "#94a3b8" : "#64748b" }}>登录即表示同意</span>
-                    <a className="text-xs mx-1 cursor-pointer" onClick={() => setAgreementType("terms")}>《用户协议》</a>
-                    <span style={{ color: isDark ? "#94a3b8" : "#64748b" }}>和</span>
-                    <a className="text-xs mx-1 cursor-pointer" onClick={() => setAgreementType("privacy")}>《隐私政策》</a>
+                  <Label htmlFor="agreed" className="text-xs font-normal cursor-pointer" style={{ color: "rgba(226,232,240,0.6)" }}>
+                    登录即表示同意
+                    <a className="auth-link text-xs mx-1" onClick={() => setAgreementType("terms")}>《用户协议》</a>
+                    和
+                    <a className="auth-link text-xs mx-1" onClick={() => setAgreementType("privacy")}>《隐私政策》</a>
                   </Label>
                 </div>
 
-                <Button type="submit" className="w-full h-11 text-base font-medium" size="lg" disabled={isLoading}>
+                <Button type="submit" className="auth-btn w-full text-base" size="lg" disabled={isLoading || !agreed}>
                   {isLoading ? "登录中..." : "登 录"}
                 </Button>
               </form>
 
               <div className="text-center mt-6">
-                <span className="text-sm" style={{ color: isDark ? "#94a3b8" : "#64748b" }}>还没有账号？</span>
-                <a className="text-sm ml-1 cursor-pointer font-medium hover:underline" style={{ color: "var(--color-primary)" }}
-                  onClick={() => setIsRegister(true)}>立即注册</a>
+                <span className="text-sm" style={{ color: "rgba(226,232,240,0.55)" }}>还没有账号？</span>
+                <a className="auth-link text-sm ml-1 font-medium" onClick={() => setIsRegister(true)}>立即注册</a>
               </div>
 
-              <div className="text-center text-xs mt-4" style={{ color: isDark ? "#64748b" : "#94a3b8" }}>
+              <div className="text-center text-xs mt-4" style={{ color: "rgba(226,232,240,0.38)" }}>
                 演示账号：admin / admin123 · zhangming / zm2026
               </div>
             </>
