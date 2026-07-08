@@ -1,7 +1,7 @@
-FROM docker.m.daocloud.io/library/python:3.12-slim
+FROM python:3.12-slim
 WORKDIR /app
 COPY apps/api-py/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+RUN pip install --no-cache-dir -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 COPY apps/api-py .
 RUN mkdir -p uploads logs
 EXPOSE 8080

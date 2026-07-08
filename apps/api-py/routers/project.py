@@ -9,12 +9,16 @@ from security import get_current_user
 router = APIRouter(tags=["项目"])
 
 def project_to_dict(p):
-    return {c.name: getattr(p, c.name) for c in p.__table__.columns}
+    return {c.key: getattr(p, c.key) for c in p.__table__.columns}
+
+def clamp_page(pageNum: int, pageSize: int):
+    return max(1, pageNum), min(max(1, pageSize), 100)
 
 @router.get("/api/project/page")
 async def page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                status: str = None, projectLevel: str = None, deptBelong: str = None,
                db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(BizProject).where(BizProject.is_deleted == 0)
     if keyword:
         q = q.where(or_(BizProject.project_name.contains(keyword), BizProject.client_name.contains(keyword)))
@@ -36,17 +40,29 @@ async def detail(project_id: int, db: AsyncSession = Depends(get_db), user=Depen
 
 @router.post("/api/project")
 async def create(dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    p = BizProject(**dto.model_dump())
+    data = dto.model_dump(exclude_none=True)
+    # camelCase → snake_case 映射
+    key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
+               "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
+               "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
+               "projectStatus":"project_status","deptBelong":"dept_belong","startDate":"start_date",
+               "expectEndDate":"expect_end_date","riskAssessment":"risk_assessment"}
+    mapped = {key_map.get(k, k): v for k, v in data.items()}
+    p = BizProject(**mapped)
     db.add(p); await db.commit(); await db.refresh(p)
     return success(project_to_dict(p))
 
 @router.put("/api/project/{project_id}")
 async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    await db.execute(select(BizProject).where(BizProject.id == project_id))
     r = (await db.execute(select(BizProject).where(BizProject.id == project_id))).scalar_one_or_none()
     if not r: return fail("项目不存在")
+    key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
+               "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
+               "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
+               "projectStatus":"project_status","deptBelong":"dept_belong","startDate":"start_date",
+               "expectEndDate":"expect_end_date","riskAssessment":"risk_assessment"}
     for k, v in dto.model_dump(exclude_unset=True).items():
-        setattr(r, k, v)
+        setattr(r, key_map.get(k, k), v)
     await db.commit()
     return success()
 

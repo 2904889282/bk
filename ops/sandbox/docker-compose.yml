@@ -13,6 +13,7 @@ services:
       dockerfile: ops/sandbox/Dockerfile.api-py
     container_name: beike-sandbox-api
     restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8080
     environment:
       TZ: Asia/Shanghai
       db_host: rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com

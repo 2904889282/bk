@@ -81,11 +81,17 @@ async def follow_delete(follow_id: int, db: AsyncSession = Depends(get_db)):
 async def attachment_upload(file: UploadFile = File(...), bizType: str = Form(...), bizId: int = Form(...),
                            db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     import os, uuid
+    ALLOWED_TYPES = {"jpg","jpeg","png","gif","pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","zip","rar"}
+    MAX_SIZE = 50 * 1024 * 1024  # 50MB
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_TYPES:
+        return fail(f"不支持的文件类型: {ext}，允许: {', '.join(sorted(ALLOWED_TYPES))}")
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        return fail(f"文件大小超限，最大50MB，当前: {len(content)//1024//1024}MB")
     os.makedirs("uploads", exist_ok=True)
-    ext = file.filename.rsplit('.', 1)[-1] if '.' in file.filename else ''
     fname = f"{uuid.uuid4()}.{ext}"
     path = os.path.join("uploads", fname)
-    content = await file.read()
     with open(path, "wb") as f: f.write(content)
     await db.execute(text("INSERT INTO biz_attachment (biz_type, biz_id, file_name, file_type, file_size, file_url, upload_user_id) VALUES (:bt,:bi,:fn,:ft,:fs,:fu,:ui)"),
                      {"bt": bizType, "bi": bizId, "fn": file.filename, "ft": ext, "fs": len(content), "fu": f"/uploads/{fname}", "ui": user["id"]})
@@ -106,7 +112,7 @@ async def attachment_delete(att_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/campaign/page")
 async def campaign_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
-                        db: AsyncSession = Depends(get_db)):
+                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     q = select(BizCampaign).where(BizCampaign.is_deleted == 0)
     if keyword: q = q.where(BizCampaign.name.contains(keyword))
     q = q.order_by(BizCampaign.create_time.desc())

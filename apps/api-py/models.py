@@ -82,6 +82,7 @@ class BizProject(Base):
     fr_user_id = Column("fr_user_id", BigInteger)
     supplier = Column(String(256))
     risk_assessment = Column("risk_assessment", Text)
+    risk_count = Column("risk_count", Integer, default=0)
     remark = Column(Text)
     stage = Column(String(32))
     description = Column(Text)

@@ -9,7 +9,10 @@ from security import get_current_user
 router = APIRouter(tags=["业务模块"])
 
 def row_to_dict(r):
-    return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+    return {c.key: getattr(r, c.key) for c in r.__table__.columns}
+
+def clamp_page(pageNum: int, pageSize: int):
+    return max(1, pageNum), min(max(1, pageSize), 100)
 
 # ==================== 人才 ====================
 
@@ -17,6 +20,7 @@ def row_to_dict(r):
 async def talent_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                       status: str = None, talentType: str = None,
                       db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(BizTalent).where(BizTalent.is_deleted == 0)
     if keyword: q = q.where(or_(BizTalent.name.contains(keyword), BizTalent.role.contains(keyword), BizTalent.skills.contains(keyword)))
     if status: q = q.where(BizTalent.status == status)
@@ -56,6 +60,7 @@ async def talent_delete(talent_id: int, db: AsyncSession = Depends(get_db)):
 async def risk_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                     projectId: int = None, level: str = None, status: str = None,
                     db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(BizRisk).where(BizRisk.is_deleted == 0)
     if keyword: q = q.where(or_(BizRisk.type.contains(keyword), BizRisk.description.contains(keyword)))
     if projectId: q = q.where(BizRisk.project_id == projectId)
@@ -95,6 +100,7 @@ async def risk_delete(risk_id: int, db: AsyncSession = Depends(get_db)):
 async def alert_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                      projectId: int = None, level: str = None, status: str = None,
                      db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(BizAlert).where(BizAlert.is_deleted == 0)
     if keyword: q = q.where(or_(BizAlert.type.contains(keyword), BizAlert.description.contains(keyword)))
     if projectId: q = q.where(BizAlert.project_id == projectId)
@@ -134,6 +140,7 @@ async def alert_delete(alert_id: int, db: AsyncSession = Depends(get_db)):
 async def clue_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                     status: str = None, clueLevel: str = None, deptBelong: str = None,
                     db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(BizClue).where(BizClue.is_deleted == 0)
     if keyword: q = q.where(or_(BizClue.clue_name.contains(keyword), BizClue.client_company.contains(keyword)))
     if status: q = q.where(BizClue.clue_status == status)

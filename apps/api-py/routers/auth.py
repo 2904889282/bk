@@ -6,12 +6,25 @@ from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermissi
 from schemas import *
 from security import verify_password, hash_password, create_token, get_current_user
 from config import settings
-import random
+import random, time, collections
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
+_login_attempts = collections.defaultdict(list)
+
+def check_rate_limit(ip: str) -> bool:
+    now = time.time()
+    _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < 60]
+    if len(_login_attempts[ip]) >= 5:
+        return False
+    _login_attempts[ip].append(now)
+    return True
+
 @router.post("/login")
-async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)):
+async def login(dto: LoginDTO, request: Request, db: AsyncSession = Depends(get_db)):
+    ip = request.client.host if request.client else "unknown"
+    if not check_rate_limit(ip):
+        return fail("登录尝试过于频繁，请60秒后重试")
     result = await db.execute(select(SysUser).where(SysUser.username == dto.username))
     user = result.scalar_one_or_none()
     if not user or not verify_password(dto.password, user.password):
@@ -19,12 +32,13 @@ async def login(dto: LoginDTO, db: AsyncSession = Depends(get_db)):
     if user.status != 1:
         return fail("账号已被禁用")
     token = create_token(user.id, user.username, settings.jwt_access_expire_hours)
-    refresh = create_token(user.id, user.username, settings.jwt_refresh_days * 24)
-    # 角色
-    rr = await db.execute(select(SysRole.code).select_from(SysUserRole).join(SysRole, SysUserRole.role_id == SysRole.id).where(SysUserRole.user_id == user.id))
+    refresh = create_token(user.id, user.username, settings.jwt_refresh_expire_days * 24)
+    # 角色（raw SQL 避免 join 歧义）
+    from sqlalchemy import text
+    rr = await db.execute(text("SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid AND r.is_deleted=0"), {"uid": user.id})
     roles = [r[0] for r in rr.all() if r[0]]
     # 权限
-    pr = await db.execute(select(SysPermission.code).select_from(SysRolePermission).join(SysPermission, SysRolePermission.permission_id == SysPermission.id).join(SysUserRole).where(SysUserRole.user_id == user.id))
+    pr = await db.execute(text("SELECT DISTINCT p.code FROM sys_permission p JOIN sys_role_permission rp ON rp.permission_id=p.id JOIN sys_user_role ur ON ur.role_id=rp.role_id WHERE ur.user_id=:uid AND p.is_deleted=0"), {"uid": user.id})
     perms = [p[0] for p in pr.all() if p[0]]
     return success({
         "token": token, "refreshToken": refresh,
