@@ -1,6 +1,0 @@
-# 加到 docker-compose.yml 同目录扩展 SkyWalking Java Agent
-services:
-  beike-web:
-    environment:
-      - SW_AGENT_NAME=beike-web
-      - SW_AGENT_COLLECTOR_BACKEND_SERVICES=skywalking-oap:11800
