@@ -53,9 +53,11 @@ public class SecurityUtils {
 
     /**
      * 从当前用户获取责任人标识：优先 realName，兜底 username。
-     * 用于线索/项目等关联字段的比对和填充。
+     * 仅对普通用户（ROLE_USER）有效，管理员/经理返回 null 表示不限制。
      */
     public static String getCurrentOwnerKey() {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null || loginUser.isAdminOrManager()) return null;
         SysUser user = getCurrentUser();
         if (user == null) return null;
         return user.getRealName() != null ? user.getRealName() : user.getUsername();
