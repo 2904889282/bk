@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- v1.2 升级脚本：数据权限体系
 -- 适用数据库：beike_platform
 -- ============================================================
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS sys_dept (
 ALTER TABLE sys_user ADD COLUMN dept_id BIGINT DEFAULT NULL COMMENT '所属部门ID';
 ALTER TABLE sys_user ADD COLUMN role_type VARCHAR(16) DEFAULT 'USER' COMMENT '角色类型(ADMIN超管/MANAGER组长/USER普通员工)';
 
--- 3. biz_pipeline 商机管线表
+-- 3. biz_pipeline 商机线索表
 CREATE TABLE IF NOT EXISTS biz_pipeline (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(128) NOT NULL COMMENT '商机名称',
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS biz_pipeline (
     INDEX idx_dept (dept_id),
     INDEX idx_stage (stage),
     INDEX idx_sea (is_sea)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商机管线表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商机线索表';
 
 -- 4. biz_pipeline_member 项目团队协作表
 CREATE TABLE IF NOT EXISTS biz_pipeline_member (
@@ -57,10 +57,10 @@ UPDATE sys_user SET dept_id = 1, role_type = 'MANAGER' WHERE id = 2;
 -- 7. 新增权限
 INSERT IGNORE INTO sys_permission (code, name, is_deleted) VALUES
 ('recycle:list', '回收站访问', 0),
-('pipeline:list', '管线列表', 0),
-('pipeline:create', '新建管线', 0),
-('pipeline:edit', '编辑管线', 0),
-('pipeline:delete', '删除管线', 0),
+('pipeline:list', '线索列表', 0),
+('pipeline:create', '新建线索', 0),
+('pipeline:edit', '编辑线索', 0),
+('pipeline:delete', '删除线索', 0),
 ('pipeline:sea:view', '查看公海', 0),
 ('pipeline:sea:assign', '公海分配', 0);
 

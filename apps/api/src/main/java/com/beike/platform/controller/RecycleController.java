@@ -5,9 +5,11 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beike.platform.common.Result;
 import com.beike.platform.common.BizException;
 import com.beike.platform.entity.Clue;
-import com.beike.platform.entity.Project;
 import com.beike.platform.mapper.ClueMapper;
 import com.beike.platform.mapper.ProjectMapper;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,25 +23,49 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecycleController {
 
+    private static final String TYPE_PROJECT = "project";
+    private static final String STATUS_CONVERTED = "已转项目";
+
     private final ClueMapper clueMapper;
     private final ProjectMapper projectMapper;
 
-    @Data public static class RecyclePageDTO { private Integer pageNum=1; private Integer pageSize=10; private String type; }
+    @Data
+    public static class RecyclePageDTO {
+        private Integer pageNum = 1;
+        private Integer pageSize = 10;
+        private String type;
+    }
 
+    @Data
+    public static class RestoreDTO {
+        @NotNull private String type;
+        @NotEmpty private List<Long> ids;
+    }
+
+    // ================================================================
+    // 分页列表
+    // ================================================================
     @GetMapping("/page")
     @PreAuthorize("hasAuthority('recycle:list')")
     public Result<IPage<?>> page(RecyclePageDTO dto) {
-        if ("project".equals(dto.getType())) {
-            return Result.success(projectMapper.selectDeletedPage(new Page<>(dto.getPageNum(), dto.getPageSize())));
+        Page<?> page = new Page<>(dto.getPageNum(), dto.getPageSize());
+        if (TYPE_PROJECT.equals(dto.getType())) {
+            return Result.success(projectMapper.selectDeletedPage((Page) page));
         }
-        return Result.success(clueMapper.selectDeletedPage(new Page<>(dto.getPageNum(), dto.getPageSize())));
+        return Result.success(clueMapper.selectDeletedPage((Page) page));
     }
 
+    // ================================================================
+    // 恢复
+    // ================================================================
     @PutMapping("/restore")
     @PreAuthorize("hasAuthority('recycle:list')")
     @Transactional(rollbackFor = Exception.class)
-    public Result<Void> restore(@RequestBody RestoreDTO dto) {
-        if ("project".equals(dto.getType())) {
+    public Result<Void> restore(@Valid @RequestBody RestoreDTO dto) {
+        if (dto.getIds() == null || dto.getIds().isEmpty()) {
+            throw new BizException("请选择要恢复的数据");
+        }
+        if (TYPE_PROJECT.equals(dto.getType())) {
             for (Long id : dto.getIds()) { projectMapper.restoreById(id); }
         } else {
             for (Long id : dto.getIds()) { clueMapper.restoreById(id); }
@@ -47,21 +73,31 @@ public class RecycleController {
         return Result.success();
     }
 
+    // ================================================================
+    // 永久删除
+    // ================================================================
     @DeleteMapping("/perm")
     @PreAuthorize("hasAuthority('recycle:list')")
     @Transactional(rollbackFor = Exception.class)
-    public Result<Void> permDelete(@RequestBody RestoreDTO dto) {
-        if ("project".equals(dto.getType())) {
+    public Result<Void> permDelete(@Valid @RequestBody RestoreDTO dto) {
+        if (dto.getIds() == null || dto.getIds().isEmpty()) {
+            throw new BizException("请选择要删除的数据");
+        }
+        if (TYPE_PROJECT.equals(dto.getType())) {
             for (Long id : dto.getIds()) { projectMapper.permDeleteById(id); }
         } else {
+            // 批量查出所有已删除线索，避免循环中逐条查询
+            List<Clue> clues = clueMapper.selectBatchIdsIgnoreDeleted(dto.getIds());
             for (Long id : dto.getIds()) {
-                Clue clue = clueMapper.selectByIdIgnoreDeleted(id);
-                if (clue != null && "已转项目".equals(clue.getClueStatus())) throw new BizException("已转项目的线索不可永久删除，请先删除关联项目");
+                Clue clue = clues.stream()
+                        .filter(c -> c.getId().equals(id))
+                        .findFirst().orElse(null);
+                if (clue != null && STATUS_CONVERTED.equals(clue.getClueStatus())) {
+                    throw new BizException("已转项目的线索不可永久删除，请先删除关联项目");
+                }
                 clueMapper.permDeleteById(id);
             }
         }
         return Result.success();
     }
-
-    @Data public static class RestoreDTO { private String type; private List<Long> ids; }
 }

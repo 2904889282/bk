@@ -1,4 +1,4 @@
-import { Table, Tag, Progress, Space, Card, Button, Modal, Form, Input, InputNumber, Select, message } from 'antd';
+import { Table, Tag, Progress, Space, Card, Button, Modal, Form, Input, InputNumber, Select, Segmented, message } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import Permission from '../../../components/auth/Permission';
 import SkeletonTable from '../../../components/ui/SkeletonTable';
@@ -17,19 +17,26 @@ const STATUS_MAP: Record<string, { color: string; label: string }> = {
   overload: { color: 'red', label: '超负荷' }, idle: { color: 'blue', label: '空闲' },
 };
 
+const TALENT_TYPE_OPTIONS = [
+  { value: '', label: '全部' },
+  { value: 'internal', label: '内部人员' },
+  { value: 'external', label: '外部人员' },
+];
+
 export default function PmTalent() {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [talentType, setTalentType] = useState('');
   const keywordTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     list, total, pageNum, pageSize, loading,
-    selectedRowKeys, selectedRows,
+    selectedRowKeys,
     refresh, setPage, setSelected, getRowKey,
-  } = useTable<TalentVO, { keyword?: string; status?: string }>({
+  } = useTable<TalentVO, { keyword?: string; status?: string; talentType?: string }>({
     fetchApi: fetchTalentPage,
     defaultPageSize: 15,
-    filters: { keyword: keyword || undefined, status: statusFilter || undefined },
+    filters: { keyword: keyword || undefined, status: statusFilter || undefined, talentType: talentType || undefined },
   });
 
   // 防抖搜索
@@ -41,7 +48,7 @@ export default function PmTalent() {
 
   const { open, editingId, submitting, formRef, openCreate, openEdit, close, submit } =
     useFormDialog<TalentSaveDTO & { id?: number }>({
-      defaultValues: { utilization: 50, status: 'normal' },
+      defaultValues: { utilization: 50, status: 'normal', talentType: talentType || 'internal' },
       onSubmit: async (values, id) => {
         if (id) await updateTalent(id, values);
         else await createTalent(values);
@@ -56,6 +63,12 @@ export default function PmTalent() {
   };
 
   const columns = [
+    {
+      title: '类型', dataIndex: 'talentType', width: 90,
+      render: (v: string) => v === 'external'
+        ? <Tag color="orange">外部</Tag>
+        : <Tag color="blue">内部</Tag>,
+    },
     { title: '姓名', dataIndex: 'name', width: 80, render: (v: string) => <strong>{v}</strong> },
     { title: '角色', dataIndex: 'role', width: 100 },
     {
@@ -101,6 +114,11 @@ export default function PmTalent() {
   return (
     <Card>
       <Space style={{ marginBottom: 12 }} wrap>
+        <Segmented
+          options={TALENT_TYPE_OPTIONS.map(o => ({ value: o.value, label: o.label }))}
+          value={talentType}
+          onChange={v => setTalentType(v as string)}
+        />
         <Input.Search placeholder="搜索姓名/角色/技能" onChange={e => onSearchChange(e.target.value)}
           style={{ width: 220 }} allowClear />
         <Select placeholder="全部状态" value={statusFilter} onChange={v => setStatusFilter(v)} allowClear style={{ width: 110 }}
@@ -120,12 +138,12 @@ export default function PmTalent() {
       />
 
       {loading && list.length === 0 ? (
-        <SkeletonTable columns={6} />
+        <SkeletonTable columns={7} />
       ) : (
         <Table columns={columns} dataSource={list} rowKey={getRowKey} size="middle" loading={loading && list.length > 0}
           rowSelection={{ selectedRowKeys, onChange: (keys, rows) => setSelected(keys, rows as TalentVO[]) }}
           pagination={{ current: pageNum, pageSize, total, showSizeChanger: true, showTotal: t => `共 ${t} 人`, onChange: setPage }}
-          scroll={{ x: 920 }}
+          scroll={{ x: 1020 }}
           locale={{ emptyText: <EmptyState description="暂无人才数据" showCreate onCreate={openCreate} createText="新增人才" /> }}
         />
       )}
@@ -138,6 +156,12 @@ export default function PmTalent() {
               <Input />
             </Form.Item>
             <Form.Item name="role" label="角色"><Input placeholder="如: 项目经理" /></Form.Item>
+            <Form.Item name="talentType" label="人员类型" rules={[{ required: true, message: '请选择人员类型' }]}>
+              <Select options={[
+                { value: 'internal', label: '内部人员' },
+                { value: 'external', label: '外部人员' },
+              ]} />
+            </Form.Item>
             <Form.Item name="skills" label="技能标签"><Input placeholder="逗号分隔" /></Form.Item>
             <Form.Item name="currentProject" label="当前项目"><Input /></Form.Item>
             <Form.Item name="utilization" label="利用率(%)" initialValue={50}>

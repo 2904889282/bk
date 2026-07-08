@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface Notification { type: string; title: string; content: string; timestamp: string; }
 
@@ -76,7 +76,6 @@ function scheduleReconnect(token: string) {
 
 export function useWebSocket(): WebSocketState {
   const [, forceUpdate] = useState(0);
-  const connectedRef = useRef(connected);
 
   useEffect(() => {
     const fn = () => forceUpdate(n => n + 1);

@@ -1,0 +1,55 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:beike_platform}?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USER:beike_app}
+    password: ${DB_PASSWORD:ChangeMeSandbox!2026}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: ${DB_POOL_MIN:2}
+      connection-timeout: 30000
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+  web:
+    resources:
+      static-locations: classpath:/static/,file:${BEIKE_UPLOAD_DIR:/app/uploads}
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.beike.platform.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,application/javascript
+
+beike:
+  upload:
+    dir: ${BEIKE_UPLOAD_DIR:/app/uploads}
+  jwt:
+    secret: ${JWT_SECRET:beike-sandbox-change-me-please-use-64-random-chars-2026}
+    access-expire-hours: ${JWT_ACCESS_EXPIRE_HOURS:2}
+    refresh-expire-days: ${JWT_REFRESH_EXPIRE_DAYS:30}
+
+logging:
+  level:
+    com.beike: info
+    org.springframework: warn
+  file:
+    path: ${BEIKE_LOG_DIR:/app/logs}
+    name: ${BEIKE_LOG_DIR:/app/logs}/app.log

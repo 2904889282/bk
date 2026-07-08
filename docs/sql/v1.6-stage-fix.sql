@@ -1,4 +1,4 @@
--- v1.6 管线阶段枚举修复
+﻿-- v1.6 线索阶段枚举修复
 -- 统一 biz_pipeline.stage：旧阶段值 -> 新标准阶段值。
 
 UPDATE biz_pipeline

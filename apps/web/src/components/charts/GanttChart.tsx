@@ -3,9 +3,6 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import dayjs from 'dayjs';
 import { Empty, Spin } from 'antd';
-import {
-  ClockCircleOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
-} from '@ant-design/icons';
 
 export interface GanttTask {
   id: number;

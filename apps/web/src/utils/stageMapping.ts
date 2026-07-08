@@ -52,10 +52,6 @@ export const PIPELINE_STAGE_ORDER: PipelineStage[] = [
   'closed_lost',
 ];
 
-export const PIPELINE_ACTIVE_STAGE_ORDER: PipelineStage[] = PIPELINE_STAGE_ORDER.filter(
-  stage => stage !== 'closed_lost',
-);
-
 export const PIPELINE_STAGE_OPTIONS = PIPELINE_STAGE_ORDER.map(stage => ({
   value: stage,
   label: PIPELINE_STAGE_LABELS[stage],

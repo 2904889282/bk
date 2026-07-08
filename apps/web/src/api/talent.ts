@@ -17,6 +17,7 @@ export interface TalentVO {
   currentProject?: string;
   utilization: number;
   status: string;           // normal/high/overload/idle
+  talentType?: string;      // internal=内部人员 / external=外部人员
   createTime?: string;
   updateTime?: string;
 }
@@ -27,6 +28,7 @@ export interface TalentPageParams {
   pageSize: number;
   keyword?: string;
   status?: string;
+  talentType?: string;      // 类型筛选: internal/external
 }
 
 /** 分页返回 */
@@ -43,6 +45,7 @@ export interface TalentSaveDTO {
   currentProject?: string;
   utilization?: number;
   status?: string;
+  talentType?: string;      // 类型: internal/external
 }
 
 // ==================== 接口函数 ====================

@@ -15,4 +15,5 @@ public class TalentSaveDTO {
     private String currentProject;      // 当前项目
     private Integer utilization;        // 利用率(%)
     private String status;              // 状态
+    private String talentType;          // 类型: internal/external
 }

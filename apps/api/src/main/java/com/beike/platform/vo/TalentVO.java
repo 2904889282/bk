@@ -13,6 +13,7 @@ public class TalentVO {
     private String currentProject;
     private Integer utilization;
     private String status;
+    private String talentType;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 }

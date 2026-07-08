@@ -1,15 +1,16 @@
-import request from '../utils/request';
+﻿import request from '../utils/request';
 import type { Pipeline as LegacyPipeline } from '../types';
 import { normalizePipelineStage } from '../utils/stageMapping';
+import { mockPipelineStore, isMockMode } from '../utils/mockStore';
 
 // ============================================================
-// 管线模块 API 层
+// 线索模块 API 层
 // 基础路径：/api/pipeline（对齐后端 PipelineController）
 // ============================================================
 
 // ==================== 兼容旧类型（LTC 看板/分析页使用） ====================
 
-/** @deprecated 旧版管线类型，仅保留兼容看板/分析页。新页面请使用 PipelineVO */
+/** @deprecated 旧版线索类型，仅保留兼容看板/分析页。新页面请使用 PipelineVO */
 export type Pipeline = LegacyPipeline;
 
 /** @deprecated 旧版全量查询，仅保留兼容看板/分析页。新页面请使用 fetchPipelinePage */
@@ -101,52 +102,88 @@ export interface PipelineSaveDTO {
 // ==================== 接口函数 ====================
 
 export async function fetchPipelinePage(params: PipelinePageParams): Promise<PipelinePageResult> {
-  const nextParams = {
-    ...params,
-    stage: params.stage ? normalizePipelineStage(params.stage) : undefined,
-  };
-  const res = await request.get('/api/pipeline/page', { params: nextParams });
-  return {
-    ...res.data,
-    records: (res.data.records || []).map((record: PipelineVO) => ({
-      ...record,
-      stage: normalizePipelineStage(record.stage),
-    })),
-  };
+  try {
+    const nextParams = {
+      ...params,
+      stage: params.stage ? normalizePipelineStage(params.stage) : undefined,
+    };
+    const res = await request.get('/api/pipeline/page', { params: nextParams });
+    return {
+      ...res.data,
+      records: (res.data.records || []).map((record: PipelineVO) => ({
+        ...record,
+        stage: normalizePipelineStage(record.stage),
+      })),
+    };
+  } catch {
+    if (isMockMode()) {
+      const result = mockPipelineStore.page({ pageNum: params.pageNum, pageSize: params.pageSize, keyword: params.keyword, stage: params.stage, customer: params.customer });
+      return { records: result.records as unknown as PipelineVO[], total: result.total };
+    }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function fetchPipelineDetail(id: number): Promise<PipelineVO> {
-  const res = await request.get(`/api/pipeline/${id}`);
-  return {
-    ...res.data,
-    stage: normalizePipelineStage(res.data.stage),
-  };
+  try {
+    const res = await request.get(`/api/pipeline/${id}`);
+    return {
+      ...res.data,
+      stage: normalizePipelineStage(res.data.stage),
+    };
+  } catch {
+    if (isMockMode()) {
+      const found = mockPipelineStore.get(id);
+      if (found) return { ...found, stage: normalizePipelineStage(found.stage) } as unknown as PipelineVO;
+    }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function createPipeline(data: PipelineSaveDTO): Promise<void> {
-  const payload = {
-    ...data,
-    customer: data.customer ?? data.client,
-    stage: normalizePipelineStage(data.stage),
-  };
-  await request.post('/api/pipeline', payload);
+  try {
+    const payload = {
+      ...data,
+      customer: data.customer ?? data.client,
+      stage: normalizePipelineStage(data.stage),
+    };
+    await request.post('/api/pipeline', payload);
+  } catch {
+    if (isMockMode()) { mockPipelineStore.create(data as any); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function updatePipeline(id: number | string, data: PipelineSaveDTO): Promise<void> {
-  const payload = {
-    ...data,
-    customer: data.customer ?? data.client,
-    stage: data.stage ? normalizePipelineStage(data.stage) : undefined,
-  };
-  await request.put(`/api/pipeline/${id}`, payload);
+  try {
+    const payload = {
+      ...data,
+      customer: data.customer ?? data.client,
+      stage: data.stage ? normalizePipelineStage(data.stage) : undefined,
+    };
+    await request.put(`/api/pipeline/${id}`, payload);
+  } catch {
+    if (isMockMode()) { mockPipelineStore.update(Number(id), data as any); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function deletePipeline(id: number | string): Promise<void> {
-  await request.delete(`/api/pipeline/${id}`);
+  try {
+    await request.delete(`/api/pipeline/${id}`);
+  } catch {
+    if (isMockMode()) { mockPipelineStore.delete(Number(id)); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function deletePipelineBatch(ids: number[]): Promise<void> {
-  await request.delete('/api/pipeline/batch', { data: ids });
+  try {
+    await request.delete('/api/pipeline/batch', { data: ids });
+  } catch {
+    if (isMockMode()) { mockPipelineStore.batchDelete(ids); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function claimPipeline(id: number): Promise<void> {

@@ -9,4 +9,5 @@ public class TalentPageDTO {
     private Integer pageSize = 10;
     private String keyword;     // 模糊匹配 姓名/角色/技能
     private String status;      // 状态筛选
+    private String talentType;  // 类型筛选: internal/external
 }

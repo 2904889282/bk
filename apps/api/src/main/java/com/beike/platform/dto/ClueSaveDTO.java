@@ -17,8 +17,7 @@ public class ClueSaveDTO {
     private String clientDept;
     private String clientContact;
 
-    @NotBlank(message = "承接人不能为空")
-    private String beikeOwner;
+    private String beikeOwner; // 后端自动填充：普通用户取当前用户名
 
     private String budget;
     private BigDecimal budgetAmount;    // v1.5: 预算范围(万)

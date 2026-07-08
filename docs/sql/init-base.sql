@@ -11,8 +11,6 @@ CREATE TABLE IF NOT EXISTS sys_user (
     real_name VARCHAR(64),
     email VARCHAR(128),
     phone VARCHAR(16),
-    wechat_open_id VARCHAR(128),
-    wechat_union_id VARCHAR(128),
     status INT DEFAULT 1,
     dept_id BIGINT DEFAULT NULL,
     role_type VARCHAR(16) DEFAULT 'USER',

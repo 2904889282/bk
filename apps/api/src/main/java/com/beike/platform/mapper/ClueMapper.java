@@ -7,6 +7,8 @@ import com.beike.platform.entity.Clue;
 import com.beike.platform.dto.CluePageDTO;
 import org.apache.ibatis.annotations.*;
 
+import java.util.List;
+
 @Mapper
 public interface ClueMapper extends BaseMapper<Clue> {
 
@@ -24,6 +26,9 @@ public interface ClueMapper extends BaseMapper<Clue> {
 
     @Select("SELECT * FROM biz_clue WHERE id = #{id}")
     Clue selectByIdIgnoreDeleted(Long id);
+
+    @Select("<script>SELECT * FROM biz_clue WHERE id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    List<Clue> selectBatchIdsIgnoreDeleted(@Param("ids") List<Long> ids);
 
     //==== 统计 ====
     @Select("SELECT COUNT(*) FROM biz_clue WHERE is_deleted = 0")

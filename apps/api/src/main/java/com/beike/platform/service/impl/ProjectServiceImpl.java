@@ -3,10 +3,13 @@ package com.beike.platform.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beike.platform.common.BizException;
+import com.beike.platform.common.SecurityUtils;
 import com.beike.platform.dto.ProjectPageDTO;
 import com.beike.platform.dto.ProjectSaveDTO;
 import com.beike.platform.entity.Project;
+import com.beike.platform.entity.SysUser;
 import com.beike.platform.mapper.ProjectMapper;
+import com.beike.platform.mapper.SysUserMapper;
 import com.beike.platform.service.ProjectService;
 import com.beike.platform.vo.ProjectVO;
 import lombok.RequiredArgsConstructor;
@@ -21,9 +24,18 @@ import java.util.List;
 public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectMapper projectMapper;
+    private final SysUserMapper userMapper;
 
     @Override
     public IPage<ProjectVO> page(ProjectPageDTO dto) {
+        // 普通用户只看自己的项目
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
+            SysUser user = userMapper.selectById(loginUser.getUserId());
+            if (user != null && user.getRealName() != null) {
+                dto.setManager(user.getRealName());
+            }
+        }
         Page<Project> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         return projectMapper.selectPageWithFilter(page, dto).convert(this::toVO);
     }
@@ -38,6 +50,14 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void create(ProjectSaveDTO dto) {
+        // 普通用户自动填充项目经理为自己
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
+            SysUser user = userMapper.selectById(loginUser.getUserId());
+            if (user != null && user.getRealName() != null) {
+                dto.setProjectManager(user.getRealName());
+            }
+        }
         Project project = new Project();
         BeanUtils.copyProperties(dto, project);
         project.setRiskCount(0);

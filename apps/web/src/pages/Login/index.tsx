@@ -7,7 +7,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../store/useTheme";
 import { App } from "antd";
-import { Eye, EyeOff, Sparkles, Sun, Moon } from "lucide-react";
+import { Eye, EyeOff, Sun, Moon } from "lucide-react";
+import Logo from "../../components/ui/Logo";
 import RegisterForm from "./RegisterForm";
 import ForgotPassword from "./ForgotPassword";
 import AgreementModal from "./AgreementModal";
@@ -216,7 +217,7 @@ export default function LoginPage() {
   }, [email, password, login, message, navigate, redirectUrl]);
 
   // 主题色
-  const darkBg = "#0f172a", cardBgDark = "#1e293b";
+  const darkBg = "#0f172a";
   const leftGradient = isDark
     ? "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)"
     : "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)";
@@ -230,11 +231,8 @@ export default function LoginPage() {
 
       {/* 左侧 — 品牌区 + 动画角色 */}
       <div className={`hidden lg:flex flex-col justify-between p-12 ${isExiting ? "login-exit-left" : ""}`} style={{ background: leftGradient, color: "#fff" }}>
-        <div className="relative z-20 flex items-center gap-2 text-lg font-semibold">
-          <div className="size-8 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.1)" }}>
-            <Sparkles className="size-4" />
-          </div>
-          <span>贝壳管理平台</span>
+        <div className="relative z-20">
+          <Logo size={36} forceLight />
         </div>
 
         {/* 四色动画角色 */}
@@ -300,7 +298,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-20 text-sm opacity-60">
-          LTC 管线 · 项目一体化管理 · 线索攻坚战
+          LTC 线索 · 项目一体化管理 · 线索攻坚战
         </div>
       </div>
 
@@ -338,17 +336,15 @@ export default function LoginPage() {
                     required className="h-11" />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                   <Label htmlFor="password" className="text-sm font-medium">密码</Label>
-                  <div className="relative">
-                    <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password}
-                      onChange={e => { setPassword(e.target.value); setError(""); }}
-                      required className="h-11 pr-10" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                      {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
+                  <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" value={password}
+                    onChange={e => { setPassword(e.target.value); setError(""); }}
+                    required className="h-11 pr-10" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 bottom-0 h-11 flex items-center text-muted-foreground hover:text-foreground transition-colors">
+                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
                 </div>
 
                 <div className="flex items-center justify-between">

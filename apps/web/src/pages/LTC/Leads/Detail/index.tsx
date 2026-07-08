@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   App,
@@ -28,11 +28,8 @@ import {
   Typography,
 } from 'antd';
 import {
-  AlertOutlined,
   ArrowLeftOutlined,
   AuditOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   DeleteOutlined,
   FileTextOutlined,
   FlagOutlined,
@@ -45,6 +42,7 @@ import {
 import dayjs from 'dayjs';
 import {
   createClueFollow,
+  decideClueReview,
   deleteClue,
   fetchClueFullDetail,
   submitOpportunityReview,
@@ -55,6 +53,7 @@ import {
   type ClueSolutionVO,
   type FollowSaveDTO,
   type FollowVO,
+  type OpportunityReviewDecisionDTO,
   type OpportunityReviewDTO,
   type OpportunityReviewVO,
 } from '../../../../api/clue';
@@ -127,6 +126,7 @@ export default function LeadsDetail() {
 
   const [detail, setDetail] = useState<ClueFullDetailVO | null>(null);
   const [loading, setLoading] = useState(true);
+  const [errorCode, setErrorCode] = useState<number | 'mock' | null>(null);
   const [followOpen, setFollowOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -149,11 +149,28 @@ export default function LeadsDetail() {
   const loadDetail = async () => {
     if (!Number.isFinite(clueId)) return;
     setLoading(true);
+    setErrorCode(null);
     try {
       const data = await fetchClueFullDetail(clueId);
       setDetail(data);
-    } catch {
-      message.error('线索详情加载失败');
+    } catch (err: unknown) {
+      // mock 令牌拦截错误：拦截器已弹 toast，此处不再重复
+      if ((err as { __mockToken?: boolean }).__mockToken) {
+        setErrorCode('mock');
+      } else {
+        // axios 错误对象结构：err.response.status = HTTP状态码，err.response.data.code = 业务错误码
+        const axiosErr = err as { response?: { status?: number; data?: { code?: number } } };
+        const httpStatus = axiosErr?.response?.status;
+        const bizCode = axiosErr?.response?.data?.code;
+        if (httpStatus === 403 || bizCode === 403) {
+          setErrorCode(403);
+        } else if (httpStatus === 404 || bizCode === 404) {
+          setErrorCode(404);
+        } else {
+          setErrorCode(500);
+          message.error('线索详情加载失败');
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -237,11 +254,91 @@ export default function LeadsDetail() {
     }
   };
 
+  const handleReviewDecision = (review: OpportunityReviewVO, conclusion: OpportunityReviewDecisionDTO['conclusion']) => {
+    if (!detail) return;
+
+    const submitDecision = async (opinion?: string) => {
+      setSubmitting(true);
+      try {
+        const result = await decideClueReview(clueId, review.id, { conclusion, opinion });
+        if (conclusion === '通过') {
+          message.success(`评审已通过，商机编号：${result.opportunityCode || '-'}`);
+        } else {
+          message.success(`评审已${conclusion}`);
+        }
+        loadDetail();
+      } finally {
+        setSubmitting(false);
+      }
+    };
+
+    if (conclusion === '通过') {
+      Modal.confirm({
+        title: '确认通过评审',
+        content: `通过后将自动创建「${detail.clueName}」的商机记录，并进入线索看板。`,
+        okText: '通过并创建商机',
+        cancelText: '取消',
+        onOk: () => submitDecision(),
+      });
+      return;
+    }
+
+    let opinion = '';
+    Modal.confirm({
+      title: conclusion === '驳回' ? '驳回评审' : '要求补充材料',
+      content: (
+        <Input.TextArea
+          rows={4}
+          placeholder={conclusion === '驳回' ? '请填写驳回原因' : '请填写需要补充的材料或说明'}
+          onChange={event => { opinion = event.target.value; }}
+        />
+      ),
+      okText: '确认提交',
+      cancelText: '取消',
+      okButtonProps: { danger: conclusion === '驳回' },
+      onOk: () => submitDecision(opinion),
+    });
+  };
+
   if (loading) {
     return <Card><Spin style={{ display: 'block', margin: '80px auto' }} /></Card>;
   }
   if (!detail) {
-    return <Card><Empty description="线索不存在或暂无权限" /></Card>;
+    if (errorCode === 403) {
+      return (
+        <div style={{ padding: 24, background: '#f5f7fb', minHeight: '100%' }}>
+          <Card>
+            <Empty
+              description={
+                <Space direction="vertical" size={8}>
+                  <Text type="danger" strong>暂无该线索的访问权限</Text>
+                  <Text type="secondary">你只能查看自己负责的线索，如需查看请联系管理员分配权限。</Text>
+                  <Button type="primary" onClick={() => navigate('/ltc/leads')}>返回线索列表</Button>
+                </Space>
+              }
+            />
+          </Card>
+        </div>
+      );
+    }
+    if (errorCode === 'mock') {
+      return (
+        <div style={{ padding: 24, background: '#f5f7fb', minHeight: '100%' }}>
+          <Card>
+            <Empty
+              description={
+                <Space direction="vertical" size={8}>
+                  <Text type="warning" strong>演示模式无法加载线索详情</Text>
+                  <Text type="secondary">当前为前端演示模式，后端服务不可用。请启动后端服务（cd apps/api && mvn spring-boot:run）后使用真实账号重新登录。</Text>
+                  <Button type="primary" onClick={() => navigate('/ltc/leads')}>返回线索列表</Button>
+                </Space>
+              }
+            />
+          </Card>
+        </div>
+      );
+    }
+    return <Card><Empty description="线索不存在或已被删除" /></Card>;
   }
 
   const health = detail.healthStatus || 'normal';
@@ -303,10 +400,26 @@ export default function LeadsDetail() {
       </Card>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={12} md={6}><Card><Statistic title="预计商机金额" value={Number(detail.opportunityAmount || detail.budgetAmount || 0)} suffix="万" /></Card></Col>
-        <Col xs={12} md={6}><Card><Statistic title="跟进记录" value={follows.length} suffix="条" /></Card></Col>
-        <Col xs={12} md={6}><Card><Statistic title="决策人" value={contacts.length} suffix="人" /></Card></Col>
-        <Col xs={12} md={6}><Card><Statistic title="协同任务" value={tasks.length + resources.length} suffix="项" /></Card></Col>
+        <Col xs={12} md={6}>
+          <Card hoverable onClick={() => navigate('/stats/expected-amount?title=预计商机金额')} style={{ borderLeft: '3px solid #1677ff' }}>
+            <Statistic title="预计商机金额" value={Number(detail.opportunityAmount || detail.budgetAmount || 0)} suffix="万" />
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card hoverable onClick={() => navigate('/stats/follow-records?title=跟进记录')} style={{ borderLeft: '3px solid #52c41a' }}>
+            <Statistic title="跟进记录" value={follows.length} suffix="条" />
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card hoverable onClick={() => navigate('/stats/contacts?title=决策人')} style={{ borderLeft: '3px solid #faad14' }}>
+            <Statistic title="决策人" value={contacts.length} suffix="人" />
+          </Card>
+        </Col>
+        <Col xs={12} md={6}>
+          <Card hoverable onClick={() => navigate('/stats/tasks?title=协同任务')} style={{ borderLeft: '3px solid #722ed1' }}>
+            <Statistic title="协同任务" value={tasks.length + resources.length} suffix="项" />
+          </Card>
+        </Col>
       </Row>
 
       <Tabs
@@ -460,6 +573,21 @@ export default function LeadsDetail() {
                         { title: '商机编号', dataIndex: 'opportunityCode', render: (v: string) => v || '-' },
                         { title: '周期', dataIndex: 'expectedDuration', render: (v: number) => v ? `${v} 天` : '-' },
                         { title: '意见', dataIndex: 'opinion', ellipsis: true },
+                        {
+                          title: '操作',
+                          width: 180,
+                          render: (_: unknown, record: OpportunityReviewVO) => {
+                            const disabled = detail.isConverted || record.conclusion === '通过';
+                            if (disabled) return <Text type="secondary">已处理</Text>;
+                            return (
+                              <Space size={4}>
+                                <Button size="small" type="link" onClick={() => handleReviewDecision(record, '通过')}>通过</Button>
+                                <Button size="small" type="link" onClick={() => handleReviewDecision(record, '待补充')}>补充</Button>
+                                <Button size="small" type="link" danger onClick={() => handleReviewDecision(record, '驳回')}>驳回</Button>
+                              </Space>
+                            );
+                          },
+                        },
                       ]}
                     />
                   </Card>
@@ -529,7 +657,7 @@ export default function LeadsDetail() {
 
       <Drawer
         title="新增跟进"
-        width={560}
+        size="large"
         open={followOpen}
         onClose={() => setFollowOpen(false)}
         extra={<Space><Button onClick={() => setFollowOpen(false)}>取消</Button><Button type="primary" loading={submitting} onClick={handleFollowSubmit}>提交</Button></Space>}
@@ -593,7 +721,7 @@ export default function LeadsDetail() {
 
       <Drawer
         title="发起商机评审"
-        width={520}
+        size="large"
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
         extra={<Space><Button onClick={() => setReviewOpen(false)}>取消</Button><Button type="primary" loading={submitting} onClick={handleReviewSubmit}>提交评审</Button></Space>}

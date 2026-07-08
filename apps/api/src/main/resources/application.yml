@@ -3,9 +3,14 @@ spring:
     name: beike-platform
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/beike_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://localhost:3306/beike_platform?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&createDatabaseIfNotExist=true
     username: root
     password: root
+  sql:
+    init:
+      mode: never  # 生产安全：禁止自动执行 DDL。首次部署前手动执行 schema.sql
+      schema-locations: classpath:schema.sql
+      continue-on-error: true
   jackson:
     date-format: yyyy-MM-dd
     time-zone: Asia/Shanghai
@@ -14,9 +19,6 @@ spring:
     multipart:
       max-file-size: 50MB
       max-request-size: 100MB
-  web:
-    resources:
-      static-locations: classpath:/static/,file:./uploads
 
 mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
@@ -36,10 +38,6 @@ server:
 beike:
   upload:
     dir: ./uploads
-  wechat:
-    app-id: ""
-    app-secret: ""
-    redirect-uri: "http://localhost:5173/login"
 
 logging:
   level:

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beike.platform.common.BizException;
+import com.beike.platform.common.SecurityUtils;
 import com.beike.platform.constant.StageEnum;
 import com.beike.platform.dto.*;
 import com.beike.platform.entity.*;
@@ -38,6 +39,7 @@ public class ClueServiceImpl implements ClueService {
     private final IronTriangleTaskMapper ironTriangleMapper;
     private final CampaignMapper campaignMapper;
     private final PipelineMapper pipelineMapper;
+    private final SysUserMapper userMapper;
     private final ClueHealthService healthService;
     private final ClueSolutionMapper solutionMapper;    // v1.5
     private final ClueLogMapper logMapper;              // v1.5
@@ -46,6 +48,16 @@ public class ClueServiceImpl implements ClueService {
 
     @Override
     public IPage<ClueVO> page(CluePageDTO dto) {
+        // 普通用户只看自己负责的线索
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
+            SysUser user = userMapper.selectById(loginUser.getUserId());
+            if (user != null) {
+                // 责任人标识：优先用 realName，兜底用 username
+                String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
+                dto.setOwner(ownerKey);
+            }
+        }
         Page<Clue> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         IPage<Clue> result = clueMapper.selectPageWithFilter(page, dto);
         return result.convert(this::toVO);
@@ -55,12 +67,26 @@ public class ClueServiceImpl implements ClueService {
     public ClueVO detail(Long id) {
         Clue clue = clueMapper.selectById(id);
         if (clue == null) throw BizException.notFound("线索");
+
+        // 普通用户只能查看自己负责的线索
+        checkDataPermission(clue);
+
         return toVO(clue);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void create(ClueSaveDTO dto) {
+    public Map<String, Object> create(ClueSaveDTO dto) {
+        // 普通用户自动填充责任人为自己
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
+            SysUser user = userMapper.selectById(loginUser.getUserId());
+            if (user != null) {
+                // 责任人标识：优先用 realName，兜底用 username
+                String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
+                dto.setBeikeOwner(ownerKey);
+            }
+        }
         Clue clue = new Clue();
         BeanUtils.copyProperties(dto, clue);
         clue.setCreateDate(LocalDate.now());
@@ -76,6 +102,8 @@ public class ClueServiceImpl implements ClueService {
 
         // v1.5: 操作日志
         writeLog(clue.getId(), "创建", "创建线索：" + clue.getClueName(), "{\"clueName\":\"" + clue.getClueName() + "\",\"clueNumber\":\"" + clue.getClueNumber() + "\"}");
+
+        return Map.of("id", clue.getId(), "clueNumber", clue.getClueNumber());
     }
 
     @Override
@@ -87,6 +115,9 @@ public class ClueServiceImpl implements ClueService {
         if (existing.getIsConverted() != null && existing.getIsConverted() == 1) {
             throw new BizException("已转项目的线索不可编辑");
         }
+
+        // 普通用户只能编辑自己负责的线索
+        checkDataPermission(existing);
 
         Clue clue = new Clue();
         BeanUtils.copyProperties(dto, clue);
@@ -102,6 +133,7 @@ public class ClueServiceImpl implements ClueService {
     public void delete(Long id) {
         Clue clue = clueMapper.selectById(id);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
         clueMapper.deleteById(id);  // MyBatis-Plus 逻辑删除
         writeLog(id, "删除", "删除线索：" + clue.getClueName(), null);
     }
@@ -142,6 +174,9 @@ public class ClueServiceImpl implements ClueService {
         Clue clue = clueMapper.selectById(id);
         if (clue == null) throw BizException.notFound("线索");
 
+        // 普通用户只能查看自己负责的线索
+        checkDataPermission(clue);
+
         ClueFullDetailVO vo = new ClueFullDetailVO();
         BeanUtils.copyProperties(clue, vo);
         vo.setIsConverted(clue.getIsConverted() != null && clue.getIsConverted() == 1);
@@ -169,6 +204,7 @@ public class ClueServiceImpl implements ClueService {
     public void submitOpportunityReview(Long clueId, OpportunityReviewDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueOpportunityReview review = new ClueOpportunityReview();
         review.setClueId(clueId);
@@ -180,14 +216,14 @@ public class ClueServiceImpl implements ClueService {
         review.setConclusion("待补充"); // 初始状态，等待评审人确认
         reviewMapper.insert(review);
 
-        // 更新线索商机金额
+        // 更新线索评审状态与商机金额
+        Clue update = new Clue();
+        update.setId(clueId);
         if (dto.getOpportunityAmount() != null) {
-            Clue update = new Clue();
-            update.setId(clueId);
             update.setOpportunityAmount(dto.getOpportunityAmount());
-            update.setReviewStatus("评审中");
-            clueMapper.updateById(update);
         }
+        update.setReviewStatus("评审中");
+        clueMapper.updateById(update);
     }
 
     @Override
@@ -195,6 +231,7 @@ public class ClueServiceImpl implements ClueService {
     public ClueContact addContact(Long clueId, ClueContactSaveDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueContact contact = new ClueContact();
         BeanUtils.copyProperties(dto, contact);
@@ -227,6 +264,7 @@ public class ClueServiceImpl implements ClueService {
     public ClueResource applyResource(Long clueId, ClueResourceSaveDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueResource resource = new ClueResource();
         resource.setClueId(clueId);
@@ -243,6 +281,7 @@ public class ClueServiceImpl implements ClueService {
     public IronTriangleTask assignIronTriangleTask(Long clueId, IronTriangleTaskSaveDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         IronTriangleTask task = new IronTriangleTask();
         BeanUtils.copyProperties(dto, task);
@@ -260,6 +299,7 @@ public class ClueServiceImpl implements ClueService {
         // 1. 校验线索存在且状态为已承接，未转项目
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
         if (!"承接".equals(clue.getClueStatus()) && !"已承接".equals(clue.getClueStatus())) {
             throw new BizException("仅承接状态的线索可以转为项目，当前状态：" + clue.getClueStatus());
         }
@@ -307,27 +347,40 @@ public class ClueServiceImpl implements ClueService {
     public String approveReviewAndCreatePipeline(Long clueId, Long reviewId) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueOpportunityReview review = reviewMapper.selectById(reviewId);
         if (review == null) throw BizException.notFound("评审记录");
+        if (!clueId.equals(review.getClueId())) throw BizException.notFound("评审记录");
+
+        if (clue.getConvertedOpportunityId() != null || "converted".equals(clue.getConvertStatus())) {
+            if ("通过".equals(review.getConclusion()) && review.getOpportunityCode() != null) {
+                return review.getOpportunityCode();
+            }
+            throw new BizException("该线索已转为商机，不可重复操作");
+        }
 
         // 1. 更新评审结论为"通过"，生成商机编号
-        String oppCode = "OP-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"))
-                + "-" + String.format("%03d", (int)(Math.random() * 1000));
+        String oppCode = review.getOpportunityCode() != null ? review.getOpportunityCode() :
+                "OP-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMM"))
+                        + "-" + String.format("%03d", (int)(Math.random() * 1000));
         review.setConclusion("通过");
         review.setOpportunityCode(oppCode);
         reviewMapper.updateById(review);
 
         // 2. 在 biz_pipeline 创建商机记录
+        SysUser owner = resolvePipelineOwner(clue);
         Pipeline pipeline = new Pipeline();
         pipeline.setName(clue.getClueName() + "（商机）");
         pipeline.setCustomer(clue.getClientCompany());
-        pipeline.setAmount(review.getExpectedDuration() != null
-                ? BigDecimal.valueOf(review.getExpectedDuration() * 10000) : BigDecimal.ZERO);
+        pipeline.setAmount(resolvePipelineAmount(clue));
         pipeline.setStage(StageEnum.LEAD.getCode());
         pipeline.setWinRate(50);
+        pipeline.setOwnerId(owner.getId());
+        pipeline.setDeptId(resolvePipelineDeptId(owner));
         pipeline.setIsSea(0);
         pipeline.setDescription(clue.getRequirementDesc());
+        pipeline.setNextAction("跟进商机评审结果，推进需求确认");
         pipelineMapper.insert(pipeline);
 
         // 3. 更新线索：标记已转商机
@@ -339,7 +392,46 @@ public class ClueServiceImpl implements ClueService {
         update.setConvertedOpportunityId(pipeline.getId());
         clueMapper.updateById(update);
 
+        writeLog(clueId, "转商机", "线索转商机成功，商机ID：" + pipeline.getId(), "{\"pipelineId\":" + pipeline.getId() + ",\"opportunityCode\":\"" + oppCode + "\"}");
+
         return oppCode;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String decideOpportunityReview(Long clueId, Long reviewId, OpportunityReviewDecisionDTO dto) {
+        String conclusion = normalizeReviewConclusion(dto == null ? null : dto.getConclusion());
+        if ("通过".equals(conclusion)) {
+            return approveReviewAndCreatePipeline(clueId, reviewId);
+        }
+
+        Clue clue = clueMapper.selectById(clueId);
+        if (clue == null) throw BizException.notFound("线索");
+
+        ClueOpportunityReview review = reviewMapper.selectById(reviewId);
+        if (review == null || !clueId.equals(review.getClueId())) {
+            throw BizException.notFound("评审记录");
+        }
+        if (clue.getConvertedOpportunityId() != null || "converted".equals(clue.getConvertStatus())) {
+            throw new BizException("该线索已转为商机，不可再变更评审结论");
+        }
+
+        review.setConclusion(conclusion);
+        if (dto != null && dto.getOpinion() != null && !dto.getOpinion().isBlank()) {
+            review.setOpinion(dto.getOpinion());
+        }
+        reviewMapper.updateById(review);
+
+        Clue update = new Clue();
+        update.setId(clueId);
+        update.setReviewStatus(conclusion);
+        if ("驳回".equals(conclusion)) {
+            update.setConvertStatus("rejected");
+        }
+        clueMapper.updateById(update);
+
+        writeLog(clueId, "商机评审", "评审结论：" + conclusion, dto == null || dto.getOpinion() == null ? null : "{\"opinion\":\"" + dto.getOpinion() + "\"}");
+        return review.getOpportunityCode();
     }
 
     @Override
@@ -394,6 +486,7 @@ public class ClueServiceImpl implements ClueService {
     public ClueSolution saveSolution(Long clueId, ClueSolutionSaveDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueSolution solution = new ClueSolution();
         BeanUtils.copyProperties(dto, solution);
@@ -426,6 +519,7 @@ public class ClueServiceImpl implements ClueService {
     public ClueFile uploadFile(Long clueId, ClueFileSaveDTO dto) {
         Clue clue = clueMapper.selectById(clueId);
         if (clue == null) throw BizException.notFound("线索");
+        checkDataPermission(clue);
 
         ClueFile file = new ClueFile();
         BeanUtils.copyProperties(dto, file);
@@ -503,6 +597,85 @@ public class ClueServiceImpl implements ClueService {
     // ================================================================
     // 内部辅助方法
     // ================================================================
+
+    /**
+     * 数据级权限校验：普通用户只能查看/操作自己负责的线索。
+     * 管理员和经理不受限制。
+     */
+    private void checkDataPermission(Clue clue) {
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser == null) return;
+        if ("ADMIN".equals(loginUser.getRoleType()) || "MANAGER".equals(loginUser.getRoleType())) return;
+
+        // 普通用户：只能操作自己负责的线索
+        SysUser user = userMapper.selectById(loginUser.getUserId());
+        if (user == null) {
+            throw BizException.noPermission();
+        }
+        // 线索责任人标识：优先用 realName，兜底用 username
+        String ownerKey = user.getRealName() != null ? user.getRealName() : user.getUsername();
+        if (clue.getBeikeOwner() == null) {
+            throw new BizException(403, "该线索尚未分配责任人（beikeOwner 为空），请联系管理员分配后重试");
+        }
+        if (!clue.getBeikeOwner().equals(ownerKey)) {
+            throw new BizException(403, "该线索责任人为「" + clue.getBeikeOwner() + "」，你无权查看。每位普通用户只能操作自己负责的线索");
+        }
+    }
+
+    private BigDecimal resolvePipelineAmount(Clue clue) {
+        if (clue.getOpportunityAmount() != null) {
+            return clue.getOpportunityAmount();
+        }
+        if (clue.getBudgetAmount() != null) {
+            return clue.getBudgetAmount();
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private SysUser resolvePipelineOwner(Clue clue) {
+        if (clue.getArUserId() != null) {
+            SysUser ar = userMapper.selectById(clue.getArUserId());
+            if (ar != null) {
+                return ar;
+            }
+        }
+
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && loginUser.getUserId() != null) {
+            SysUser currentUser = userMapper.selectById(loginUser.getUserId());
+            if (currentUser != null) {
+                return currentUser;
+            }
+        }
+
+        SysUser admin = userMapper.selectById(1L);
+        if (admin != null) {
+            return admin;
+        }
+        throw BizException.notFound("负责人");
+    }
+
+    private Long resolvePipelineDeptId(SysUser owner) {
+        if (owner.getDeptId() != null) {
+            return owner.getDeptId();
+        }
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && loginUser.getDeptId() != null && loginUser.getDeptId() > 0) {
+            return loginUser.getDeptId();
+        }
+        return 1L;
+    }
+
+    private String normalizeReviewConclusion(String conclusion) {
+        if (conclusion == null || conclusion.isBlank()) {
+            throw new BizException("请选择评审结论");
+        }
+        String normalized = conclusion.trim();
+        if (!List.of("通过", "驳回", "待补充").contains(normalized)) {
+            throw new BizException("评审结论仅支持：通过、驳回、待补充");
+        }
+        return normalized;
+    }
 
     private void writeLog(Long clueId, String actionType, String summary, String detailJson) {
         try {

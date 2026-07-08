@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Card, Tag, Progress, Row, Col, Button, Space, Typography } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import PipelineForm from '../../../features/pipeline/PipelineForm';
@@ -44,7 +44,7 @@ const COLUMNS: KanbanColumn[] = [
 
 export default function LtcKanban() {
   const [list, setList] = useState<Pipeline[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState<Pipeline | null>(null);
 
@@ -69,7 +69,7 @@ export default function LtcKanban() {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={5} style={{ margin: 0 }}>
-          管线 {list.length > 0 ? <Tag style={{ marginLeft: 8 }}>{list.length}</Tag> : null}
+          线索 {list.length > 0 ? <Tag style={{ marginLeft: 8 }}>{list.length}</Tag> : null}
         </Title>
         <Button
           type="primary"
@@ -79,7 +79,7 @@ export default function LtcKanban() {
             setFormOpen(true);
           }}
         >
-          新建管线
+          新建线索
         </Button>
       </div>
 
@@ -100,7 +100,7 @@ export default function LtcKanban() {
               >
                 {items.length === 0 ? (
                   <div style={{ textAlign: 'center', color: '#999', padding: 24 }}>
-                    暂无管线
+                    暂无线索
                   </div>
                 ) : (
                   items.map((p) => (

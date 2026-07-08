@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Input, Button, Checkbox, Progress, App, Typography } from 'antd';
+import { Input, Button, Checkbox, Progress, Select, App } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import request from '../../utils/request';
 import AgreementModal from './AgreementModal';
-
-const { Text } = Typography;
 
 interface Props { onSuccess: () => void; onBack: () => void; }
 
@@ -13,6 +11,12 @@ const PWD_RULES = [
   { re: /[a-zA-Z]/, label: '含字母' },
   { re: /\d/, label: '含数字' },
   { re: /[!@#$%^&*]/, label: '含特殊字符' },
+];
+
+const DEPT_OPTIONS = [
+  { value: 1, label: '平台一部' },
+  { value: 2, label: '平台二部' },
+  { value: 3, label: '平台三部' },
 ];
 
 function getPwdStrength(pwd: string) {
@@ -27,6 +31,7 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
   const { message } = App.useApp();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [deptId, setDeptId] = useState<number | undefined>(undefined);
   const [password, setPassword] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
   const [agreed, setAgreed] = useState(false);
@@ -55,13 +60,13 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
     setLoading(true);
     try {
       try {
-        // realName 默认用 username
         await request.post('/api/auth/register', {
           username: username.trim(),
           realName: username.trim(),
           email: email.trim(),
           password,
           confirmPassword: confirmPwd,
+          deptId: deptId || null,
         });
       } catch {
         // 后端不可用时降级
@@ -107,6 +112,9 @@ export default function RegisterForm({ onSuccess, onBack }: Props) {
         onChange={e => { setUsername(e.target.value); setErrors(p => ({ ...p, username: '' })); }}
         status={errors.username ? 'error' : undefined} style={{ marginBottom: 8 }} />
       {errors.username && <div style={{ color: '#ef4444', fontSize: 12, marginBottom: 8, marginTop: -4 }}>{errors.username}</div>}
+
+      <Select size="large" placeholder="选择部门" value={deptId} onChange={v => setDeptId(v)}
+        options={DEPT_OPTIONS} style={{ width: '100%', marginBottom: 16 }} />
 
       <Input size="large" prefix={<MailOutlined />} placeholder="绑定邮箱（用于找回密码）" value={email}
         onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }}

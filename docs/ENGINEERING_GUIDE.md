@@ -1,4 +1,4 @@
-# 工程结构与二次开发说明
+﻿# 工程结构与二次开发说明
 
 本项目已按当前可运行主线重新整理。日常开发优先看 `apps/web` 和 `apps/api`，其他目录作为文档、部署或参考资料保留。
 
@@ -81,8 +81,8 @@ http://localhost:8080/
 - 将当前主前端固定到 `apps/web`。
 - 将当前主后端固定到 `apps/api`。
 - 将微服务原型移到 `reference/microservices`，避免和当前主后端混淆。
-- 将旧版未接入的管线页移到 `reference/frontend-legacy`。
-- 将仍被看板复用的管线表单提到 `apps/web/src/features/pipeline`。
+- 将旧版未接入的线索页移到 `reference/frontend-legacy`。
+- 将仍被看板复用的线索表单提到 `apps/web/src/features/pipeline`。
 - 将部署、网关、监控、日志、CI/CD 等资料归到 `ops`。
 - 将前端页面改为按路由懒加载，主入口包从约 3MB 降到约 671KB。
 - 删除旧的 `docs/PROJECT_STRUCTURE.md`，重新输出当前文档。

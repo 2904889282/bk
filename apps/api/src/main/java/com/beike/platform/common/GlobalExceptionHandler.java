@@ -1,5 +1,6 @@
 package com.beike.platform.common;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.FieldError;
@@ -15,8 +16,14 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BizException.class)
-    public Result<Void> handleBiz(BizException e) {
+    public Result<Void> handleBiz(BizException e, HttpServletResponse response) {
         log.warn("业务异常: code={} msg={}", e.getCode(), e.getMessage());
+        // 根据业务错误码设置对应的 HTTP 状态码，让前端拦截器能正确区分 403 / 404
+        if (e.getCode() == 403) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        } else if (e.getCode() == 404) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
         return Result.error(e.getCode(), e.getMessage());
     }
 

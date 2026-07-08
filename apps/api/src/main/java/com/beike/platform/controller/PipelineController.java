@@ -125,20 +125,4 @@ public class PipelineController {
         return Result.success();
     }
 
-    /**
-     * 阶段字典 — 前端唯一数据源
-     * GET /api/pipeline/stages
-     */
-    @GetMapping("/stages")
-    public Result<List<Map<String, String>>> stages() {
-        List<Map<String, String>> list = Arrays.stream(StageEnum.values())
-                .map(s -> {
-                    Map<String, String> map = new java.util.LinkedHashMap<>();
-                    map.put("code", s.getCode());
-                    map.put("label", s.getLabel());
-                    return map;
-                })
-                .collect(Collectors.toList());
-        return Result.success(list);
-    }
 }

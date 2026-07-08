@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import request from '../utils/request';
-import { FALLBACK_MENUS, type MenuItem } from '../config/menus';
+import { FALLBACK_MENUS, REGULAR_USER_MENUS, type MenuItem } from '../config/menus';
 
 /** 根据是否"记住我"选择存储位置 */
 const tokenStore = {
@@ -24,6 +24,8 @@ interface AuthState {
   permissions: string[];
   menus: MenuItem[];
   isLoggedIn: boolean;
+  /** 是否处于演示模式（token 为 mock_xxx，后端不可用） */
+  isMockMode: () => boolean;
   login: (username: string, password: string, remember?: boolean) => Promise<{ success: boolean; msg?: string }>;
   fetchUserInfo: () => Promise<void>;
   logout: () => void;
@@ -56,7 +58,8 @@ export const useAuth = create<AuthState>((set, get) => ({
         localStorage.setItem('beike_username', username);
       }
 
-      set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus || [] });
+      const isAdminOrManager = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_MANAGER');
+      set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : (isAdminOrManager ? FALLBACK_MENUS : REGULAR_USER_MENUS) });
       return { success: true };
     } catch {
       // 2. 后端不可用 → 降级模拟登录
@@ -90,7 +93,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       s.setItem('beike_token', token);
       localStorage.setItem('beike_user', JSON.stringify(user));
       if (remember) { localStorage.setItem('beike_remember', '1'); localStorage.setItem('beike_username', username); }
-      set({ token, user, isLoggedIn: true, permissions: ['clue:list'], menus: FALLBACK_MENUS.filter(m => m.path === '/' || m.name === 'LTC 管线管理') });
+      set({ token, user, isLoggedIn: true, permissions: ['clue:list', 'project:list'], menus: REGULAR_USER_MENUS });
       return { success: true };
     }
 
@@ -98,12 +101,23 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   fetchUserInfo: async () => {
+    const token = get().token || '';
+    // mock 令牌：从 localStorage 恢复
+    if (token.startsWith('mock_')) {
+      restoreMockUser(token, set);
+      return;
+    }
     try {
       const res = await request.get('/api/auth/userinfo');
       const data = res.data;
       const user = normalizeUser(data.user);
       localStorage.setItem('beike_user', JSON.stringify(user));
-      set({ user, isLoggedIn: true, permissions: normalizePermissions(data), menus: data.menus || [] });
+      const permissions = normalizePermissions(data);
+      // 根据角色选择菜单
+      const menus = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_MANAGER')
+        ? (data.menus || FALLBACK_MENUS)
+        : REGULAR_USER_MENUS;
+      set({ user, isLoggedIn: true, permissions, menus });
     } catch {
       get().logout();
     }
@@ -118,7 +132,14 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ user: null, token: null, isLoggedIn: false, permissions: [], menus: [] });
   },
 
-  hasPermission: (code) => get().permissions.includes('*') || get().permissions.includes(code) || get().user?.roles?.includes('ROLE_ADMIN') || false,
+  isMockMode: () => {
+    const t = get().token;
+    return !!(t && t.startsWith('mock_'));
+  },
+  hasPermission: (code) => {
+    const perms = get().permissions || [];
+    return perms.includes('*') || perms.includes(code) || (get().user?.roles || []).includes('ROLE_ADMIN');
+  },
   hasRole: (role) => get().user?.roles?.includes(role) || false,
 }));
 
@@ -134,4 +155,41 @@ function normalizeUser(raw: any): UserInfo {
 
 function normalizePermissions(data: any): string[] {
   return data?.permissions ?? data?.user?.permissions ?? [];
+}
+
+/** 演示账号完整权限集 */
+function getDemoPermissions(username: string): { permissions: string[] } | null {
+  const map: Record<string, string[]> = {
+    admin: ['*'],
+    zhangming: [
+      'clue:list', 'clue:create', 'clue:edit', 'clue:delete', 'clue:batch', 'clue:convert',
+      'pipeline:list', 'pipeline:create', 'pipeline:edit', 'pipeline:delete',
+      'pipeline:import', 'pipeline:batch-delete', 'pipeline:batch-modify',
+      'project:list', 'project:create', 'project:edit', 'project:delete',
+      'risk:list', 'risk:create', 'risk:edit', 'risk:delete',
+      'talent:list', 'talent:create', 'talent:edit', 'talent:delete',
+      'alert:list', 'recycle:list', 'system:user:list',
+    ],
+  };
+  return map[username] ? { permissions: map[username] } : null;
+}
+
+/** mock 令牌：从 localStorage 恢复用户状态 */
+function restoreMockUser(_token: string, set: (state: Partial<AuthState>) => void) {
+  const saved = localStorage.getItem('beike_user');
+  if (saved) {
+    try {
+      const user = JSON.parse(saved);
+      const isAdmin = user.roles?.includes('ROLE_ADMIN') || user.username === 'admin';
+      const isManager = user.roles?.includes('ROLE_MANAGER');
+      if (isAdmin || isManager) {
+        const demo = getDemoPermissions(user.username) || { permissions: ['clue:list'] };
+        set({ user, isLoggedIn: true, permissions: demo.permissions, menus: FALLBACK_MENUS });
+      } else {
+        set({ user, isLoggedIn: true, permissions: ['clue:list', 'project:list'], menus: REGULAR_USER_MENUS });
+      }
+      return;
+    } catch {}
+  }
+  set({ user: null, isLoggedIn: false, permissions: [], menus: [] });
 }

@@ -1,12 +1,8 @@
 -- ============================================================
--- v1.1 升级脚本：忘记密码 + 微信登录 + 多设备管理
+-- v1.1 升级脚本：忘记密码 + 多设备管理
 -- ============================================================
 
--- 1. sys_user 增加微信相关字段
-ALTER TABLE sys_user ADD COLUMN wechat_open_id VARCHAR(128) COMMENT '微信OpenID';
-ALTER TABLE sys_user ADD COLUMN wechat_union_id VARCHAR(128) COMMENT '微信UnionID';
-
--- 2. 登录设备表
+-- 1. 登录设备表
 CREATE TABLE IF NOT EXISTS sys_login_device (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,

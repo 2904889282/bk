@@ -37,7 +37,7 @@ export default function LtcAlerts() {
     keywordTimer.current = setTimeout(() => setKeyword(val), 400);
   };
 
-  useEffect(() => { fetchProjectPage({ pageNum: 1, pageSize: 9999 }).then(r => setProjects(r.list || [])).catch(() => {}); }, []);
+  useEffect(() => { fetchProjectPage({ pageNum: 1, pageSize: 9999 }).then(r => setProjects(r.records || [])).catch(() => {}); }, []);
 
   const { open, editingId, submitting, formRef, openCreate, openEdit, close, submit } =
     useFormDialog<AlertSaveDTO & { id?: number }>({

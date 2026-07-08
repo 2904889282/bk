@@ -14,8 +14,6 @@ public class SysUser {
     private String realName;
     private String email;
     private String phone;
-    private String wechatOpenId;
-    private String wechatUnionId;
     private Integer status;
     private Long deptId;             // 所属部门ID
     private String roleType;         // 角色类型: ADMIN超管 / MANAGER组长 / USER普通员工

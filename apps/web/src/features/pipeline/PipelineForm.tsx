@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Modal, Form, Input, Select, InputNumber, message, Button, Space } from 'antd';
 import { PRODUCT_MAP, INDUSTRY_MAP } from '../../types';
 import { PIPELINE_ACTIVE_STAGE_OPTIONS, normalizePipelineStage } from '../../utils/stageMapping';
@@ -65,10 +65,10 @@ export default function PipelineForm({ open, editItem, onClose, onSuccess }: Pro
       setSubmitting(true);
       if (editItem) {
         await updatePipeline(editItem.id, dto);
-        message.success('管线已更新');
+        message.success('线索已更新');
       } else {
         await createPipeline(dto);
-        message.success('管线已创建');
+        message.success('线索已创建');
       }
       onSuccess();
     } catch {
@@ -80,7 +80,7 @@ export default function PipelineForm({ open, editItem, onClose, onSuccess }: Pro
 
   return (
     <Modal
-      title={isEdit ? '编辑管线' : '新建管线'}
+      title={isEdit ? '编辑线索' : '新建线索'}
       open={open}
       onCancel={onClose}
       width={720}
@@ -104,10 +104,10 @@ export default function PipelineForm({ open, editItem, onClose, onSuccess }: Pro
         >
           <Form.Item
             name="name"
-            label="管线名称"
-            rules={[{ required: true, message: '请输入管线名称' }]}
+            label="线索名称"
+            rules={[{ required: true, message: '请输入线索名称' }]}
           >
-            <Input placeholder="输入管线名称" />
+            <Input placeholder="输入线索名称" />
           </Form.Item>
 
           <Form.Item name="client" label="客户">
@@ -172,7 +172,7 @@ export default function PipelineForm({ open, editItem, onClose, onSuccess }: Pro
         </div>
 
         <Form.Item name="description" label="描述">
-          <Input.TextArea rows={2} placeholder="管线描述" />
+          <Input.TextArea rows={2} placeholder="线索描述" />
         </Form.Item>
 
         <Form.Item name="nextAction" label="下一步行动">

@@ -53,8 +53,10 @@ beike:
   upload:
     dir: /opt/beike-app/uploads              # 绝对路径
   jwt:
-    secret: ${JWT_SECRET:ProdSecret-ChangeMe-To-Random-64Chars-Minimum!!}
+    secret: ${JWT_SECRET}                     # 生产环境必须通过环境变量注入（至少64字符随机值）
     expire-hours: 24
+  cors:
+    allowed-origins: ${CORS_ORIGINS:https://beike.yourdomain.com}  # 生产必须指定具体域名，多个用逗号分隔
 
 logging:
   level:

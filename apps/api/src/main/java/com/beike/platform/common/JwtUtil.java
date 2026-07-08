@@ -2,6 +2,7 @@ package com.beike.platform.common;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -11,10 +12,22 @@ import java.util.UUID;
 
 @Component
 public class JwtUtil {
-    private static final String SECRET = "beike-platform-v1-secret-key-2026-long-enough-for-hs256";
-    private static final long ACCESS_EXPIRE = 2 * 60 * 60 * 1000;      // 2小时
-    private static final long REFRESH_EXPIRE = 30 * 24 * 60 * 60 * 1000L; // 30天
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    private final SecretKey key;
+    private final long accessExpire;
+    private final long refreshExpire;
+
+    public JwtUtil(
+            @Value("${beike.jwt.secret:beike-platform-v1-secret-key-2026-long-enough-for-hs256}") String secret,
+            @Value("${beike.jwt.access-expire-hours:2}") long accessExpireHours,
+            @Value("${beike.jwt.refresh-expire-days:30}") long refreshExpireDays) {
+        byte[] secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length < 32) {
+            throw new IllegalArgumentException("beike.jwt.secret must be at least 32 bytes for HS256");
+        }
+        this.key = Keys.hmacShaKeyFor(secretBytes);
+        this.accessExpire = accessExpireHours * 60 * 60 * 1000L;
+        this.refreshExpire = refreshExpireDays * 24 * 60 * 60 * 1000L;
+    }
 
     /** Access Token（短有效期），含 JTI 用于设备管理 */
     public String generateToken(Long userId, String username) {
@@ -24,7 +37,7 @@ public class JwtUtil {
                 .claim("type", "access")
                 .id(UUID.randomUUID().toString())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + ACCESS_EXPIRE))
+                .expiration(new Date(System.currentTimeMillis() + accessExpire))
                 .signWith(key)
                 .compact();
     }
@@ -37,7 +50,7 @@ public class JwtUtil {
                 .claim("type", "refresh")
                 .id(UUID.randomUUID().toString())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + REFRESH_EXPIRE))
+                .expiration(new Date(System.currentTimeMillis() + refreshExpire))
                 .signWith(key)
                 .compact();
     }

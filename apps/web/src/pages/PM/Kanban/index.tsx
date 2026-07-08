@@ -14,13 +14,13 @@ export default function PmKanban() {
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const res = await fetchProjectPage({ pageNum: 1, pageSize: 200 });
-      setProjects(res.list || []);
+      setProjects(res.records || []);
     } finally {
       setLoading(false);
     }

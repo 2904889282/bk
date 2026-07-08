@@ -14,6 +14,9 @@
             <if test="dto.status != null and dto.status != ''">
                 AND status = #{dto.status}
             </if>
+            <if test="dto.talentType != null and dto.talentType != ''">
+                AND talent_type = #{dto.talentType}
+            </if>
         </where>
         ORDER BY create_time DESC
     </select>

@@ -19,8 +19,8 @@ public interface ClueService {
     /** 线索详情 */
     ClueVO detail(Long id);
 
-    /** 新增线索 */
-    void create(ClueSaveDTO dto);
+    /** 新增线索，返回线索ID和编号 */
+    Map<String, Object> create(ClueSaveDTO dto);
 
     /** 编辑线索 */
     void update(ClueSaveDTO dto, Long id);
@@ -64,6 +64,9 @@ public interface ClueService {
 
     /** 评审通过 → 自动创建商机（Pipeline）并返回商机编号 */
     String approveReviewAndCreatePipeline(Long clueId, Long reviewId);
+
+    /** 处理商机评审：通过/驳回/待补充 */
+    String decideOpportunityReview(Long clueId, Long reviewId, OpportunityReviewDecisionDTO dto);
 
     /** 批量分配责任人 */
     void batchAssign(List<Long> ids, String owner);

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Popconfirm, message, Tag, Card } from 'antd';
+import { Table, Button, Popconfirm, Typography, message, Tag, Card, Space } from 'antd';
 import { DesktopOutlined, MobileOutlined, GlobalOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useAuth } from '../../hooks/useAuth';
 import { fetchDevices, kickDevice, kickAllDevices } from '../../api/account';
 import type { LoginDevice } from '../../api/account';
 
-const parseUA = (ua: string): string => {
+const parseUA = (ua?: string): string => {
   if (!ua) return '未知';
   if (ua.includes('Windows')) return 'Windows';
   if (ua.includes('Mac')) return 'Mac';
@@ -14,8 +15,8 @@ const parseUA = (ua: string): string => {
   return '未知';
 };
 
-const getDeviceIcon = (ua: string) => {
-  if (ua.includes('iPhone') || ua.includes('Android') || ua.includes('iPad')) {
+const getDeviceIcon = (ua?: string) => {
+  if (ua && (ua.includes('iPhone') || ua.includes('Android') || ua.includes('iPad'))) {
     return <MobileOutlined />;
   }
   return <DesktopOutlined />;
@@ -34,6 +35,9 @@ const timeAgo = (t: string): string => {
 };
 
 export default function DevicesPage() {
+  const { isMockMode } = useAuth();
+  const demoMode = isMockMode();
+
   const [devices, setDevices] = useState<LoginDevice[]>([]);
   const [loading, setLoading] = useState(false);
   const [kickingAll, setKickingAll] = useState(false);
@@ -43,8 +47,10 @@ export default function DevicesPage() {
     try {
       const data = await fetchDevices();
       setDevices(data);
-    } catch {
-      message.error('加载设备列表失败');
+    } catch (err: unknown) {
+      if (!(err as { __mockToken?: boolean }).__mockToken) {
+        message.error('加载设备列表失败');
+      }
     }
     setLoading(false);
   };
@@ -150,7 +156,14 @@ export default function DevicesPage() {
         rowKey="id"
         loading={loading}
         pagination={false}
-        locale={{ emptyText: '暂无登录设备记录' }}
+        locale={{
+          emptyText: demoMode && !loading ? (
+            <Space direction="vertical" size={8} style={{ padding: 24 }}>
+              <Typography.Text type="secondary">演示模式下无法加载设备数据</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务后使用真实账号重新登录</Typography.Text>
+            </Space>
+          ) : '暂无登录设备记录',
+        }}
       />
     </Card>
   );

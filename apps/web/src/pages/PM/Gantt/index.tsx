@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { Card, Row, Col, Select, Statistic, Space, Typography, Tag, Segmented } from 'antd';
-import { ReloadOutlined, ProjectOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { useEffect, useState, useMemo } from 'react';
+import { Card, Row, Col, Select, Statistic, Space, Typography, Segmented } from 'antd';
+import { ProjectOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import GanttChart, { type GanttTask } from '../../../components/charts/GanttChart';
 import { fetchProjectPage, type ProjectVO } from '../../../api/project';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const STATUS_OPTIONS = ['全部', '进行中', '已完成', '已暂停'];
 
@@ -18,7 +18,7 @@ export default function PmGantt() {
   useEffect(() => {
     setLoading(true);
     fetchProjectPage({ pageNum: 1, pageSize: 200 })
-      .then(res => setProjects(res.list || []))
+      .then(res => setProjects(res.records || []))
       .finally(() => setLoading(false));
   }, []);
 
@@ -76,8 +76,8 @@ export default function PmGantt() {
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={6}><Card size="small"><Statistic title="项目总数" value={stats.total} prefix={<ProjectOutlined />} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="进行中" value={stats.active} valueStyle={{ color: '#2563eb' }} /></Card></Col>
-        <Col span={6}><Card size="small"><Statistic title="已完成" value={stats.completed} prefix={<CheckCircleOutlined />} valueStyle={{ color: '#52c41a' }} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="进行中" value={stats.active} styles={{ content: { color: '#2563eb' } }} /></Card></Col>
+        <Col span={6}><Card size="small"><Statistic title="已完成" value={stats.completed} prefix={<CheckCircleOutlined />} styles={{ content: { color: '#52c41a' } }} /></Card></Col>
         <Col span={6}><Card size="small"><Statistic title="平均进度" value={stats.avgProgress} suffix="%" /></Card></Col>
       </Row>
 

@@ -54,9 +54,8 @@ public class ClueController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('clue:create')")
-    public Result<Void> create(@Valid @RequestBody ClueSaveDTO dto) {
-        clueService.create(dto);
-        return Result.success();
+    public Result<Map<String, Object>> create(@Valid @RequestBody ClueSaveDTO dto) {
+        return Result.success(clueService.create(dto));
     }
 
     /**
@@ -229,6 +228,19 @@ public class ClueController {
                                                       @PathVariable Long reviewId) {
         String oppCode = clueService.approveReviewAndCreatePipeline(id, reviewId);
         return Result.success(Map.of("opportunityCode", oppCode));
+    }
+
+    /**
+     * 处理商机评审
+     * PUT /api/clue/{id}/review/{reviewId}/decision
+     */
+    @PutMapping("/{id}/review/{reviewId}/decision")
+    @PreAuthorize("hasAuthority('clue:edit')")
+    public Result<Map<String, Object>> decideReview(@PathVariable Long id,
+                                                     @PathVariable Long reviewId,
+                                                     @RequestBody OpportunityReviewDecisionDTO dto) {
+        String oppCode = clueService.decideOpportunityReview(id, reviewId, dto);
+        return Result.success(Map.of("opportunityCode", oppCode == null ? "" : oppCode));
     }
 
     /**

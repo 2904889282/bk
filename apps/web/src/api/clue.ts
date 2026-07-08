@@ -1,4 +1,5 @@
 import request from '../utils/request';
+import { mockClueStore, isMockMode } from '../utils/mockStore';
 
 // ============================================================
 // 线索模块 API 层 — v1.5 完整版本
@@ -99,17 +100,26 @@ export interface ClueSaveDTO {
   clueLevel: string;
   clueStatus: string;
   reviewStatus?: string;
+  businessConfirmed?: string;
   contactDate?: string;
   proposalDate?: string;
   createDate?: string;
   requirementDesc?: string;
   painPoint?: string;
   expectedTarget?: string;
+  clueEvaluation?: string;
   remark?: string;
   deptBelong: string;
+  commRecord1?: string;
+  commRecord2?: string;
+  commRecord3?: string;
+  commRecord4?: string;
   arUserId?: number;
   srUserId?: number;
   frUserId?: number;
+  relation1?: string;
+  relation2?: string;
+  relation3?: string;
   campaignId?: number;
   clientCircle?: string;
   healthStatus?: string;
@@ -221,6 +231,11 @@ export interface FollowSaveDTO {
 export interface OpportunityReviewDTO {
   opportunityAmount?: number;
   expectedDuration?: number;
+  opinion?: string;
+}
+
+export interface OpportunityReviewDecisionDTO {
+  conclusion: '通过' | '驳回' | '待补充';
   opinion?: string;
 }
 
@@ -360,34 +375,72 @@ export interface ClueConvertDTO {
 // ==================== 线索 CRUD ====================
 
 export async function fetchCluePage(params: CluePageParams): Promise<CluePageResult> {
-  const res = await request.get('/api/clue/page', { params });
-  return res.data;
+  try {
+    const res = await request.get('/api/clue/page', { params });
+    return res.data;
+  } catch {
+    if (isMockMode()) return mockClueStore.page(params);
+    throw new Error('后端不可用');
+  }
 }
 
 export async function fetchClueDetail(id: number): Promise<ClueVO> {
-  const res = await request.get(`/api/clue/${id}`);
-  return res.data;
+  try {
+    const res = await request.get(`/api/clue/${id}`);
+    return res.data;
+  } catch {
+    if (isMockMode()) {
+      const found = mockClueStore.get(id);
+      if (found) return found;
+    }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function createClue(data: ClueSaveDTO): Promise<void> {
-  await request.post('/api/clue', data);
+  try {
+    await request.post('/api/clue', data);
+  } catch {
+    if (isMockMode()) { mockClueStore.create(data); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function updateClue(id: number, data: Partial<ClueSaveDTO>): Promise<void> {
-  await request.put(`/api/clue/${id}`, data);
+  try {
+    await request.put(`/api/clue/${id}`, data);
+  } catch {
+    if (isMockMode()) { mockClueStore.update(id, data); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function deleteClue(id: number): Promise<void> {
-  await request.delete(`/api/clue/${id}`);
+  try {
+    await request.delete(`/api/clue/${id}`);
+  } catch {
+    if (isMockMode()) { mockClueStore.delete(id); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function batchDeleteClue(ids: number[]): Promise<void> {
-  await request.delete('/api/clue/batch', { data: ids });
+  try {
+    await request.delete('/api/clue/batch', { data: ids });
+  } catch {
+    if (isMockMode()) { mockClueStore.batchDelete(ids); return; }
+    throw new Error('后端不可用');
+  }
 }
 
 export async function fetchClueStats(): Promise<ClueStats> {
-  const res = await request.get('/api/clue/stats');
-  return res.data;
+  try {
+    const res = await request.get('/api/clue/stats');
+    return res.data;
+  } catch {
+    if (isMockMode()) return mockClueStore.stats();
+    throw new Error('后端不可用');
+  }
 }
 
 export async function convertClueToProject(id: number, dto: ClueConvertDTO): Promise<{ projectId: number }> {
@@ -422,6 +475,15 @@ export async function submitOpportunityReview(clueId: number, dto: OpportunityRe
 
 export async function approveClueReview(clueId: number, reviewId: number): Promise<{ opportunityCode: string }> {
   const res = await request.put(`/api/clue/${clueId}/review/${reviewId}/approve`);
+  return res.data;
+}
+
+export async function decideClueReview(
+  clueId: number,
+  reviewId: number,
+  dto: OpportunityReviewDecisionDTO,
+): Promise<{ opportunityCode: string }> {
+  const res = await request.put(`/api/clue/${clueId}/review/${reviewId}/decision`, dto);
   return res.data;
 }
 

@@ -21,20 +21,25 @@ export default function AdminUsers() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await request.get('/api/user/page', { params: { page, size: 10, keyword } });
+      const res = await request.get('/api/user/page', { params: { pageNum: page, pageSize: 10, keyword } });
       setData(res.data?.records || []);
       setTotal(res.data?.total || 0);
     } catch {
-      // 后端不可用 — 降级 localStorage
-      const stored = JSON.parse(localStorage.getItem('beike_admin_users') || '[]');
+      // 后端不可用 — 降级 localStorage，合并注册用户
+      let stored = JSON.parse(localStorage.getItem('beike_admin_users') || '[]');
       if (stored.length === 0) {
-        const defaults = [
+        stored = [
           { id: 'U001', username: 'admin', realName: '管理员', status: 1, createdAt: '2026-01-01' },
           { id: 'U002', username: 'zhangming', realName: '张明', status: 1, createdAt: '2026-01-01' },
         ];
-        localStorage.setItem('beike_admin_users', JSON.stringify(defaults));
-        stored.push(...defaults);
       }
+      // 合并注册用户
+      const registered = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
+      registered.forEach((r: { username: string; email?: string; createdAt?: string }) => {
+        if (!stored.find((u: UserRow) => u.username === r.username)) {
+          stored.push({ id: 'U' + Date.now(), username: r.username, realName: r.username, status: 1, createdAt: r.createdAt?.slice(0, 10) || new Date().toISOString().slice(0, 10) });
+        }
+      });
       let filtered = stored;
       if (keyword) filtered = filtered.filter((u: UserRow) => u.username.includes(keyword) || u.realName?.includes(keyword));
       setData(filtered.slice((page - 1) * 10, page * 10));
@@ -59,7 +64,7 @@ export default function AdminUsers() {
     const values = await form.validateFields();
     try {
       if (editId) {
-        await request.put('/api/user', { id: editId, ...values, password: values.password || '' });
+        await request.put(`/api/user/${editId}`, { id: editId, ...values, password: values.password || '' });
       } else {
         await request.post('/api/user', values);
       }

@@ -53,8 +53,4 @@ public interface SysUserMapper extends BaseMapper<SysUser> {
             "<if test='dateTo!=null and dateTo!=\"\"'> AND create_time &lt;= DATE_ADD(#{dateTo}, INTERVAL 1 DAY)</if> " +
             "ORDER BY create_time DESC</script>")
     IPage<Map<String, Object>> selectLogPage(Page<?> page, String userName, String action, String dateFrom, String dateTo);
-
-    //==== 通用 SQL 执行 ====
-    @Update("${sql}")
-    void executeRawSql(@Param("sql") String sql);
 }

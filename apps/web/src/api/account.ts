@@ -26,18 +26,6 @@ export async function resetPassword(email: string, code: string, newPassword: st
   await request.post('/api/auth/reset-password', { email, code, newPassword });
 }
 
-// ==================== 微信登录 ====================
-
-export async function getWechatAuthUrl(): Promise<string> {
-  const res = await request.get('/api/auth/wechat/url');
-  return res.data.url;
-}
-
-export async function wechatCallback(code: string): Promise<any> {
-  const res = await request.get('/api/auth/wechat/callback', { params: { code } });
-  return res.data;
-}
-
 // ==================== 设备管理 ====================
 
 export async function fetchDevices(): Promise<LoginDevice[]> {

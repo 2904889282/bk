@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Tag, Input, Select, Space, Card, message, Modal } from 'antd';
+import { Table, Button, Tag, Input, Select, Space, Card, Typography, message, Modal } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import { useAuth } from '../../../hooks/useAuth';
 import Permission from '../../../components/auth/Permission';
 import ProjectForm from './Form';
 import {
@@ -29,6 +30,8 @@ const LEVEL_COLORS: Record<string, string> = {
 };
 
 export default function PmProjects() {
+  const { isMockMode } = useAuth();
+  const demoMode = isMockMode();
   // 筛选
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<string | undefined>(undefined);
@@ -62,8 +65,12 @@ export default function PmProjects() {
     setLoading(true);
     try {
       const res = await fetchProjectPage(buildParams(pn, ps));
-      setList(res.list);
+      setList(res.records);
       setTotal(res.total);
+    } catch (err: unknown) {
+      if (!(err as { __mockToken?: boolean }).__mockToken) {
+        message.error('加载项目数据失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -282,7 +289,14 @@ export default function PmProjects() {
           onChange: onPageChange,
         }}
         scroll={{ x: 1200 }}
-        locale={{ emptyText: '暂无项目数据' }}
+        locale={{
+          emptyText: demoMode && !loading ? (
+            <Space direction="vertical" size={8} style={{ padding: 24 }}>
+              <Typography.Text type="secondary">演示模式下无法加载项目数据</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务后使用真实账号重新登录</Typography.Text>
+            </Space>
+          ) : '暂无项目数据',
+        }}
       />
 
       <ProjectForm

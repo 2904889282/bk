@@ -27,7 +27,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterDTO dto) {
-        authService.register(dto.getUsername(), dto.getPassword(), dto.getRealName(), dto.getEmail());
+        authService.register(dto.getUsername(), dto.getPassword(), dto.getRealName(), dto.getEmail(), dto.getDeptId());
         return Result.success();
     }
 
@@ -71,20 +71,6 @@ public class AuthController {
         return Result.success();
     }
 
-    // ==================== 微信登录 ====================
-
-    /** 获取微信扫码登录 URL */
-    @GetMapping("/wechat/url")
-    public Result<Map<String, String>> wechatAuthUrl() {
-        return Result.success(Map.of("url", authService.getWechatAuthUrl()));
-    }
-
-    /** 微信登录回调（code 换 token） */
-    @GetMapping("/wechat/callback")
-    public Result<Map<String, Object>> wechatCallback(@RequestParam String code, HttpServletRequest request) {
-        return Result.success(authService.wechatLogin(code, request));
-    }
-
     // ==================== 多设备管理 ====================
 
     /** 我的设备列表 */
@@ -119,8 +105,9 @@ public class AuthController {
     public static class RegisterDTO {
         @NotBlank private String username;
         @NotBlank private String password;
-        private String realName;
+        @NotBlank(message = "真实姓名不能为空") private String realName;
         @NotBlank private String email;
+        private Long deptId;             // 所属部门ID
     }
 
     @Data

@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
   ShadingType, PageNumber, PageBreak, LevelFormat, TableOfContents } = require('docx');
@@ -98,7 +98,7 @@ const doc = new Document({
           new TextRun({ text: 'v5.0', size: 36, color: '64748B' }),
         ] }),
         new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [
-          new TextRun({ text: 'LTC 管线管理 · 项目一体化管理 · 数据驱动决策', size: 24, color: '475569' }),
+          new TextRun({ text: 'LTC 线索管理 · 项目一体化管理 · 数据驱动决策', size: 24, color: '475569' }),
         ] }),
         new Paragraph({ spacing: { before: 600 }, border: { top: { style: BorderStyle.SINGLE, size: 6, color: colors.primary, space: 8 } }, children: [] }),
         new Paragraph({ spacing: { before: 200 }, children: [] }),
@@ -129,13 +129,13 @@ const doc = new Document({
 
         // ===== 1. 产品概述 =====
         heading(HeadingLevel.HEADING_1, '1. 产品概述'),
-        para('贝壳统一管理平台（以下简称"本系统"）是一套面向企业级客户的全流程业务管理系统，覆盖从线索获取、管线追踪、项目交付到数据洞察的完整业务链路。系统采用前后端分离架构，支持暗色模式、动态权限路由、演示数据降级等多种高级特性。'),
-        para('本系统旨在帮助企业实现销售管线的透明化管理、项目执行的高效协同、以及业务数据的实时洞察，从而提升决策效率与经营质量。'),
+        para('贝壳统一管理平台（以下简称"本系统"）是一套面向企业级客户的全流程业务管理系统，覆盖从线索获取、线索追踪、项目交付到数据洞察的完整业务链路。系统采用前后端分离架构，支持暗色模式、动态权限路由、演示数据降级等多种高级特性。'),
+        para('本系统旨在帮助企业实现销售线索的透明化管理、项目执行的高效协同、以及业务数据的实时洞察，从而提升决策效率与经营质量。'),
 
         boldPara('核心价值'),
         ...featureCard('全流程覆盖', '从线索到交付的一体化管 理', [
           '线索创建、分发、跟进全流程管 理',
-          '管线阶段可视化追踪与预警',
+          '线索阶段可视化追踪与预警',
           '项目全生命周期管理 与风险评估',
           '人才资源池管理与 调度',
         ]),
@@ -220,21 +220,21 @@ const doc = new Document({
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: 'KPI 卡片：线索总数、活跃项目、待处理预警、人才池，支持今日新增标记', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '补充指标：本月成交数、本月成交额、预警分布', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '趋势图：30 天线索/项目/转化折柱混合图（ECharts）', size: 22 })] }),
-        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '管线漏斗图：阶段分布可视化', size: 22 })] }),
+        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索漏斗图：阶段分布可视化', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '数据饼图：线索/项目/人才/预警占比', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '最近动态：操作日志 Timeline', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '快捷入口：6 宫格快捷操作 + 线索快速录入 Modal', size: 22 })] }),
         new Paragraph({ spacing: { after: 200 }, children: [] }),
 
-        heading(HeadingLevel.HEADING_2, '3.3 LTC 管线管理'),
-        para('LTC（Lead to Cash）管线管理模块覆盖从线索获取到成交转化的完整流程。'),
+        heading(HeadingLevel.HEADING_2, '3.3 LTC 线索管理'),
+        para('LTC（Lead to Cash）线索管理模块覆盖从线索获取到成交转化的完整流程。'),
         heading(HeadingLevel.HEADING_3, '线索管理'),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索列表：支持搜索、状态筛选、批量删除', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索详情：编辑模式（Inline Form）、删除操作', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索看板：状态分布饼图 + 最近创建列表', size: 22 })] }),
-        heading(HeadingLevel.HEADING_3, '管线管理'),
-        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '管线列表：多条件筛选（产品/行业/阶段）、搜索', size: 22 })] }),
-        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '管线看板：阶段卡片拖拽式视图 + 进度条', size: 22 })] }),
+        heading(HeadingLevel.HEADING_3, '线索管理'),
+        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索列表：多条件筛选（产品/行业/阶段）、搜索', size: 22 })] }),
+        new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '线索看板：阶段卡片拖拽式视图 + 进度条', size: 22 })] }),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '导入导出：Excel 模板下载/上传、错误明细下载', size: 22 })] }),
         heading(HeadingLevel.HEADING_3, '预警中心'),
         new Paragraph({ numbering: { reference: 'bullets', level: 0 }, children: [new TextRun({ text: '预警列表：分级管理（高/中/低）、处理状态跟踪', size: 22 })] }),
@@ -302,12 +302,12 @@ const doc = new Document({
         new Table({ width: { size: CONTENT_W, type: WidthType.DXA }, columnWidths: [1800, 2000, 1800, 3760],
           rows: simpleTable(['角色', '用户名', '密码', '权限范围'], [
             ['管理员', 'admin', 'admin123', '全部功能 (*)'],
-            ['经理', 'zhangming', 'zm2026', '管线管理：pipeline:create, edit, delete, import, batch'],
+            ['经理', 'zhangming', 'zm2026', '线索管理：pipeline:create, edit, delete, import, batch'],
             ['普通用户', '注册用户', '自定义', '基础权限：clue:list, pipeline:create'],
           ]) }),
         new Paragraph({ spacing: { after: 200 }, children: [] }),
 
-        para('权限码示例：pipeline:create（管线新建）、alert:list（预警查看）、project:list（项目查看）、risk:list（风险查看）、talent:list（人才查看）、system:user:list（用户管理）、clue:list（线索查看）。管理员（ROLE_ADMIN 角色）拥有所有权限，不受权限码限制。'),
+        para('权限码示例：pipeline:create（线索新建）、alert:list（预警查看）、project:list（项目查看）、risk:list（风险查看）、talent:list（人才查看）、system:user:list（用户管理）、clue:list（线索查看）。管理员（ROLE_ADMIN 角色）拥有所有权限，不受权限码限制。'),
 
         // ===== 6. 部署说明 =====
         heading(HeadingLevel.HEADING_1, '6. 部署说明'),
@@ -333,7 +333,7 @@ const doc = new Document({
           rows: simpleTable(['版本', '日期', '变更内容', '负责人'], [
             ['v5.0', '2026-07-03', '设计 Token 体系重构、动态权限路由、演示数据降级', '开发团队'],
             ['v4.1', '2026-06-30', '登录体系全链路闭环、Dashboard 首页、antd v6 兼容', '开发团队'],
-            ['v4.0', '2026-06-20', 'LTC 管线管理 + 项目管理核心模块', '开发团队'],
+            ['v4.0', '2026-06-20', 'LTC 线索管理 + 项目管理核心模块', '开发团队'],
             ['v3.0', '2026-06-10', '后端 Spring Boot 单体架构、39 个 API 接口', '开发团队'],
             ['v1.0', '2026-05-15', '项目初始化、技术选型、数据库设计', '开发团队'],
           ]) }),

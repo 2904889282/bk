@@ -21,7 +21,7 @@ const STATUS_OPTIONS = ['进行中', '暂停', '已交付', '已终止'];
 
 export default function ProjectForm({ open, editId, onClose, onSuccess }: Props) {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // 打开弹窗时：编辑模式回显数据，新建模式设置默认值

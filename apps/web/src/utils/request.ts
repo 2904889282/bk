@@ -34,6 +34,33 @@ const clearAuth = () => {
   });
 };
 
+/** 创建 mock 令牌错误对象，携带标记位供响应拦截器识别 */
+const createMockTokenError = (url: string) => ({
+  __mockToken: true,
+  message: `演示模式下 API 不可用（${url}），请启动后端服务后使用真实账号登录`,
+});
+
+/**
+ * 判断 mock 令牌是否可以放行到后端。
+ * 仅允许后端的无鉴权认证接口（与 SecurityConfig WHITELIST 对齐）+ userinfo。
+ * /api/auth/devices 等需要鉴权的接口不在白名单内，mock 令牌会被拦截。
+ */
+const MOCK_ALLOWED_AUTH_URLS = [
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/refresh',
+  '/api/auth/send-code',
+  '/api/auth/reset-password',
+  '/api/auth/login-by-email',
+  '/api/auth/userinfo',
+];
+const isMockAllowedAuthUrl = (url: string) =>
+  MOCK_ALLOWED_AUTH_URLS.some(allowed => url.startsWith(allowed));
+
+/** 防止 mock 模式下多个并发 API 调用重复弹 toast */
+let mockTokenNotified = false;
+const resetMockTokenNotified = () => { mockTokenNotified = false; };
+
 const request = axios.create({
   baseURL: '',
   timeout: 15000,
@@ -43,6 +70,21 @@ const request = axios.create({
 // ========== 请求拦截器 ==========
 request.interceptors.request.use(config => {
   const token = localStorage.getItem('beike_token') || sessionStorage.getItem('beike_token');
+
+  // 拦截 mock 演示令牌（mock_xxx）：阻止发送无效令牌到后端
+  // mock 令牌无法通过 Spring Security JWT 校验，必然导致 HTTP 403，
+  // 此处提前拦截并给出明确指引，避免用户困惑。
+  if (token && token.startsWith('mock_')) {
+    const url = (config.url || '').toLowerCase();
+    // 仅放行后端 SecurityConfig 白名单中的认证接口 + userinfo
+    if (!isMockAllowedAuthUrl(url)) {
+      return Promise.reject(createMockTokenError(config.url || ''));
+    }
+  } else if (token) {
+    // 真实令牌：重置 mock 通知标志，以便用户切换回 mock 模式时能再次提示
+    resetMockTokenNotified();
+  }
+
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
   // 非 GET 请求防重复提交
@@ -98,6 +140,15 @@ request.interceptors.response.use(
     // 请求被取消（防重复或路由切换）
     if (axios.isCancel(err)) return Promise.reject(err);
 
+    // Mock 令牌拦截：演示模式下后端不可用，给出明确指引（同次会话只弹一次）
+    if (err.__mockToken) {
+      if (!mockTokenNotified) {
+        mockTokenNotified = true;
+        msg('当前为演示模式，请启动后端服务后使用真实账号登录');
+      }
+      return Promise.reject(err);
+    }
+
     // HTTP 状态码处理
     const status = err.response?.status;
 
@@ -145,9 +196,10 @@ request.interceptors.response.use(
       }
     }
 
-    // 403 usually means the account is valid but lacks the required permission.
+    // 403：后端返回的具体消息优先于通用提示
     if (status === 403) {
-      msg('当前账号无此操作权限，请联系管理员开通权限');
+      const bodyMsg = err.response?.data?.message;
+      msg(bodyMsg || '当前账号无此操作权限，请联系管理员开通权限');
     } else if (status === 400) {
       const data = err.response?.data;
       msg(data?.message || data?.msg || '请求参数错误');

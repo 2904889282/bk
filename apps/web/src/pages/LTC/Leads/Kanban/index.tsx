@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Space, Typography, Select, Button } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Space, Typography, Select } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import {
@@ -149,7 +149,7 @@ export default function LeadsKanban() {
                       value={d.value}
                       suffix={d.suffix}
                       precision={d.precision}
-                      valueStyle={{ color: d.color, fontSize: 22, fontWeight: 700 }}
+                      styles={{ content: { color: d.color, fontSize: 22, fontWeight: 700 } }}
                     />
                   </Col>
                 ))}
@@ -214,7 +214,7 @@ export default function LeadsKanban() {
                 ].map((c, i) => (
                   <Col span={6} key={i}>
                     <Card size="small" style={{ borderTop: `3px solid ${c.color}`, borderRadius: 8 }}>
-                      <Statistic title={c.name} value={c.count} suffix="条" valueStyle={{ color: c.color }} />
+                      <Statistic title={c.name} value={c.count} suffix="条" styles={{ content: { color: c.color } }} />
                       <Text type="secondary" style={{ fontSize: 12 }}>{c.desc}</Text>
                     </Card>
                   </Col>

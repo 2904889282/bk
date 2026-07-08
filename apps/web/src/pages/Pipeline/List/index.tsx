@@ -4,6 +4,7 @@ import {
   Space, Tooltip, Popover, Checkbox, Progress, Typography, App, Dropdown, Drawer,
   Modal,
 } from 'antd';
+import { useAuth } from '../../../hooks/useAuth';
 import {
   SearchOutlined, ReloadOutlined, PlusOutlined, DownloadOutlined,
   SettingOutlined, DownOutlined, UpOutlined, ExpandOutlined, CompressOutlined,
@@ -28,6 +29,8 @@ const STAGES = PIPELINE_STAGE_OPTIONS;
 
 const PipelineList: React.FC = () => {
   const { message } = App.useApp();
+  const { isMockMode } = useAuth();
+  const demoMode = isMockMode();
   const [form] = Form.useForm();
   const [drawerForm] = Form.useForm();
   const tableRef = useRef<HTMLDivElement>(null);
@@ -121,8 +124,10 @@ const PipelineList: React.FC = () => {
       setDataSource(res.records || []);
       setTotal(res.total || 0);
       setPagination({ current: page, pageSize: size });
-    } catch {
-      message.error('加载数据失败');
+    } catch (err: unknown) {
+      if (!(err as { __mockToken?: boolean }).__mockToken) {
+        message.error('加载数据失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -325,7 +330,7 @@ const PipelineList: React.FC = () => {
         style={{ borderRadius: 8 }}
         title={
           <Space>
-            <Text strong style={{ fontSize: 16 }}>管线列表</Text>
+            <Text strong style={{ fontSize: 16 }}>线索列表</Text>
             <Tag color="blue">共 {total} 条商机</Tag>
           </Space>
         }
@@ -374,6 +379,14 @@ const PipelineList: React.FC = () => {
           dataSource={dataSource}
           loading={loading}
           scroll={{ x: 1300 }}
+          locale={{
+            emptyText: demoMode && !loading ? (
+              <Space direction="vertical" size={8} style={{ padding: 24 }}>
+                <Typography.Text type="secondary">演示模式下无法加载商机数据</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务后使用真实账号重新登录</Typography.Text>
+              </Space>
+            ) : undefined,
+          }}
           rowSelection={{
             selectedRowKeys,
             onChange: (keys) => setSelectedRowKeys(keys),
@@ -392,7 +405,7 @@ const PipelineList: React.FC = () => {
       {/* 3. 新建/编辑 Drawer */}
       <Drawer
         title={editId ? '编辑商机' : '新建商机'}
-        width={520}
+        size="large"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         extra={

@@ -4,11 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.beike.platform.common.BizException;
 import com.beike.platform.common.JwtUtil;
 import com.beike.platform.common.VerifyCodeStore;
-import com.beike.platform.config.WechatConfig;
 import com.beike.platform.entity.LoginDevice;
 import com.beike.platform.entity.SysUser;
+import com.beike.platform.entity.Talent;
 import com.beike.platform.mapper.LoginDeviceMapper;
 import com.beike.platform.mapper.SysUserMapper;
+import com.beike.platform.mapper.TalentMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,10 +28,10 @@ import java.util.stream.Collectors;
 public class AuthService {
 
     private final SysUserMapper userMapper;
+    private final TalentMapper talentMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final VerifyCodeStore codeStore;
-    private final WechatConfig wechatConfig;
     private final LoginDeviceMapper deviceMapper;
 
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -85,7 +86,7 @@ public class AuthService {
     // ==================== 注册 ====================
 
     @Transactional(rollbackFor = Exception.class)
-    public void register(String username, String password, String realName, String email) {
+    public void register(String username, String password, String realName, String email, Long deptId) {
         if (userMapper.exists(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUsername, username))) {
             throw new BizException("用户名已存在");
         }
@@ -95,8 +96,29 @@ public class AuthService {
         user.setRealName(realName);
         user.setEmail(email);
         user.setStatus(1);
+        if (deptId != null) user.setDeptId(deptId);
         userMapper.insert(user);
         userMapper.insertUserRole(user.getId(), 3L);
+
+        // 自动加入人才池（外部人员），部门信息写入角色字段
+        String deptName = resolveDeptName(deptId);
+        Talent talent = new Talent();
+        talent.setName(realName != null ? realName : username);
+        talent.setRole(deptName != null ? deptName + "-外部人员" : "外部人员");
+        talent.setTalentType("external");
+        talent.setStatus("normal");
+        talent.setUtilization(0);
+        talentMapper.insert(talent);
+    }
+
+    private String resolveDeptName(Long deptId) {
+        if (deptId == null) return null;
+        return switch (deptId.intValue()) {
+            case 1 -> "平台一部";
+            case 2 -> "平台二部";
+            case 3 -> "平台三部";
+            default -> null;
+        };
     }
 
     // ==================== 邮箱验证码登录 ====================
@@ -178,61 +200,6 @@ public class AuthService {
 
         // 重置密码后踢掉所有设备，强制重新登录
         deviceMapper.kickAllDevices(user.getId());
-    }
-
-    // ==================== 微信登录 ====================
-
-    public String getWechatAuthUrl() {
-        if (wechatConfig.getAppId().isEmpty()) {
-            throw new BizException("微信登录未配置，请联系管理员");
-        }
-        return "https://open.weixin.qq.com/connect/qrconnect"
-                + "?appid=" + wechatConfig.getAppId()
-                + "&redirect_uri=" + wechatConfig.getRedirectUri()
-                + "&response_type=code"
-                + "&scope=snsapi_login"
-                + "&state=STATE#wechat_redirect";
-    }
-
-    @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> wechatLogin(String code, HttpServletRequest request) {
-        if (wechatConfig.getAppId().isEmpty()) {
-            throw new BizException("微信登录未配置");
-        }
-
-        // 模拟微信回调：开发环境下，code 作为用户名，通过 openid 查找或自动注册
-        // 生产环境需用 code 换 access_token，再用 access_token 获取 openid
-        String openId = code; // 生产环境替换为真实的 openid
-        String unionId = code;
-
-        SysUser user = userMapper.selectOne(
-                new LambdaQueryWrapper<SysUser>().eq(SysUser::getWechatOpenId, openId));
-
-        if (user == null) {
-            // 自动注册
-            user = new SysUser();
-            user.setUsername("wx_" + openId.substring(0, Math.min(openId.length(), 8)));
-            user.setPassword(passwordEncoder.encode("wx" + System.currentTimeMillis()));
-            user.setRealName("微信用户");
-            user.setWechatOpenId(openId);
-            user.setWechatUnionId(unionId);
-            user.setStatus(1);
-            userMapper.insert(user);
-            userMapper.insertUserRole(user.getId(), 3L);
-        }
-
-        if (user.getStatus() != 1) {
-            throw new BizException("账号已被禁用");
-        }
-
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
-        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getUsername());
-        saveLoginDevice(user.getId(), token, request);
-
-        List<String> roles = userMapper.selectRolesByUserId(user.getId());
-        List<String> permissions = userMapper.selectPermissionsByUserId(user.getId());
-
-        return authPayload(token, refreshToken, user, roles, permissions);
     }
 
     // ==================== 多设备管理 ====================

@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useEffect, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, lazy, Suspense, useState } from 'react';
 import { App as AntdApp, ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuth } from './hooks/useAuth';
@@ -26,6 +26,7 @@ const AdminUsers = lazy(() => import('./pages/Admin/Users'));
 const RecycleBin = lazy(() => import('./pages/Admin/RecycleBin'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
 const ResourcesPage = lazy(() => import('./pages/Resources'));
+const StatPlaceholder = lazy(() => import('./pages/StatPlaceholder'));
 
 function PageLoading() {
   return <div style={{ textAlign: 'center', padding: 80 }}><Spin size="large" /></div>;
@@ -51,9 +52,30 @@ function MessageInjector() {
 }
 
 function AppInit() {
-  const { token, isLoggedIn, fetchUserInfo } = useAuth();
+  const { token, isLoggedIn, fetchUserInfo, logout } = useAuth();
+  const navigate = useNavigate();
+  const [transitioning, setTransitioning] = useState(false);
+
   useEffect(() => {
-    if (token && !isLoggedIn) fetchUserInfo();
+    // mock 令牌检测：后端在线则自动清除，强制重新登录获取真实 JWT
+    if (!token || transitioning) return;
+    if (!token.startsWith('mock_')) { setTransitioning(true); return; }
+    
+    // mock 令牌 + 尝试检测后端
+    fetch('/api/health')
+      .then(resp => {
+        if (resp.ok) {
+          // 后端在线 → 清除 mock 令牌 → 跳转登录页获取真实 JWT
+          logout();
+          setTimeout(() => { navigate('/login', { replace: true }); }, 100);
+        }
+      })
+      .catch(() => { /* 后端不可用，mock 模式 */ });
+    setTransitioning(true);
+  }, [token, transitioning]);
+
+  useEffect(() => {
+    if (token && !isLoggedIn && !token.startsWith('mock_')) fetchUserInfo();
   }, [token, isLoggedIn, fetchUserInfo]);
   useEffect(() => {
     initStageMapping();
@@ -63,6 +85,8 @@ function AppInit() {
 
 function AppContent() {
   const { isDark } = useTheme();
+  const location = useLocation();
+  const isRoot = location.pathname === '/';
 
   return (
     <ConfigProvider
@@ -164,27 +188,35 @@ function AppContent() {
       <AntdApp>
         <MessageInjector />
         <AppInit />
-        <Routes>
-          <Route path="/login" element={withSuspense(<LoginPage />)} />
-          <Route path="/" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
-            <Route index element={withSuspense(<PortalPage />)} />
-            <Route path="ltc/kanban" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcKanban /></PermissionGuard>)} />
-            <Route path="ltc/pipeline" element={withSuspense(<PermissionGuard permCode="pipeline:list"><PipelineList /></PermissionGuard>)} />
-            <Route path="ltc/alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
-            <Route path="ltc/analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
-            <Route path="ltc/leads" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
-            <Route path="ltc/leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
-            <Route path="pm/kanban" element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
-            <Route path="pm/projects" element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
-            <Route path="pm/risks" element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
-            <Route path="pm/talent" element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
-            <Route path="pm/gantt" element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
-            <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
-            <Route path="admin/recycle" element={withSuspense(<PermissionGuard permCode="recycle:list"><RecycleBin /></PermissionGuard>)} />
-            <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
-            <Route path="resources" element={withSuspense(<ResourcesPage />)} />
-          </Route>
-        </Routes>
+        {isRoot ? (
+          // 闪屏首页 — 在 <Routes> 外部渲染，零路由冲突
+          <PrivateRoute>{withSuspense(<PortalPage />)}</PrivateRoute>
+        ) : (
+          <Routes>
+            <Route path="/login" element={withSuspense(<LoginPage />)} />
+            {/* 业务模块 — 共用 BasicLayout 导航栏 */}
+            <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
+              <Route path="ltc/kanban" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcKanban /></PermissionGuard>)} />
+              <Route path="ltc/pipeline" element={withSuspense(<PermissionGuard permCode="pipeline:list"><PipelineList /></PermissionGuard>)} />
+              <Route path="ltc/alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
+              <Route path="ltc/analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
+              <Route path="ltc/leads" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
+              <Route path="ltc/leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
+              <Route path="pm/kanban" element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
+              <Route path="pm/projects" element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
+              <Route path="pm/risks" element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
+              <Route path="pm/talent" element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
+              <Route path="pm/gantt" element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
+              <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
+              <Route path="admin/recycle" element={withSuspense(<PermissionGuard permCode="recycle:list"><RecycleBin /></PermissionGuard>)} />
+              <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
+              <Route path="resources" element={withSuspense(<ResourcesPage />)} />
+              <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
+            </Route>
+            {/* 未知路径回退 → 也是 BasicLayout */}
+            <Route path="*" element={<Navigate to="/ltc/kanban" replace />} />
+          </Routes>
+        )}
       </AntdApp>
     </ConfigProvider>
   );

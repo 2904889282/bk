@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.beike.platform.common.BizException;
+import com.beike.platform.common.SecurityUtils;
 import com.beike.platform.constant.StageEnum;
 import com.beike.platform.dto.PipelinePageDTO;
 import com.beike.platform.dto.PipelineSaveDTO;
@@ -27,7 +28,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 管线 Service 实现 — 完全不需要关心数据权限。
+ * 线索 Service 实现 — 完全不需要关心数据权限。
  * <p>
  * 数据权限由 @DataScope 注解（标注在 Mapper 方法上）+ DataPermissionInterceptor 自动处理，
  * 业务代码零侵入，只需关注纯业务逻辑。
@@ -42,6 +43,14 @@ public class PipelineServiceImpl implements PipelineService {
 
     @Override
     public IPage<PipelineVO> page(PipelinePageDTO dto) {
+        // 普通用户只看自己负责的商机
+        SecurityUtils.LoginUser loginUser = SecurityUtils.getLoginUser();
+        if (loginUser != null && "USER".equals(loginUser.getRoleType())) {
+            SysUser user = userMapper.selectById(loginUser.getUserId());
+            if (user != null && user.getRealName() != null) {
+                dto.setOwner(user.getRealName());
+            }
+        }
         if (dto.getStage() != null && !dto.getStage().isBlank()) {
             dto.setStage(StageEnum.normalize(dto.getStage()));
         }

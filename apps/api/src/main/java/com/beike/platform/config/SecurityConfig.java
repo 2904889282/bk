@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -39,13 +40,16 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
 
-    /** 白名单：无需鉴权的接口 */
+    /** CORS 允许的来源，通过配置注入。开发环境默认 *，生产环境必须指定具体域名。 */
+    @Value("${beike.cors.allowed-origins:*}")
+    private String allowedOrigins;
+
+    // ================================================================
     private static final String[] WHITELIST = {
-            "/api/auth/login", "/api/auth/register", "/api/auth/refresh",
-            "/api/auth/send-code", "/api/auth/reset-password",
-            "/api/auth/login-by-email",
-            "/api/auth/wechat/**",
-            "/api/pipeline/stages",
+            "/api/auth/login", "/api/auth/register",
+            "/api/auth/refresh", "/api/auth/send-code",
+            "/api/auth/reset-password", "/api/auth/login-by-email",
+            "/api/health", "/api/pipeline/stages",
             "/error", "/actuator/**"
     };
 
@@ -66,7 +70,10 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOriginPattern("*");   // 不能用 setAllowedOriginPatterns + allowCredentials(true)
+        // 生产环境必须通过 beike.cors.allowed-origins 配置具体域名，不再允许 * + allowCredentials
+        for (String origin : allowedOrigins.split(",")) {
+            config.addAllowedOriginPattern(origin.trim());
+        }
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
         config.setAllowCredentials(true);

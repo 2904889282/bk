@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useAuth } from '../../../../hooks/useAuth';
 import {
   Card, Form, Input, Select, DatePicker, Button, Row, Col, Table, Tag,
   Space, Tooltip, Popover, Checkbox, Typography, App, Drawer, Modal,
@@ -10,7 +11,7 @@ import {
   SearchOutlined, ReloadOutlined, PlusOutlined, DownloadOutlined,
   SettingOutlined, DownOutlined, UpOutlined, ExpandOutlined, CompressOutlined,
   EyeOutlined, UserSwitchOutlined, TagOutlined, FlagOutlined,
-  AuditOutlined, AimOutlined, WarningOutlined,
+  AuditOutlined,
 } from '@ant-design/icons';
 import {
   fetchCluePage, createClue, updateClue, deleteClue, batchDeleteClue,
@@ -21,6 +22,23 @@ import {
 import type {
   ClueVO, ClueSaveDTO, CampaignDashboardVO, CampaignItem,
 } from '../../../../api/clue';
+import { fetchDeptList, fetchUserOptions, type DeptOption, type UserOption } from '../../../../api/dept';
+import ClueFormFields from '../../../../features/clue/ClueFormFields';
+import {
+  CLIENT_CIRCLE_COLORS,
+  CLIENT_CIRCLE_LABELS,
+  CLIENT_CIRCLE_OPTIONS,
+  CLUE_FORM_DEFAULTS,
+  CLUE_LEVEL_OPTIONS,
+  CLUE_STATUS_COLORS,
+  CLUE_STATUS_OPTIONS,
+  HEALTH_COLORS,
+  HEALTH_LABELS,
+  HEALTH_OPTIONS,
+  LEVEL_COLORS,
+  mapClueToForm,
+  normalizeClueFormValues,
+} from '../../../../features/clue/clueFormConfig';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
@@ -28,36 +46,60 @@ const { Text, Link } = Typography;
 const { RangePicker } = DatePicker;
 
 // --- 业务常量 ---
-const STATUS_OPTIONS = ['接触', '沟通', '提案', '承接', '延期', '丢失'];
-const STATUS_COLORS: Record<string, string> = {
-  '接触': 'blue', '沟通': 'orange', '提案': 'purple', '承接': 'green',
-  '延期': 'warning', '丢失': 'default',
-};
-const LEVEL_OPTIONS = ['S', 'A', 'B', 'C'];
-const LEVEL_COLORS: Record<string, string> = { S: '#ff4d4f', A: '#fa8c16', B: '#1677ff', C: '#8c8c8c' };
-const HEALTH_OPTIONS = ['normal', 'yellow', 'red'];
-const HEALTH_LABELS: Record<string, string> = { normal: '正常', yellow: '黄灯', red: '红灯' };
-const HEALTH_COLORS: Record<string, string> = { normal: 'green', yellow: 'gold', red: 'red' };
-const CIRCLE_OPTIONS = ['第一圈层', '第二圈层', '第三圈层', '第四圈层'];
-const CIRCLE_COLORS: Record<string, string> = {
-  '第一圈层': '#ff4d4f', '第二圈层': '#fa8c16', '第三圈层': '#1677ff', '第四圈层': '#8c8c8c',
-};
-const CIRCLE_LABELS: Record<string, string> = {
-  '第一圈层': '传统大厂', '第二圈层': 'AI大厂', '第三圈层': '腰部中厂', '第四圈层': '大G',
-};
-const QUICK_FILTERS = [
-  { key: 'mine', label: '我的待处理', values: { owner: '张明', status: '接触' } },
-  { key: 'review', label: '本周上会清单', values: { status: '提案' } },
-  { key: 'red', label: '红灯督办池', values: { healthStatus: 'red' } },
-  { key: 'potential', label: '高潜商机', values: { clueLevel: 'S' } },
+const QUICK_FILTER_BASES = [
+  { key: 'mine', label: '我的待处理', values: { status: '接触' }, usesOwner: true },
+  { key: 'review', label: '本周上会清单', values: { status: '提案' }, usesOwner: false },
+  { key: 'red', label: '红灯督办池', values: { healthStatus: 'red' }, usesOwner: false },
+  { key: 'potential', label: '高潜商机', values: { clueLevel: 'S' }, usesOwner: false },
 ] as const;
+
+const DEFAULT_VISIBLE_COLUMNS = [
+  'clueNumber',
+  'clientCompany',
+  'requirementDesc',
+  'clueLevel',
+  'clueStatus',
+  'reviewStatus',
+  'beikeOwner',
+  'healthStatus',
+  'completeness',
+  'opportunityAmount',
+  'industry',
+  'recommendedProducts',
+  'action',
+];
+
+function clueCompleteness(record: ClueVO) {
+  const fields: Array<keyof ClueVO> = [
+    'clueName', 'clientCompany', 'clientContact', 'beikeOwner', 'deptBelong',
+    'clueStatus', 'clueLevel', 'clientCircle', 'sourceType', 'industry',
+    'requirementDesc', 'painPoint', 'expectedTarget', 'opportunityAmount',
+    'recommendedProducts', 'nextMaintenanceDate',
+  ];
+  const filled = fields.filter(field => {
+    const value = record[field];
+    return value !== undefined && value !== null && String(value).trim() !== '';
+  }).length;
+  return Math.round((filled / fields.length) * 100);
+}
 
 export default function LeadsList() {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const currentUser = useAuth(s => s.user);
+  const quickFilters = useMemo(() =>
+    QUICK_FILTER_BASES.map(f =>
+      f.usesOwner
+        ? { ...f, values: { ...f.values, owner: currentUser?.name || '' } }
+        : f
+    ), [currentUser]);
+
   const [form] = Form.useForm();
   const [drawerForm] = Form.useForm();
   const tableRef = useRef<HTMLDivElement>(null);
+
+  const { isMockMode } = useAuth();
+  const demoMode = isMockMode();
 
   // 数据
   const [loading, setLoading] = useState(false);
@@ -69,6 +111,10 @@ export default function LeadsList() {
   const [campaigns, setCampaigns] = useState<CampaignItem[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<number | null>(null);
   const [dashboard, setDashboard] = useState<CampaignDashboardVO | null>(null);
+
+  // 承接人 / 部门下拉数据
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [depts, setDepts] = useState<DeptOption[]>([]);
 
   // UI
   const [expandSearch, setExpandSearch] = useState(false);
@@ -95,8 +141,8 @@ export default function LeadsList() {
         <Space>
           <Link strong onClick={() => navigate(`/ltc/leads/${r.id}`)}>{r.clientCompany}</Link>
           {r.clientCircle && (
-            <Tag color={CIRCLE_COLORS[r.clientCircle]} style={{ fontSize: 11 }}>
-              {CIRCLE_LABELS[r.clientCircle] || r.clientCircle}
+            <Tag color={CLIENT_CIRCLE_COLORS[r.clientCircle]} style={{ fontSize: 11 }}>
+              {CLIENT_CIRCLE_LABELS[r.clientCircle] || r.clientCircle}
             </Tag>
           )}
         </Space>
@@ -115,7 +161,11 @@ export default function LeadsList() {
     },
     {
       title: '当前状态', dataIndex: 'clueStatus', width: 90,
-      render: (v: string) => <Tag color={STATUS_COLORS[v] || 'default'}>{v}</Tag>,
+      render: (v: string) => <Tag color={CLUE_STATUS_COLORS[v] || 'default'}>{v}</Tag>,
+    },
+    {
+      title: '评审状态', dataIndex: 'reviewStatus', width: 90,
+      render: (v: string) => v ? <Tag color={v === '通过' ? 'green' : v === '驳回' ? 'red' : v === '评审中' ? 'purple' : 'gold'}>{v}</Tag> : '-',
     },
     { title: '责任人', dataIndex: 'beikeOwner', width: 100 },
     {
@@ -133,8 +183,26 @@ export default function LeadsList() {
         );
       },
     },
+    {
+      title: '资料完整度', key: 'completeness', width: 120,
+      render: (_: unknown, r: ClueVO) => {
+        const percent = clueCompleteness(r);
+        const color = percent >= 80 ? 'success' : percent >= 55 ? 'active' : 'exception';
+        return <Progress percent={percent} size="small" status={color as 'success' | 'active' | 'exception'} />;
+      },
+    },
     { title: '预计商机金额', dataIndex: 'opportunityAmount', width: 130,
-      render: (v: number) => v ? <Text strong>{v.toLocaleString()} 元</Text> : '-' },
+      render: (_: number, r: ClueVO) => {
+        const amount = r.opportunityAmount ?? r.budgetAmount;
+        return amount ? <Text strong>{Number(amount).toLocaleString()} 万</Text> : '-';
+      } },
+    { title: '所属行业', dataIndex: 'industry', width: 100, render: (v: string) => v ? <Tag>{v}</Tag> : '-' },
+    { title: '价值象限', dataIndex: 'valueQuadrant', width: 130, ellipsis: true },
+    { title: '推荐产品', dataIndex: 'recommendedProducts', width: 150, ellipsis: true },
+    {
+      title: '下次维护', dataIndex: 'nextMaintenanceDate', width: 110,
+      render: (v: string) => v ? dayjs(v).format('MM-DD') : '-',
+    },
     { title: '甲方部门', dataIndex: 'clientDept', width: 100 },
     { title: '甲方对接人', dataIndex: 'clientContact', width: 100 },
     { title: '来源', dataIndex: 'sourceType', width: 100,
@@ -154,8 +222,20 @@ export default function LeadsList() {
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(
     () => JSON.parse(localStorage.getItem('leads_columns_v2') || 'null')
-      || allColumns.map(c => c.dataIndex || c.key!)
+      || DEFAULT_VISIBLE_COLUMNS
   );
+
+  const pageStats = useMemo(() => {
+    const complete = dataSource.filter(item => clueCompleteness(item) >= 80).length;
+    const review = dataSource.filter(item => item.reviewStatus === '评审中').length;
+    const amount = dataSource.reduce((sum, item) => sum + Number(item.opportunityAmount ?? item.budgetAmount ?? 0), 0);
+    return {
+      complete,
+      incomplete: Math.max(dataSource.length - complete, 0),
+      review,
+      amount,
+    };
+  }, [dataSource]);
 
   // ========== 数据加载 ==========
   const loadData = async (page = pagination.current, size = pagination.pageSize) => {
@@ -179,8 +259,11 @@ export default function LeadsList() {
       setDataSource(res.records || []);
       setTotal(res.total || 0);
       setPagination({ current: page, pageSize: size });
-    } catch {
-      message.error('加载数据失败');
+    } catch (err: unknown) {
+      // mock 令牌拦截错误：拦截器已弹 toast，此处不再重复
+      if (!(err as { __mockToken?: boolean }).__mockToken) {
+        message.error('加载数据失败');
+      }
     } finally { setLoading(false); }
   };
 
@@ -195,6 +278,8 @@ export default function LeadsList() {
         }
       }
     }).catch(() => {});
+    fetchDeptList().then(setDepts).catch(() => {});
+    fetchUserOptions().then(setUsers).catch(() => {});
     loadData(1);
   }, []);
 
@@ -205,7 +290,7 @@ export default function LeadsList() {
       loadData(1);
       return;
     }
-    const item = QUICK_FILTERS.find(f => f.key === key);
+    const item = quickFilters.find(f => f.key === key);
     if (item) {
       form.setFieldsValue(item.values);
       loadData(1);
@@ -241,34 +326,13 @@ export default function LeadsList() {
   const openCreate = () => {
     setEditId(null);
     drawerForm.resetFields();
-    drawerForm.setFieldsValue({ clueStatus: '接触', clueLevel: 'B', deptBelong: '销售一部' });
+    drawerForm.setFieldsValue(CLUE_FORM_DEFAULTS);
     setDrawerOpen(true);
   };
 
   const handleEdit = (r: ClueVO) => {
     setEditId(r.id);
-    drawerForm.setFieldsValue({
-      clueName: r.clueName,
-      clientCompany: r.clientCompany,
-      clientDept: r.clientDept,
-      clientContact: r.clientContact,
-      beikeOwner: r.beikeOwner,
-      budget: r.budget,
-      budgetAmount: r.budgetAmount,
-      clueLevel: r.clueLevel,
-      clueStatus: r.clueStatus,
-      deptBelong: r.deptBelong,
-      clientCircle: r.clientCircle,
-      campaignId: r.campaignId,
-      sourceType: r.sourceType,
-      sourceActivityName: r.sourceActivityName,
-      industry: r.industry,
-      contactDate: r.contactDate,
-      requirementDesc: r.requirementDesc,
-      painPoint: r.painPoint,
-      expectedTarget: r.expectedTarget,
-      remark: r.remark,
-    });
+    drawerForm.setFieldsValue(mapClueToForm(r));
     setDrawerOpen(true);
   };
 
@@ -276,10 +340,7 @@ export default function LeadsList() {
     try {
       const values = await drawerForm.validateFields();
       setDrawerLoading(true);
-      const dto: ClueSaveDTO = {
-        ...values,
-        contactDate: values.contactDate,
-      };
+      const dto: ClueSaveDTO = normalizeClueFormValues(values);
       if (editId) {
         await updateClue(editId, dto);
         message.success('线索已更新');
@@ -462,36 +523,36 @@ export default function LeadsList() {
           <Row gutter={[16, 16]}>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-                <Statistic title="战役目标" value={dashboard.targetCount} suffix="条" valueStyle={{ fontSize: 24, fontWeight: 700 }} />
+                <Statistic title="战役目标" value={dashboard.targetCount} suffix="条" styles={{ content: { fontSize: 24, fontWeight: 700 } }} />
                 <div style={{ marginTop: 4 }}><Text type="secondary" style={{ fontSize: 12 }}>目标金额: {dashboard.targetAmount || '-'} 万</Text></div>
               </Card>
             </Col>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-                <Statistic title="已新增线索" value={dashboard.addedCount} suffix="条" valueStyle={{ color: '#1677ff', fontSize: 24, fontWeight: 700 }} />
+                <Statistic title="已新增线索" value={dashboard.addedCount} suffix="条" styles={{ content: { color: '#1677ff', fontSize: 24, fontWeight: 700 } }} />
                 <div style={{ marginTop: 4 }}><Tag color="blue">完成率 {((dashboard.addedCount / Math.max(dashboard.targetCount, 1)) * 100).toFixed(0)}%</Tag></div>
               </Card>
             </Col>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-                <Statistic title="有效线索率" value={dashboard.validRate} suffix="%" precision={1} valueStyle={{ color: '#52c41a', fontSize: 24, fontWeight: 700 }} />
+                <Statistic title="有效线索率" value={dashboard.validRate} suffix="%" precision={1} styles={{ content: { color: '#52c41a', fontSize: 24, fontWeight: 700 } }} />
               </Card>
             </Col>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-                <Statistic title="商机转化率" value={dashboard.conversionRate} suffix="%" precision={1} valueStyle={{ color: '#722ed1', fontSize: 24, fontWeight: 700 }} />
+                <Statistic title="商机转化率" value={dashboard.conversionRate} suffix="%" precision={1} styles={{ content: { color: '#722ed1', fontSize: 24, fontWeight: 700 } }} />
               </Card>
             </Col>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" styles={{ body: { padding: '12px 16px' } }}>
-                <Statistic title="待评审" value={dashboard.pendingReviewCount} suffix="条" valueStyle={{ color: '#fa8c16', fontSize: 24, fontWeight: 700 }} />
+                <Statistic title="待评审" value={dashboard.pendingReviewCount} suffix="条" styles={{ content: { color: '#fa8c16', fontSize: 24, fontWeight: 700 } }} />
               </Card>
             </Col>
             <Col xs={12} sm={8} md={4}>
               <Card size="small" hoverable styles={{ body: { padding: '12px 16px' } }}>
                 <Statistic
                   title="超期预警" value={dashboard.yellowWarningCount + (dashboard.redWarningCount || 0)}
-                  suffix="条" valueStyle={{ color: '#ff4d4f', fontSize: 24, fontWeight: 700 }}
+                  suffix="条" styles={{ content: { color: '#ff4d4f', fontSize: 24, fontWeight: 700 } }}
                 />
                 <div style={{ marginTop: 4 }}>
                   <Tag color="gold" onClick={() => { form.setFieldsValue({ healthStatus: 'yellow' }); loadData(1); }}>黄灯 {dashboard.yellowWarningCount}</Tag>
@@ -513,7 +574,7 @@ export default function LeadsList() {
             onChange={(value) => applyQuickFilter(String(value))}
             options={[
               { label: '全部', value: 'all' },
-              ...QUICK_FILTERS.map(item => ({ label: item.label, value: item.key })),
+              ...quickFilters.map(item => ({ label: item.label, value: item.key })),
             ]}
           />
           {reviewMode && <Tag color="purple" icon={<AuditOutlined />}>周度评审工作台已开启</Tag>}
@@ -524,13 +585,13 @@ export default function LeadsList() {
               <Form.Item name="keyword" label="关键词"><Input placeholder="线索名称/公司" allowClear prefix={<SearchOutlined />} /></Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item name="status" label="线索状态"><Select placeholder="全部状态" allowClear options={STATUS_OPTIONS.map(v => ({ value: v, label: v }))} /></Form.Item>
+              <Form.Item name="status" label="线索状态"><Select placeholder="全部状态" allowClear options={CLUE_STATUS_OPTIONS.map(v => ({ value: v, label: v }))} /></Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Form.Item name="healthStatus" label="健康度"><Select placeholder="全部" allowClear options={HEALTH_OPTIONS.map(v => ({ value: v, label: HEALTH_LABELS[v] }))} /></Form.Item>
             </Col>
             <Col xs={24} sm={12} md={6}>
-              <Form.Item name="clientCircle" label="客户圈层"><Select placeholder="全部圈层" allowClear options={CIRCLE_OPTIONS.map(v => ({ value: v, label: `${v}(${CIRCLE_LABELS[v]})` }))} /></Form.Item>
+              <Form.Item name="clientCircle" label="客户圈层"><Select placeholder="全部圈层" allowClear options={CLIENT_CIRCLE_OPTIONS.map(v => ({ value: v, label: `${v}(${CLIENT_CIRCLE_LABELS[v]})` }))} /></Form.Item>
             </Col>
 
             {expandSearch && (
@@ -539,7 +600,7 @@ export default function LeadsList() {
                   <Form.Item name="owner" label="责任人"><Input placeholder="请输入" allowClear /></Form.Item>
                 </Col>
                 <Col xs={24} sm={12} md={6}>
-                  <Form.Item name="clueLevel" label="线索等级"><Select placeholder="全部等级" allowClear options={LEVEL_OPTIONS.map(v => ({ value: v, label: v + '级' }))} /></Form.Item>
+                  <Form.Item name="clueLevel" label="线索等级"><Select placeholder="全部等级" allowClear options={CLUE_LEVEL_OPTIONS.map(v => ({ value: v, label: v + '级' }))} /></Form.Item>
                 </Col>
                 <Col xs={24} sm={12} md={6}>
                   <Form.Item name="campaignId" label="所属战役"><Select placeholder="全部战役" allowClear options={campaigns.map(c => ({ value: c.id, label: c.name }))} /></Form.Item>
@@ -551,7 +612,7 @@ export default function LeadsList() {
                   <Form.Item name="deptBelong" label="承接部门"><Input placeholder="请输入" allowClear /></Form.Item>
                 </Col>
                 <Col xs={24} sm={12} md={6}>
-                  <Form.Item name="level" label="等级(别名)"><Select placeholder="全部" allowClear options={LEVEL_OPTIONS.map(v => ({ value: v, label: v }))} /></Form.Item>
+                  <Form.Item name="level" label="等级(别名)"><Select placeholder="全部" allowClear options={CLUE_LEVEL_OPTIONS.map(v => ({ value: v, label: v }))} /></Form.Item>
                 </Col>
               </>
             )}
@@ -611,6 +672,28 @@ export default function LeadsList() {
           </Space>
         }
       >
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
+          <Col xs={12} md={6}>
+            <Card size="small" hoverable onClick={() => navigate('/stats/complete-clues?title=本页完整线索')} style={{ borderLeft: '3px solid #1677ff' }}>
+              <Statistic title="本页完整线索" value={pageStats.complete} suffix={`/ ${dataSource.length}`} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small" hoverable onClick={() => navigate('/stats/incomplete-clues?title=待补资料')} style={{ borderLeft: '3px solid #faad14' }}>
+              <Statistic title="待补资料" value={pageStats.incomplete} styles={{ content: { color: pageStats.incomplete ? '#faad14' : '#52c41a' } }} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small" hoverable onClick={() => navigate('/stats/reviewing-clues?title=评审中')} style={{ borderLeft: '3px solid #722ed1' }}>
+              <Statistic title="评审中" value={pageStats.review} styles={{ content: { color: '#722ed1' } }} />
+            </Card>
+          </Col>
+          <Col xs={12} md={6}>
+            <Card size="small" hoverable onClick={() => navigate('/stats/expected-amount?title=预计金额')} style={{ borderLeft: '3px solid #52c41a' }}>
+              <Statistic title="预计金额" value={pageStats.amount} suffix="万" precision={0} />
+            </Card>
+          </Col>
+        </Row>
         <Table
           rowKey="id"
           columns={currentColumns}
@@ -619,6 +702,14 @@ export default function LeadsList() {
           scroll={{ x: 1600 }}
           size="middle"
           rowSelection={{ selectedRowKeys, onChange: (keys) => setSelectedRowKeys(keys) }}
+          locale={{
+            emptyText: demoMode && !loading ? (
+              <Space direction="vertical" size={8} style={{ padding: 24 }}>
+                <Text type="secondary">演示模式下无法加载线索数据</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务（cd apps/api && mvn spring-boot:run）后使用真实账号重新登录</Text>
+              </Space>
+            ) : undefined,
+          }}
           pagination={{
             ...pagination, total, showSizeChanger: true, showQuickJumper: true,
             showTotal: (t) => `共 ${t} 条`,
@@ -630,42 +721,13 @@ export default function LeadsList() {
       {/* ===== 新建/编辑 Drawer ===== */}
       <Drawer
         title={editId ? '编辑线索' : '新建线索'}
-        width={600}
+        size="large"
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         extra={<Space><Button onClick={() => setDrawerOpen(false)}>取消</Button><Button type="primary" loading={drawerLoading} onClick={handleDrawerSubmit}>{editId ? '保存' : '创建'}</Button></Space>}
       >
-        <Form form={drawerForm} layout="vertical" scrollToFirstError>
-          <Form.Item name="clueName" label="线索名称" rules={[{ required: true }]}><Input placeholder="如：腾讯云数据中台项目" /></Form.Item>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="clientCompany" label="甲方公司" rules={[{ required: true }]}><Input placeholder="公司全称" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="clientDept" label="甲方部门"><Input placeholder="如：技术部" /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="beikeOwner" label="责任人(AR)" rules={[{ required: true }]}><Input placeholder="负责人姓名" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="clientContact" label="甲方对接人"><Input placeholder="联系人姓名" /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}><Form.Item name="clueStatus" label="线索状态" rules={[{ required: true }]}><Select options={STATUS_OPTIONS.map(v => ({ value: v, label: v }))} /></Form.Item></Col>
-            <Col span={8}><Form.Item name="clueLevel" label="线索等级" rules={[{ required: true }]}><Select options={LEVEL_OPTIONS.map(v => ({ value: v, label: v + '级' }))} /></Form.Item></Col>
-            <Col span={8}><Form.Item name="deptBelong" label="承接部门" rules={[{ required: true }]}><Select options={['销售一部', '销售二部', '大客户组', '政府事业部'].map(v => ({ value: v, label: v }))} /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="clientCircle" label="客户圈层"><Select placeholder="选择圈层" options={CIRCLE_OPTIONS.map(v => ({ value: v, label: `${v}(${CIRCLE_LABELS[v]})` }))} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="campaignId" label="归属战役"><Select placeholder="选择战役" allowClear options={campaigns.map(c => ({ value: c.id, label: c.name }))} /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="sourceType" label="线索来源"><Select placeholder="选择来源" options={['产品发布会', '技术交流会', '客户走访', '市场活动', '其他'].map(v => ({ value: v, label: v }))} /></Form.Item></Col>
-            <Col span={12}><Form.Item name="sourceActivityName" label="来源活动名称"><Input placeholder="活动名称" /></Form.Item></Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}><Form.Item name="budget" label="预算量级"><Input placeholder="如：100-500万" /></Form.Item></Col>
-            <Col span={12}><Form.Item name="contactDate" label="接触日期"><Input type="date" /></Form.Item></Col>
-          </Row>
-          <Form.Item name="requirementDesc" label="需求概要"><Input.TextArea rows={2} placeholder="核心需求一句话摘要" /></Form.Item>
-          <Form.Item name="painPoint" label="客户痛点"><Input.TextArea rows={2} placeholder="客户当前面临的问题和痛点" /></Form.Item>
-          <Form.Item name="expectedTarget" label="预期目标"><Input.TextArea rows={2} placeholder="客户期望达到的目标" /></Form.Item>
-          <Form.Item name="remark" label="备注"><Input.TextArea rows={2} placeholder="其他补充信息" /></Form.Item>
+        <Form form={drawerForm} layout="vertical" scrollToFirstError initialValues={CLUE_FORM_DEFAULTS}>
+          <ClueFormFields campaigns={campaigns} users={users} depts={depts} />
         </Form>
       </Drawer>
 
@@ -679,7 +741,7 @@ export default function LeadsList() {
 
       <Modal title="批量调整线索等级" open={batchLevelVisible} onCancel={() => setBatchLevelVisible(false)} onOk={handleBatchLevel} okText="确认调整">
         <Form form={batchForm} layout="vertical">
-          <Form.Item name="level" label="线索等级" rules={[{ required: true }]}><Select options={LEVEL_OPTIONS.map(v => ({ value: v, label: v + '级' }))} /></Form.Item>
+          <Form.Item name="level" label="线索等级" rules={[{ required: true }]}><Select options={CLUE_LEVEL_OPTIONS.map(v => ({ value: v, label: v + '级' }))} /></Form.Item>
           <Text type="secondary">将为选中的 {selectedRowKeys.length} 条线索统一调整等级</Text>
         </Form>
       </Modal>

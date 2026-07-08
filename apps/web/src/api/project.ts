@@ -42,7 +42,7 @@ export interface ProjectVO {
 
 /** 分页返回结构 */
 export interface ProjectPageResult {
-  list: ProjectVO[];
+  records: ProjectVO[];
   total: number;
 }
 
