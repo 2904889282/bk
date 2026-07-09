@@ -86,7 +86,10 @@ export default function ProjectForm({ open, editId, onClose, onSuccess }: Props)
         message.success('项目已创建');
       }
       onSuccess();
-    } catch { /* ignore */ }
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.msg || err?.message || '操作失败，请稍后重试';
+      message.error(errMsg);
+    }
     finally { setSubmitting(false); }
   };
 

@@ -1,266 +1,330 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Descriptions, Tag, Tabs, Table, Button, Modal, Form, Input, InputNumber, Select, DatePicker, Space, message, Row, Col, Typography, Progress } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ArrowLeftOutlined, WarningOutlined, DollarOutlined, TeamOutlined, FlagOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Tag, Tabs, Table, Button, Modal, Form, Input, Select, Space, message, Row, Col, Progress, Collapse, Timeline, Empty, Statistic } from 'antd';
+import { EditOutlined, ArrowLeftOutlined, WarningOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { fetchProjectDetail, fetchPeriods, savePeriod, deletePeriod, type ProjectVO, type ProjectPeriod } from '../../../api/project';
+import { fetchDashboard, saveWeekly, type ProjectDashboard } from '../../../api/project';
+
+const { TextArea } = Input;
 
 const STATUS_COLORS: Record<string, string> = { '进行中': 'blue', '暂停': 'orange', '已交付': 'green', '已终止': 'default' };
 const LEVEL_COLORS: Record<string, string> = { S: 'red', A: 'orange', B: 'blue', C: 'default' };
-
-const WEEK_DAYS = ['第一周', '第二周', '第三周', '第四周'];
+const SEVERITY_COLORS: Record<string, string> = { normal: 'default', warning: 'orange', critical: 'red' };
+const MILESTONE_COLORS: Record<string, string> = { pending: 'default', in_progress: 'blue', completed: 'green', delayed: 'red' };
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const projectId = Number(id);
 
-  const [project, setProject] = useState<ProjectVO | null>(null);
-  const [periods, setPeriods] = useState<ProjectPeriod[]>([]);
-  const [activeMonth, setActiveMonth] = useState<string>('');
-  const [editModal, setEditModal] = useState(false);
-  const [form] = Form.useForm();
+  const [data, setData] = useState<ProjectDashboard | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [weeklyModal, setWeeklyModal] = useState(false);
+  const [weeklyForm] = Form.useForm();
 
   const load = useCallback(async () => {
-    const p = await fetchProjectDetail(projectId);
-    setProject(p);
-    const list = await fetchPeriods(projectId);
-    setPeriods(list);
-    if (!activeMonth && list.length > 0) setActiveMonth(list[0].periodMonth);
-  }, [projectId, activeMonth]);
+    setLoading(true);
+    try {
+      const d = await fetchDashboard(projectId);
+      setData(d);
+    } catch { message.error('加载失败'); }
+    finally { setLoading(false); }
+  }, [projectId]);
 
   useEffect(() => { load(); }, [load]);
 
-  const curPeriod = periods.find(p => p.periodMonth === activeMonth);
-
-  const openEdit = (month?: string) => {
-    const existing = periods.find(p => p.periodMonth === month);
-    form.setFieldsValue({
-      ...existing,
-      periodMonth: month || dayjs().format('YYYY-MM'),
-      projectId,
+  const handleSaveWeekly = async () => {
+    const values = await weeklyForm.validateFields();
+    await saveWeekly(projectId, {
+      ...values,
+      periodMonth: dayjs().format('YYYY-MM'),
+      weekNumber: Math.ceil(dayjs().date() / 7),
     });
-    setEditModal(true);
-  };
-
-  const handleSave = async () => {
-    const values = await form.validateFields();
-    await savePeriod({ ...values, projectId });
-    message.success('已保存');
-    setEditModal(false);
+    message.success('周报已保存');
+    setWeeklyModal(false);
+    weeklyForm.resetFields();
     load();
   };
 
-  const handleDelete = async (periodId: number) => {
-    await deletePeriod(periodId);
-    message.success('已删除');
-    load();
-  };
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>加载中...</div>;
+  if (!data || !data.project) return <Empty description="项目不存在" />;
 
-  const parseProgress = (v?: string) => {
-    if (!v) return 0;
-    const n = parseFloat(v.replace('%', ''));
-    return isNaN(n) ? 0 : n;
-  };
-
-  const parseJson = (v?: string) => {
-    try { return v ? JSON.parse(v) : []; } catch { return []; }
-  };
-
-  if (!project) return <div style={{ padding: 40, textAlign: 'center' }}>加载中...</div>;
+  const p = data.project;
+  const currentMonth = dayjs().format('YYYY-MM');
+  const curPeriod = data.periods.find(pp => pp.periodMonth === currentMonth);
+  const curWeeklies = data.weeklies.filter(w => w.periodMonth === currentMonth);
+  const activeRisks = data.risks.filter((r: any) => r.status === 'open');
+  const totalProgress = p.progress || 0;
 
   return (
     <div style={{ paddingBottom: 40 }}>
-      <Space style={{ marginBottom: 16 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/projects')}>返回列表</Button>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openEdit()}>新增月度数据</Button>
-      </Space>
+      {/* 顶部栏 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Space>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/pm/projects')}>返回</Button>
+          <h2 style={{ margin: 0 }}>{p.projectName}</h2>
+          <Tag color={LEVEL_COLORS[p.projectLevel]}>{p.projectLevel}</Tag>
+          <Tag color={STATUS_COLORS[p.projectStatus]}>{p.projectStatus}</Tag>
+        </Space>
+        <Button type="primary" icon={<EditOutlined />} onClick={() => {
+          const weekNum = Math.ceil(dayjs().date() / 7);
+          const existing = curWeeklies.find((w: any) => w.weekNumber === weekNum);
+          if (existing) weeklyForm.setFieldsValue({
+            completedWork: existing.completedWork,
+            issues: existing.issues,
+            issueSeverity: existing.issueSeverity,
+            nextWeekPlan: existing.nextWeekPlan,
+          });
+          setWeeklyModal(true);
+        }}>本周更新</Button>
+      </div>
 
-      {/* 项目基础信息 */}
-      <Card style={{ marginBottom: 16 }}>
-        <Descriptions title="项目信息" column={4} size="small" bordered>
-          <Descriptions.Item label="项目名称">{project.projectName}</Descriptions.Item>
-          <Descriptions.Item label="项目编号">{project.projectNumber || '-'}</Descriptions.Item>
-          <Descriptions.Item label="项目等级"><Tag color={LEVEL_COLORS[project.projectLevel]}>{project.projectLevel}</Tag></Descriptions.Item>
-          <Descriptions.Item label="项目状态"><Tag color={STATUS_COLORS[project.projectStatus]}>{project.projectStatus}</Tag></Descriptions.Item>
-          <Descriptions.Item label="客户公司">{project.clientName}</Descriptions.Item>
-          <Descriptions.Item label="甲方对接人">{project.clientContact || '-'}</Descriptions.Item>
-          <Descriptions.Item label="一条龙经理">{project.projectManager}</Descriptions.Item>
-          <Descriptions.Item label="交付经理">{project.deliveryManager || '-'}</Descriptions.Item>
-          <Descriptions.Item label="产品经理">{project.productManager || '-'}</Descriptions.Item>
-          <Descriptions.Item label="合同金额"><strong>¥{project.projectAmount?.toLocaleString()}</strong></Descriptions.Item>
-          <Descriptions.Item label="所属部门">{project.deptBelong}</Descriptions.Item>
-          <Descriptions.Item label="开始日期">{project.startDate}</Descriptions.Item>
-          <Descriptions.Item label="预计结束">{project.expectEndDate || '-'}</Descriptions.Item>
-          <Descriptions.Item label="供应商">{project.supplier || '-'}</Descriptions.Item>
-          <Descriptions.Item label="风险评估" span={2}>{project.riskAssessment || '-'}</Descriptions.Item>
-        </Descriptions>
-      </Card>
+      {/* 第一层：一眼全貌 */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={6}>
+          <Card>
+            <Statistic title="整体进度" value={totalProgress} suffix="%" />
+            <Progress percent={totalProgress} size="small" status={totalProgress >= 80 ? 'success' : 'active'} />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="本月营收目标" value={curPeriod?.estimatedRevenue || 0} prefix="¥" />
+            <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+              实际: ¥{curPeriod?.actualRevenue?.toLocaleString() || 0}
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="本周报数" value={curWeeklies.length} suffix={`/ ${Math.ceil(dayjs().date()/7)}周`} />
+            <div style={{ fontSize: 12, color: curWeeklies.length > 0 ? '#52c41a' : '#ff4d4f', marginTop: 4 }}>
+              {curWeeklies.length > 0 ? '已更新' : '待更新'}
+            </div>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic title="活跃风险" value={activeRisks.length} prefix={<WarningOutlined style={{ color: activeRisks.length > 0 ? '#ff4d4f' : '#52c41a' }} />} />
+            <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+              {activeRisks.length > 0 ? '需关注' : '无风险'}
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
-      {/* 月份 Tabs */}
-      {periods.length === 0 ? (
-        <Card><Typography.Text type="secondary">暂无月度数据，点击上方"新增月度数据"开始录入</Typography.Text></Card>
-      ) : (
-        <Tabs
-          activeKey={activeMonth}
-          onChange={setActiveMonth}
-          type="card"
-          items={periods.map(p => ({
-            key: p.periodMonth,
-            label: `${p.periodMonth}月`,
-            children: curPeriod ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* 操作按钮 */}
-                <Space>
-                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(p.periodMonth)}>编辑本月</Button>
-                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => { if (p.id) handleDelete(p.id); }}>删除</Button>
-                </Space>
-
-                {/* 营收 */}
-                <Card title={<><DollarOutlined /> 营收信息</>} size="small">
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <Table size="small" pagination={false} rowKey="key" columns={[
-                        { title: '项目', dataIndex: 'label', width: 120 },
-                        { title: '金额', dataIndex: 'value', align: 'right' },
-                      ]} dataSource={[
-                        { key: '1', label: '预计营收', value: `¥${curPeriod.estimatedRevenue?.toLocaleString() || 0}` },
-                        { key: '2', label: '预期毛利', value: `¥${curPeriod.estimatedProfit?.toLocaleString() || 0}` },
-                        { key: '3', label: '毛利率预估', value: curPeriod.estimatedProfitRate || '-' },
-                        { key: '4', label: '执行成本预估', value: `¥${curPeriod.estimatedCost?.toLocaleString() || 0}` },
-                        { key: '5', label: '人员成本预估', value: `¥${curPeriod.estimatedLaborCost?.toLocaleString() || 0}` },
-                      ]} />
-                    </Col>
-                    <Col span={12}>
-                      <Table size="small" pagination={false} rowKey="key" columns={[
-                        { title: '项目', dataIndex: 'label', width: 120 },
-                        { title: '金额', dataIndex: 'value', align: 'right' },
-                      ]} dataSource={[
-                        { key: '6', label: '实际营收', value: `¥${curPeriod.actualRevenue?.toLocaleString() || 0}` },
-                        { key: '7', label: '实际净毛利', value: `¥${curPeriod.actualProfit?.toLocaleString() || 0}` },
-                        { key: '8', label: '实际毛利率', value: curPeriod.actualProfitRate || '-' },
-                        { key: '9', label: '实际执行成本', value: `¥${curPeriod.actualCost?.toLocaleString() || 0}` },
-                        { key: '10', label: '毛利达成度', value: curPeriod.profitAchievementRate || '-' },
-                      ]} />
-                    </Col>
-                  </Row>
-                </Card>
-
-                {/* 关键目标 + 周进度 */}
-                <Card title={<><FlagOutlined /> 关键目标与进度</>} size="small">
-                  <Descriptions column={2} size="small">
-                    <Descriptions.Item label="目标说明">{curPeriod.goalDescription || '-'}</Descriptions.Item>
-                    <Descriptions.Item label="月目标">{curPeriod.monthlyTarget || '-'}</Descriptions.Item>
-                  </Descriptions>
-                  <Row gutter={[12, 12]} style={{ marginTop: 12 }}>
-                    {WEEK_DAYS.map((week, i) => {
-                      const targets = [
-                        { t: curPeriod.w1Target, a: curPeriod.w1Actual, p: curPeriod.w1Progress },
-                        { t: curPeriod.w2Target, a: curPeriod.w2Actual, p: curPeriod.w2Progress },
-                        { t: curPeriod.w3Target, a: curPeriod.w3Actual, p: curPeriod.w3Progress },
-                        { t: curPeriod.w4Target, a: curPeriod.w4Actual, p: curPeriod.w4Progress },
-                      ];
-                      const d = targets[i];
-                      const pg = parseProgress(d.p);
-                      return (
-                        <Col span={6} key={week}>
-                          <Card size="small" title={week} style={{ textAlign: 'center' }}>
-                            <p style={{ fontSize: 12, color: '#999' }}>目标: {d.t || '-'}</p>
-                            <p style={{ fontSize: 12, color: '#666' }}>实际: {d.a || '-'}</p>
-                            <Progress percent={pg} size="small" status={pg >= 80 ? 'success' : pg >= 60 ? 'active' : 'exception'} />
-                          </Card>
-                        </Col>
-                      );
-                    })}
-                  </Row>
-                </Card>
-
-                {/* 人员 */}
-                <Card title={<><TeamOutlined /> 人员分配</>} size="small">
-                  <Table size="small" pagination={false} rowKey="name" dataSource={parseJson(curPeriod.personnel)}
-                    columns={[
-                      { title: '人员', dataIndex: 'name' },
-                      { title: '职能', dataIndex: 'role' },
-                      { title: '重要性', dataIndex: 'importanceWeight', render: (v: number) => v ? `${(v * 100).toFixed(0)}%` : '-' },
-                      { title: '能效', dataIndex: 'efficiencyCalc', render: (v: string) => v || '-' },
-                    ]}
-                    locale={{ emptyText: '暂无人员分配' }} />
-                </Card>
-
-                {/* 里程碑 */}
-                <Card title="里程碑" size="small">
-                  <Table size="small" pagination={false} rowKey="description" dataSource={parseJson(curPeriod.milestones)}
-                    columns={[
-                      { title: '里程碑', dataIndex: 'description' },
-                      { title: '奖励金额', dataIndex: 'rewardAmount' },
-                      { title: '完成状态', dataIndex: 'completed', render: (v: string) => <Tag color={v === '是' ? 'green' : 'orange'}>{v || '-'}</Tag> },
-                      { title: '发放状态', dataIndex: 'paid', render: (v: string) => <Tag color={v === '是' ? 'green' : 'default'}>{v || '-'}</Tag> },
-                    ]}
-                    locale={{ emptyText: '暂无里程碑' }} />
-                  <div style={{ marginTop: 8 }}>
-                    <Tag>过程奖: {curPeriod.processBonus || '-'}</Tag>
-                    <Tag>结果奖: {curPeriod.resultBonus || '-'}</Tag>
-                  </div>
-                </Card>
-
-                {/* 预警 */}
-                {curPeriod.alertText && (
-                  <Card size="small" style={{ borderColor: '#ff4d4f' }}>
-                    <Space><WarningOutlined style={{ color: '#ff4d4f' }} /><strong>预警提醒</strong></Space>
-                    <p style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{curPeriod.alertText}</p>
-                    {curPeriod.progressInterpretation && <p style={{ color: '#666' }}>解读: {curPeriod.progressInterpretation}</p>}
-                    {curPeriod.monthlyProfitExpectation && <p>月毛利完成预期: {curPeriod.monthlyProfitExpectation}</p>}
+      {/* 本周进度条 */}
+      {curWeeklies.length > 0 && (
+        <Card title="本月周进度" size="small" style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            {[1, 2, 3, 4].map(week => {
+              const w = curWeeklies.find((ww: any) => ww.weekNumber === week);
+              const hasIssue = w && w.issues && w.issues.trim();
+              return (
+                <Col span={6} key={week}>
+                  <Card size="small" title={`第${week}周`} styles={{ body: { padding: 12 } }}>
+                    {w ? (
+                      <>
+                        <p style={{ fontSize: 12, margin: 0, color: '#666' }}>{w.completedWork?.slice(0, 50) || '无记录'}...</p>
+                        {hasIssue && <Tag color={SEVERITY_COLORS[w.issueSeverity] || 'default'} style={{ marginTop: 4 }}>{w.issueSeverity === 'critical' ? '紧急' : w.issueSeverity === 'warning' ? '注意' : '正常'}</Tag>}
+                      </>
+                    ) : (
+                      <span style={{ color: '#ccc' }}>未更新</span>
+                    )}
                   </Card>
-                )}
-              </div>
-            ) : null,
-          }))}
-        />
+                </Col>
+              );
+            })}
+          </Row>
+        </Card>
       )}
 
-      {/* 编辑月度数据弹窗 */}
-      <Modal
-        title="编辑月度数据"
-        open={editModal}
-        onCancel={() => setEditModal(false)}
-        onOk={handleSave}
-        width={900}
-        destroyOnHidden
-        okText="保存"
-      >
-        <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
-          <Space style={{ marginBottom: 12 }}>
-            <Form.Item name="periodMonth" label="月份" rules={[{ required: true }]}>
-              <DatePicker picker="month" format="YYYY-MM" />
-            </Form.Item>
-            <Form.Item name="periodStatus" label="状态">
-              <Select style={{ width: 120 }} options={['正式执行', '规划中', '已结束'].map(v => ({ value: v, label: v }))} />
-            </Form.Item>
-          </Space>
-          <Tabs size="small" items={[
-            { key: 'revenue', label: '营收', children: <Row gutter={16}>
-              {['estimatedRevenue', 'estimatedProfit', 'estimatedCost', 'estimatedLaborCost', 'actualRevenue', 'actualProfit', 'actualCost', 'actualLaborCost'].map(f => (
-                <Col span={6} key={f}><Form.Item name={f} label={f.replace('estimated','预计').replace('actual','实际').replace('Revenue','营收').replace('Profit','毛利').replace('Cost','成本').replace('LaborCost','人员成本')}><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-              ))}
-            </Row> },
-            { key: 'goal', label: '目标', children: <Row gutter={16}>
-              <Col span={12}><Form.Item name="goalDescription" label="目标说明"><Input.TextArea rows={2} /></Form.Item></Col>
-              <Col span={12}><Form.Item name="monthlyTarget" label="月目标"><Input /></Form.Item>
-              <Form.Item name="goalSummary" label="执行总结"><Input.TextArea rows={2} /></Form.Item></Col>
-              {[0,1,2,3].map(i => <Col span={6} key={i}><Card size="small" title={WEEK_DAYS[i]}>
-                <Form.Item name={`w${i+1}Target`} label="目标"><Input /></Form.Item>
-                <Form.Item name={`w${i+1}Actual`} label="实际"><Input /></Form.Item>
-                <Form.Item name={`w${i+1}Progress`} label="进度"><Input placeholder="如 80%" /></Form.Item>
-              </Card></Col>)}
-            </Row> },
-            { key: 'personnel', label: '人员', children: <Form.Item name="personnel" label="人员(JSON)"><Input.TextArea rows={4} placeholder='[{"name":"张三","role":"经理","importanceWeight":0.8,"efficiencyCalc":"100%"}]' /></Form.Item> },
-            { key: 'milestone', label: '里程碑', children: <Form.Item name="milestones" label="里程碑(JSON)"><Input.TextArea rows={4} placeholder='[{"description":"需求确认","rewardAmount":"5000","completed":"是","paid":"否","participants":"张三,李四"}]' /></Form.Item> },
-            { key: 'alert', label: '预警', children: <>
-              <Form.Item name="alertText" label="预警提醒"><Input.TextArea rows={2} /></Form.Item>
-              <Form.Item name="progressInterpretation" label="进展解读"><Input.TextArea rows={2} /></Form.Item>
-              <Form.Item name="monthlyProfitExpectation" label="月毛利预期"><Input /></Form.Item>
-            </> },
-          ]} />
+      {/* 当前风险（有则显示红色卡片） */}
+      {activeRisks.length > 0 && (
+        <Card size="small" style={{ marginBottom: 16, borderColor: '#ff4d4f' }}>
+          <Space><WarningOutlined style={{ color: '#ff4d4f' }} /><strong>当前风险（{activeRisks.length}项）</strong></Space>
+          <div style={{ marginTop: 8 }}>
+            {activeRisks.map((r: any) => (
+              <Tag key={r.id} color={r.level === 'high' ? 'red' : r.level === 'medium' ? 'orange' : 'default'} style={{ marginBottom: 4 }}>
+                {r.type}: {r.description?.slice(0, 40)}
+              </Tag>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* 第二层：Tab 切换 */}
+      <Tabs
+        defaultActiveKey="weekly"
+        items={[
+          {
+            key: 'weekly',
+            label: '📋 周报记录',
+            children: (
+              <Table size="small" rowKey="id" dataSource={data.weeklies} pagination={{ pageSize: 10 }}
+                columns={[
+                  { title: '月份', dataIndex: 'periodMonth', width: 80 },
+                  { title: '周次', dataIndex: 'weekNumber', width: 60, render: (v: number) => `第${v}周` },
+                  { title: '完成工作', dataIndex: 'completedWork', ellipsis: true },
+                  { title: '问题', dataIndex: 'issues', ellipsis: true,
+                    render: (v: string, r: any) => v ? <Tag color={SEVERITY_COLORS[r.issueSeverity]}>{v.slice(0,30)}</Tag> : '-' },
+                  { title: '下周计划', dataIndex: 'nextWeekPlan', ellipsis: true },
+                ]}
+                locale={{ emptyText: '暂无周报，点击右上角"本周更新"开始记录' }}
+              />
+            ),
+          },
+          {
+            key: 'monthly',
+            label: '📊 月度数据',
+            children: (
+              <Table size="small" rowKey="id" dataSource={data.periods} pagination={false}
+                columns={[
+                  { title: '月份', dataIndex: 'periodMonth', width: 80 },
+                  { title: '预计营收', dataIndex: 'estimatedRevenue', render: (v: number) => `¥${v?.toLocaleString() || 0}` },
+                  { title: '实际营收', dataIndex: 'actualRevenue', render: (v: number) => `¥${v?.toLocaleString() || 0}` },
+                  { title: '预期毛利', dataIndex: 'estimatedProfit', render: (v: number) => `¥${v?.toLocaleString() || 0}` },
+                  { title: '实际毛利', dataIndex: 'actualProfit', render: (v: number) => `¥${v?.toLocaleString() || 0}` },
+                  { title: '达成度', dataIndex: 'profitAchievementRate' },
+                ]}
+                locale={{ emptyText: '暂无月度数据' }}
+              />
+            ),
+          },
+          {
+            key: 'milestones',
+            label: '🎯 里程碑',
+            children: data.milestones.length > 0 ? (
+              <Timeline items={data.milestones.map((m: any) => ({
+                color: MILESTONE_COLORS[m.status] === 'green' ? 'green' : MILESTONE_COLORS[m.status] === 'red' ? 'red' : 'blue',
+                children: (
+                  <div>
+                    <strong>{m.milestone}</strong>
+                    <div style={{ fontSize: 12, color: '#999' }}>
+                      {m.stage} | 计划: {m.plannedDate || '-'} | 实际: {m.actualDate || '-'}
+                    </div>
+                    <Tag color={MILESTONE_COLORS[m.status]}>{m.status}</Tag>
+                  </div>
+                ),
+              }))} />
+            ) : <Empty description="暂无里程碑" />,
+          },
+          {
+            key: 'team',
+            label: '👥 团队',
+            children: (
+              <Table size="small" rowKey="id" dataSource={data.team} pagination={false}
+                columns={[
+                  { title: '姓名', dataIndex: 'name', width: 80 },
+                  { title: '部门', dataIndex: 'dept', width: 100 },
+                  { title: '职务', dataIndex: 'role', width: 100 },
+                  { title: '责任', dataIndex: 'responsibility', width: 60,
+                    render: (v: string) => v ? <Tag>{v}</Tag> : '-' },
+                ]}
+                locale={{ emptyText: '暂无团队成员' }}
+              />
+            ),
+          },
+        ]}
+      />
+
+      {/* 第三层：折叠区 */}
+      <Collapse style={{ marginTop: 16 }} items={[
+        {
+          key: 'basic',
+          label: '项目基本信息',
+          children: (
+            <Descriptions column={3} size="small" bordered>
+              <Descriptions.Item label="项目名称">{p.projectName}</Descriptions.Item>
+              <Descriptions.Item label="项目编号">{p.projectNumber || '-'}</Descriptions.Item>
+              <Descriptions.Item label="客户公司">{p.clientName}</Descriptions.Item>
+              <Descriptions.Item label="一条龙经理">{p.projectManager}</Descriptions.Item>
+              <Descriptions.Item label="交付经理">{p.deliveryManager || '-'}</Descriptions.Item>
+              <Descriptions.Item label="产品经理">{p.productManager || '-'}</Descriptions.Item>
+              <Descriptions.Item label="开始日期">{p.startDate}</Descriptions.Item>
+              <Descriptions.Item label="预计结束">{p.expectEndDate || '-'}</Descriptions.Item>
+              <Descriptions.Item label="合同金额">¥{p.projectAmount?.toLocaleString()}</Descriptions.Item>
+              <Descriptions.Item label="所属部门">{p.deptBelong}</Descriptions.Item>
+              <Descriptions.Item label="供应商">{p.supplier || '-'}</Descriptions.Item>
+              <Descriptions.Item label="风险评估" span={3}>{p.riskAssessment || '-'}</Descriptions.Item>
+            </Descriptions>
+          ),
+        },
+        {
+          key: 'wbs',
+          label: 'WBS 工作分解',
+          children: (
+            <Table size="small" rowKey="id" dataSource={data.wbs} pagination={false} scroll={{ x: 1000 }}
+              columns={[
+                { title: '代码', dataIndex: 'code', width: 60 },
+                { title: '任务', dataIndex: 'taskName', width: 150 },
+                { title: '活动', dataIndex: 'activities', ellipsis: true },
+                { title: '工时', dataIndex: 'workHours', width: 60 },
+                { title: '费用', dataIndex: 'costEstimate', width: 80 },
+                { title: '开始', dataIndex: 'startDate', width: 100 },
+                { title: '结束', dataIndex: 'endDate', width: 100 },
+                { title: '交付件', dataIndex: 'deliverable', width: 120 },
+                { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <Tag color={v === 'completed' ? 'green' : 'blue'}>{v}</Tag> },
+              ]}
+              locale={{ emptyText: '暂无WBS数据' }}
+            />
+          ),
+        },
+        {
+          key: 'risks',
+          label: '风险管理',
+          children: (
+            <Table size="small" rowKey="id" dataSource={data.risks} pagination={false}
+              columns={[
+                { title: '类型', dataIndex: 'type', width: 100 },
+                { title: '描述', dataIndex: 'description', ellipsis: true },
+                { title: '等级', dataIndex: 'level', width: 80, render: (v: string) => <Tag color={v === 'high' ? 'red' : v === 'medium' ? 'orange' : 'default'}>{v}</Tag> },
+                { title: '负责人', dataIndex: 'owner', width: 80 },
+                { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <Tag color={v === 'open' ? 'orange' : 'green'}>{v}</Tag> },
+              ]}
+              locale={{ emptyText: '暂无风险' }}
+            />
+          ),
+        },
+        {
+          key: 'changes',
+          label: '变更记录',
+          children: (
+            <Table size="small" rowKey="id" dataSource={data.changes} pagination={false}
+              columns={[
+                { title: '日期', dataIndex: 'changeDate', width: 100 },
+                { title: '涉及任务', dataIndex: 'affectedTask', width: 150 },
+                { title: '变更要点', dataIndex: 'changeSummary', ellipsis: true },
+                { title: '申请人', dataIndex: 'applicant', width: 80 },
+                { title: '审批人', dataIndex: 'approver', width: 80 },
+              ]}
+              locale={{ emptyText: '暂无变更' }}
+            />
+          ),
+        },
+      ]} />
+
+      {/* 本周更新弹窗 */}
+      <Modal title={`本周更新 - ${dayjs().format('YYYY年MM月')}第${Math.ceil(dayjs().date()/7)}周`}
+        open={weeklyModal} onCancel={() => setWeeklyModal(false)} onOk={handleSaveWeekly}
+        width={600} okText="保存" destroyOnHidden>
+        <Form form={weeklyForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="completedWork" label="本周完成了什么" rules={[{ required: true, message: '请输入' }]}>
+            <TextArea rows={3} placeholder="如：完成美团项目需求调研，交付了PRD文档..." />
+          </Form.Item>
+          <Form.Item name="issues" label="遇到的问题">
+            <TextArea rows={2} placeholder="如：客户反馈延迟，需协调资源..." />
+          </Form.Item>
+          <Form.Item name="issueSeverity" label="问题紧急程度" initialValue="normal">
+            <Select options={[
+              { value: 'normal', label: '正常' },
+              { value: 'warning', label: '需注意' },
+              { value: 'critical', label: '紧急' },
+            ]} />
+          </Form.Item>
+          <Form.Item name="nextWeekPlan" label="下周计划">
+            <TextArea rows={2} placeholder="如：完成原型设计，启动开发..." />
+          </Form.Item>
         </Form>
       </Modal>
     </div>
