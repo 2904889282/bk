@@ -91,6 +91,11 @@ request.interceptors.request.use(config => {
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
+  // DELETE 请求统一携带确认标记
+  if (config.method?.toUpperCase() === 'DELETE' && config.url?.includes('/api/')) {
+    config.data = { ...(config.data || {}), confirm: true };
+  }
+
   // 非 GET 请求防重复提交
   const method = config.method?.toUpperCase();
   if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && !config.headers['X-Allow-Duplicate']) {

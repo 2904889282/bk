@@ -236,6 +236,10 @@ class BizCampaign(Base):
     description = Column(Text)
     priority = Column(String(8), default="NORMAL")
     manager_name = Column("manager_name", String(64))
+    create_by = Column("create_by", BigInteger)
+    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    update_by = Column("update_by", BigInteger)
+    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 # ==================== 项目扩展表 ====================

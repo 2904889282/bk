@@ -46,7 +46,9 @@ async def talent_detail(talent_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/talent")
 async def talent_create(dto: TalentSaveDTO, db: AsyncSession = Depends(get_db)):
-    t = BizTalent(**dto.model_dump())
+    data = dto.model_dump(exclude_none=True)
+    m = {"talentType":"talent_type", "currentProject":"current_project"}
+    t = BizTalent(**{m.get(k,k):v for k,v in data.items()})
     db.add(t); await db.commit(); await db.refresh(t)
     return success(row_to_dict(t))
 
@@ -54,7 +56,9 @@ async def talent_create(dto: TalentSaveDTO, db: AsyncSession = Depends(get_db)):
 async def talent_update(talent_id: int, dto: TalentSaveDTO, db: AsyncSession = Depends(get_db)):
     r = (await db.execute(select(BizTalent).where(BizTalent.id == talent_id))).scalar_one_or_none()
     if not r: return fail("人才不存在")
-    for k, v in dto.model_dump(exclude_unset=True).items(): setattr(r, k, v)
+    m = {"talentType":"talent_type", "currentProject":"current_project"}
+    for k, v in dto.model_dump(exclude_unset=True).items():
+        setattr(r, m.get(k, k), v)
     await db.commit(); return success()
 
 @router.delete("/api/talent/{talent_id}")
@@ -90,14 +94,19 @@ async def risk_detail(risk_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/risk")
 async def risk_create(dto: RiskSaveDTO, db: AsyncSession = Depends(get_db)):
-    r = BizRisk(**dto.model_dump()); db.add(r); await db.commit(); await db.refresh(r)
+    data = dto.model_dump(exclude_none=True)
+    m = {"projectId":"project_id"}
+    r = BizRisk(**{m.get(k,k):v for k,v in data.items()})
+    db.add(r); await db.commit(); await db.refresh(r)
     return success(row_to_dict(r))
 
 @router.put("/api/risk/{risk_id}")
 async def risk_update(risk_id: int, dto: RiskSaveDTO, db: AsyncSession = Depends(get_db)):
     r = (await db.execute(select(BizRisk).where(BizRisk.id == risk_id))).scalar_one_or_none()
     if not r: return fail("风险不存在")
-    for k, v in dto.model_dump(exclude_unset=True).items(): setattr(r, k, v)
+    m = {"projectId":"project_id"}
+    for k, v in dto.model_dump(exclude_unset=True).items():
+        setattr(r, m.get(k, k), v)
     await db.commit(); return success()
 
 @router.delete("/api/risk/{risk_id}")
@@ -176,14 +185,46 @@ async def clue_detail(clue_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/clue")
 async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db)):
-    c = BizClue(**dto.model_dump()); db.add(c); await db.commit(); await db.refresh(c)
+    data = dto.model_dump(exclude_none=True)
+    key_map = {"clueName":"clue_name","clientCompany":"client_company","clientDept":"client_dept",
+               "clientContact":"client_contact","beikeOwner":"beike_owner","budgetAmount":"budget_amount",
+               "clueLevel":"clue_level","clueStatus":"clue_status","reviewStatus":"review_status",
+               "businessConfirmed":"business_confirmed","contactDate":"contact_date",
+               "createDate":"create_date","requirementDesc":"requirement_desc",
+               "expectedTarget":"expected_target","deptBelong":"dept_belong",
+               "opportunityAmount":"opportunity_amount","clueEvaluation":"clue_evaluation",
+               "sourceType":"source_type","sourceActivityName":"source_activity_name",
+               "clientCircle":"client_circle","valueQuadrant":"value_quadrant",
+               "healthStatus":"health_status","proposalDate":"proposal_date",
+               "campaignId":"campaign_id","maintenanceFreq":"maintenance_freq",
+               "nextMaintenanceDate":"next_maintenance_date",
+               "painPoint":"pain_point"}
+    mapped = {key_map.get(k, k): v for k, v in data.items()}
+    # 前端多余字段（commRecord, relation, matchedProducts等）存入 extra_data
+    extra = {}
+    for k, v in data.items():
+        if k not in key_map and k not in ["budget"]:
+            extra[k] = v
+    if extra:
+        import json
+        mapped["extra_data"] = json.dumps(extra)
+    c = BizClue(**mapped)
+    db.add(c); await db.commit(); await db.refresh(c)
     return success(row_to_dict(c))
 
 @router.put("/api/clue/{clue_id}")
 async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends(get_db)):
     r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
     if not r: return fail("线索不存在")
-    for k, v in dto.model_dump(exclude_unset=True).items(): setattr(r, k, v)
+    key_map = {"clueName":"clue_name","clientCompany":"client_company","clientDept":"client_dept",
+               "clientContact":"client_contact","beikeOwner":"beike_owner","budgetAmount":"budget_amount",
+               "clueLevel":"clue_level","clueStatus":"clue_status","reviewStatus":"review_status",
+               "businessConfirmed":"business_confirmed","contactDate":"contact_date",
+               "createDate":"create_date","requirementDesc":"requirement_desc",
+               "expectedTarget":"expected_target","deptBelong":"dept_belong",
+               "opportunityAmount":"opportunity_amount","clueEvaluation":"clue_evaluation"}
+    for k, v in dto.model_dump(exclude_unset=True).items():
+        setattr(r, key_map.get(k, k), v)
     await db.commit(); return success()
 
 @router.delete("/api/clue/{clue_id}")
