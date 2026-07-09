@@ -10,8 +10,17 @@ import json
 
 router = APIRouter(tags=["项目"])
 
+def _to_camel(d):
+    result = {}
+    for k, v in d.items():
+        parts = k.split('_')
+        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
+        result[camel] = v
+    return result
+
 def project_to_dict(p):
-    return {c.key: getattr(p, c.key) for c in p.__table__.columns}
+    d = {c.key: getattr(p, c.key) for c in p.__table__.columns}
+    return _to_camel(d)
 
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)
@@ -75,7 +84,8 @@ async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depend
     return success()
 
 @router.delete("/api/project/{project_id}")
-async def delete(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+async def delete(project_id: int, body: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    if not body.get("confirm"): return fail("请确认删除操作")
     r = (await db.execute(select(BizProject).where(BizProject.id == project_id))).scalar_one_or_none()
     if not r: return fail("项目不存在")
     r.is_deleted = 1; await db.commit()
@@ -93,12 +103,32 @@ async def period_list(project_id: int, db: AsyncSession = Depends(get_db)):
 async def period_save(dto: ProjectPeriodDTO, db: AsyncSession = Depends(get_db)):
     r = await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == dto.projectId, BizProjectPeriod.period_month == dto.periodMonth))
     exist = r.scalar_one_or_none()
+    # camelCase → snake_case 映射（与前端 DTO 对齐）
+    period_map = {"projectId":"project_id","periodMonth":"period_month","periodStatus":"period_status",
+                  "estimatedRevenue":"estimated_revenue","estimatedProfit":"estimated_profit",
+                  "estimatedProfitRate":"estimated_profit_rate","estimatedCost":"estimated_cost",
+                  "estimatedLaborCost":"estimated_labor_cost","actualRevenue":"actual_revenue",
+                  "actualProfit":"actual_profit","actualProfitRate":"actual_profit_rate",
+                  "actualCost":"actual_cost","actualLaborCost":"actual_labor_cost",
+                  "profitAchievementRate":"profit_achievement_rate","goalDescription":"goal_description",
+                  "monthlyTarget":"monthly_target","monthlyActual":"monthly_actual",
+                  "monthlyProgress":"monthly_progress","goalSummary":"goal_summary",
+                  "w1Target":"w1_target","w1Actual":"w1_actual","w1Progress":"w1_progress",
+                  "w2Target":"w2_target","w2Actual":"w2_actual","w2Progress":"w2_progress",
+                  "w3Target":"w3_target","w3Actual":"w3_actual","w3Progress":"w3_progress",
+                  "w4Target":"w4_target","w4Actual":"w4_actual","w4Progress":"w4_progress",
+                  "processBonus":"process_bonus","resultBonus":"result_bonus",
+                  "alertText":"alert_text","progressInterpretation":"progress_interpretation",
+                  "monthlyProfitExpectation":"monthly_profit_expectation",
+                  "executionStaff":"execution_staff","customerInfo":"customer_info",
+                  "riskAssessment":"risk_assessment"}
     if exist:
         for k, v in dto.model_dump(exclude_unset=True).items():
-            setattr(exist, k, v)
+            setattr(exist, period_map.get(k, k), v)
         await db.commit(); await db.refresh(exist)
         return success(project_to_dict(exist))
-    p = BizProjectPeriod(**dto.model_dump())
+    mapped = {period_map.get(k, k): v for k, v in dto.model_dump().items() if v is not None}
+    p = BizProjectPeriod(**mapped)
     db.add(p); await db.commit(); await db.refresh(p)
     return success(project_to_dict(p))
 

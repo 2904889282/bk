@@ -52,7 +52,7 @@ export default function ProjectDetail() {
   const p = data.project;
   const currentMonth = dayjs().format('YYYY-MM');
   const curPeriod = data.periods.find(pp => pp.periodMonth === currentMonth);
-  const curWeeklies = data.weeklies.filter(w => w.period_month === currentMonth);
+  const curWeeklies = data.weeklies.filter(w => w.periodMonth === currentMonth);
   const activeRisks = data.risks.filter((r: any) => r.status === 'open');
   const totalProgress = p.progress || 0;
 
@@ -68,12 +68,12 @@ export default function ProjectDetail() {
         </Space>
         <Button type="primary" icon={<EditOutlined />} onClick={() => {
           const weekNum = Math.ceil(dayjs().date() / 7);
-          const existing = curWeeklies.find((w: any) => w.week_number === weekNum);
+          const existing = curWeeklies.find((w: any) => w.weekNumber === weekNum);
           if (existing) weeklyForm.setFieldsValue({
-            completedWork: existing.completed_work,
+            completedWork: existing.completedWork,
             issues: existing.issues,
-            issueSeverity: existing.issue_severity,
-            nextWeekPlan: existing.next_week_plan,
+            issueSeverity: existing.issueSeverity,
+            nextWeekPlan: existing.nextWeekPlan,
           });
           setWeeklyModal(true);
         }}>本周更新</Button>
@@ -118,15 +118,15 @@ export default function ProjectDetail() {
         <Card title="本月周进度" size="small" style={{ marginBottom: 16 }}>
           <Row gutter={16}>
             {[1, 2, 3, 4].map(week => {
-              const w = curWeeklies.find((ww: any) => ww.week_number === week);
+              const w = curWeeklies.find((ww: any) => ww.weekNumber === week);
               const hasIssue = w && w.issues && w.issues.trim();
               return (
                 <Col span={6} key={week}>
                   <Card size="small" title={`第${week}周`} styles={{ body: { padding: 12 } }}>
                     {w ? (
                       <>
-                        <p style={{ fontSize: 12, margin: 0, color: '#666' }}>{w.completed_work?.slice(0, 50) || '无记录'}...</p>
-                        {hasIssue && <Tag color={SEVERITY_COLORS[w.issue_severity] || 'default'} style={{ marginTop: 4 }}>{w.issue_severity === 'critical' ? '紧急' : w.issue_severity === 'warning' ? '注意' : '正常'}</Tag>}
+                        <p style={{ fontSize: 12, margin: 0, color: '#666' }}>{w.completedWork?.slice(0, 50) || '无记录'}...</p>
+                        {hasIssue && <Tag color={SEVERITY_COLORS[w.issueSeverity] || 'default'} style={{ marginTop: 4 }}>{w.issueSeverity === 'critical' ? '紧急' : w.issueSeverity === 'warning' ? '注意' : '正常'}</Tag>}
                       </>
                     ) : (
                       <span style={{ color: '#ccc' }}>未更新</span>
@@ -163,12 +163,12 @@ export default function ProjectDetail() {
             children: (
               <Table size="small" rowKey="id" dataSource={data.weeklies} pagination={{ pageSize: 10 }}
                 columns={[
-                  { title: '月份', dataIndex: 'period_month', width: 80 },
-                  { title: '周次', dataIndex: 'week_number', width: 60, render: (v: number) => `第${v}周` },
-                  { title: '完成工作', dataIndex: 'completed_work', ellipsis: true },
+                  { title: '月份', dataIndex: 'periodMonth', width: 80 },
+                  { title: '周次', dataIndex: 'weekNumber', width: 60, render: (v: number) => `第${v}周` },
+                  { title: '完成工作', dataIndex: 'completedWork', ellipsis: true },
                   { title: '问题', dataIndex: 'issues', ellipsis: true,
-                    render: (v: string, r: any) => v ? <Tag color={SEVERITY_COLORS[r.issue_severity]}>{v.slice(0,30)}</Tag> : '-' },
-                  { title: '下周计划', dataIndex: 'next_week_plan', ellipsis: true },
+                    render: (v: string, r: any) => v ? <Tag color={SEVERITY_COLORS[r.issueSeverity]}>{v.slice(0,30)}</Tag> : '-' },
+                  { title: '下周计划', dataIndex: 'nextWeekPlan', ellipsis: true },
                 ]}
                 locale={{ emptyText: '暂无周报，点击右上角"本周更新"开始记录' }}
               />
@@ -201,7 +201,7 @@ export default function ProjectDetail() {
                   <div>
                     <strong>{m.milestone}</strong>
                     <div style={{ fontSize: 12, color: '#999' }}>
-                      {m.stage} | 计划: {m.planned_date || '-'} | 实际: {m.actual_date || '-'}
+                      {m.stage} | 计划: {m.plannedDate || '-'} | 实际: {m.actualDate || '-'}
                     </div>
                     <Tag color={MILESTONE_COLORS[m.status]}>{m.status}</Tag>
                   </div>
@@ -257,12 +257,12 @@ export default function ProjectDetail() {
             <Table size="small" rowKey="id" dataSource={data.wbs} pagination={false} scroll={{ x: 1000 }}
               columns={[
                 { title: '代码', dataIndex: 'code', width: 60 },
-                { title: '任务', dataIndex: 'task_name', width: 150 },
+                { title: '任务', dataIndex: 'taskName', width: 150 },
                 { title: '活动', dataIndex: 'activities', ellipsis: true },
-                { title: '工时', dataIndex: 'work_hours', width: 60 },
-                { title: '费用', dataIndex: 'cost_estimate', width: 80 },
-                { title: '开始', dataIndex: 'start_date', width: 100 },
-                { title: '结束', dataIndex: 'end_date', width: 100 },
+                { title: '工时', dataIndex: 'workHours', width: 60 },
+                { title: '费用', dataIndex: 'costEstimate', width: 80 },
+                { title: '开始', dataIndex: 'startDate', width: 100 },
+                { title: '结束', dataIndex: 'endDate', width: 100 },
                 { title: '交付件', dataIndex: 'deliverable', width: 120 },
                 { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <Tag color={v === 'completed' ? 'green' : 'blue'}>{v}</Tag> },
               ]}
@@ -292,9 +292,9 @@ export default function ProjectDetail() {
           children: (
             <Table size="small" rowKey="id" dataSource={data.changes} pagination={false}
               columns={[
-                { title: '日期', dataIndex: 'change_date', width: 100 },
-                { title: '涉及任务', dataIndex: 'affected_task', width: 150 },
-                { title: '变更要点', dataIndex: 'change_summary', ellipsis: true },
+                { title: '日期', dataIndex: 'changeDate', width: 100 },
+                { title: '涉及任务', dataIndex: 'affectedTask', width: 150 },
+                { title: '变更要点', dataIndex: 'changeSummary', ellipsis: true },
                 { title: '申请人', dataIndex: 'applicant', width: 80 },
                 { title: '审批人', dataIndex: 'approver', width: 80 },
               ]}

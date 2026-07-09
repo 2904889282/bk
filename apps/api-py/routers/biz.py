@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, or_, text
+from sqlalchemy import select, func, or_, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from models import BizTalent, BizRisk, BizAlert, BizClue
+from models import BizTalent, BizRisk, BizAlert, BizClue, BizCampaign, BizProject
 from schemas import *
 from security import get_current_user_with_role
+from datetime import date, datetime
 
 router = APIRouter(tags=["业务模块"])
 
@@ -184,7 +185,7 @@ async def clue_detail(clue_id: int, db: AsyncSession = Depends(get_db)):
     return success(row_to_dict(r)) if r else fail("线索不存在")
 
 @router.post("/api/clue")
-async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db)):
+async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     data = dto.model_dump(exclude_none=True)
     key_map = {"clueName":"clue_name","clientCompany":"client_company","clientDept":"client_dept",
                "clientContact":"client_contact","beikeOwner":"beike_owner","budgetAmount":"budget_amount",
@@ -208,12 +209,21 @@ async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db)):
     if extra:
         import json
         mapped["extra_data"] = json.dumps(extra)
+    # 设置创建人
+    mapped["create_by"] = user["id"]
+    # 财务数据自动计算
+    actual_fields = {}
+    if "budgetAmount" in data and data["budgetAmount"]:
+        actual_fields["budget_amount"] = data["budgetAmount"]
+    if "opportunityAmount" in data and data["opportunityAmount"]:
+        actual_fields["opportunity_amount"] = data["opportunityAmount"]
+    mapped.update(actual_fields)
     c = BizClue(**mapped)
     db.add(c); await db.commit(); await db.refresh(c)
     return success(row_to_dict(c))
 
 @router.put("/api/clue/{clue_id}")
-async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends(get_db)):
+async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
     if not r: return fail("线索不存在")
     key_map = {"clueName":"clue_name","clientCompany":"client_company","clientDept":"client_dept",
@@ -222,9 +232,18 @@ async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends
                "businessConfirmed":"business_confirmed","contactDate":"contact_date",
                "createDate":"create_date","requirementDesc":"requirement_desc",
                "expectedTarget":"expected_target","deptBelong":"dept_belong",
-               "opportunityAmount":"opportunity_amount","clueEvaluation":"clue_evaluation"}
+               "opportunityAmount":"opportunity_amount","clueEvaluation":"clue_evaluation",
+               "sourceType":"source_type","sourceActivityName":"source_activity_name",
+               "clientCircle":"client_circle","valueQuadrant":"value_quadrant",
+               "healthStatus":"health_status","proposalDate":"proposal_date",
+               "campaignId":"campaign_id","maintenanceFreq":"maintenance_freq",
+               "nextMaintenanceDate":"next_maintenance_date",
+               "painPoint":"pain_point"}
     for k, v in dto.model_dump(exclude_unset=True).items():
-        setattr(r, key_map.get(k, k), v)
+        col = key_map.get(k, k)
+        if hasattr(BizClue, col):
+            setattr(r, col, v)
+    r.update_by = user["id"]
     await db.commit(); return success()
 
 @router.delete("/api/clue/{clue_id}")
@@ -248,4 +267,65 @@ async def clue_dashboard(clue_id: int, db: AsyncSession = Depends(get_db), user=
         "clue": row_to_dict(clue),
         "follows": [dict(f) for f in follows],
         "logs": [dict(l) for l in logs],
+    })
+
+# ==================== 线索统计 ====================
+
+@router.get("/api/clue/stats")
+async def clue_stats(db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """线索统计数据：总量、待跟进、已承接、已转化"""
+    base_q = select(BizClue).where(BizClue.is_deleted == 0)
+    is_admin = "ROLE_ADMIN" in user.get("roles", [])
+    if not is_admin and user.get("realName"):
+        base_q = base_q.where(BizClue.beike_owner == user["realName"])
+    sub = base_q.subquery()
+    total = (await db.execute(select(func.count()).select_from(sub))).scalar() or 0
+    pending = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "接触")))).scalar() or 0
+    if not is_admin and user.get("realName"):
+        pending = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "接触", BizClue.beike_owner == user["realName"])))).scalar() or 0
+    accepted = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "承接")))).scalar() or 0
+    if not is_admin and user.get("realName"):
+        accepted = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "承接", BizClue.beike_owner == user["realName"])))).scalar() or 0
+    # 已转化 = 有关联项目的线索
+    converted = (await db.execute(text("SELECT COUNT(DISTINCT c.id) FROM biz_clue c JOIN biz_project p ON p.source_clue_id = c.id WHERE c.is_deleted = 0 AND p.is_deleted = 0"))).scalar() or 0
+    return success({"total": total, "pending": pending, "accepted": accepted, "converted": converted})
+
+# ==================== 战役（前端兼容路径） ====================
+
+@router.get("/api/clue/campaigns")
+async def clue_campaigns(db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """返回战役列表（兼容前端 /api/clue/campaigns 路径）"""
+    rows = (await db.execute(select(BizCampaign).where(BizCampaign.is_deleted == 0).order_by(BizCampaign.create_time.desc()))).scalars().all()
+    return success([row_to_dict(r) for r in rows])
+
+@router.get("/api/clue/campaign/dashboard")
+async def clue_campaign_dashboard(campaignId: int = Query(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """战役作战看板数据"""
+    campaign = (await db.execute(select(BizCampaign).where(BizCampaign.id == campaignId, BizCampaign.is_deleted == 0))).scalar_one_or_none()
+    if not campaign: return fail("战役不存在")
+    # 该战役下的线索数
+    clue_count = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.campaign_id == campaignId).subquery()))).scalar() or 0
+    # 线索状态统计
+    pending_review = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.campaign_id == campaignId, BizClue.review_status.in_(["待评审", "评审中"])).subquery()))).scalar() or 0
+    yellow_count = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.campaign_id == campaignId, BizClue.health_status == "yellow").subquery()))).scalar() or 0
+    red_count = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.campaign_id == campaignId, BizClue.health_status == "red").subquery()))).scalar() or 0
+    # 已转化 = 该战役下有关联项目的线索
+    converted = (await db.execute(text("SELECT COUNT(DISTINCT c.id) FROM biz_clue c JOIN biz_project p ON p.source_clue_id = c.id WHERE c.campaign_id = :cid AND c.is_deleted = 0 AND p.is_deleted = 0"), {"cid": campaignId})).scalar() or 0
+    # 本周内新增
+    this_week = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.campaign_id == campaignId, BizClue.create_time >= func.date_sub(func.now(), text("INTERVAL 7 DAY"))).subquery()))).scalar() or 0
+    target_total = float(campaign.target_count or 0)
+    valid_rate = round((clue_count / target_total * 100) if target_total > 0 else 0, 1)
+    conv_rate = round((converted / clue_count * 100) if clue_count > 0 else 0, 1)
+    return success({
+        "targetCount": campaign.target_count or 0,
+        "targetAmount": float(campaign.target_amount or 0),
+        "addedCount": clue_count,
+        "validRate": valid_rate,
+        "conversionRate": conv_rate,
+        "keyFollowCount": pending_review + yellow_count + red_count,
+        "newClueCount": this_week,
+        "pendingReviewCount": pending_review,
+        "yellowWarningCount": yellow_count,
+        "redWarningCount": red_count,
+        "expectedThisWeek": 0,
     })
