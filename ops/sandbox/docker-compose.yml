@@ -41,6 +41,7 @@ services:
       - beike-net
 
   web:
+    image: beike-platform-web:latest
     build:
       context: ../..
       dockerfile: ops/sandbox/Dockerfile.web
