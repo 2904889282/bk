@@ -71,8 +71,9 @@ export default function PipelineForm({ open, editItem, onClose, onSuccess }: Pro
         message.success('线索已创建');
       }
       onSuccess();
-    } catch {
-      // 表单校验失败或接口报错，统一走全局拦截器
+    } catch (err: any) {
+      if (err?.errorFields) return; // 表单校验失败，antd 自动提示
+      message.error(err?.message || '操作失败，请稍后重试');
     } finally {
       setSubmitting(false);
     }
