@@ -3,19 +3,35 @@ from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizPipeline, BizCampaign
-from security import get_current_user
+from security import get_current_user_with_role
 from schemas import success, fail
 
 router = APIRouter(tags=["LTC"])
 
+def _to_camel(d):
+    result = {}
+    for k, v in d.items():
+        parts = k.split('_')
+        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
+        result[camel] = v
+    return result
+
 def row_to_dict(r):
-    return {c.name: getattr(r, c.name) for c in r.__table__.columns}
+    d = {c.key: getattr(r, c.key) for c in r.__table__.columns}
+    return _to_camel(d)
+
+# 前端 camelCase → 数据库 snake_case 映射
+PIPELINE_KEY_MAP = {
+    "winRate":"win_rate","ownerId":"owner_id","deptId":"dept_id",
+    "nextAction":"next_action","managerName":"manager_name",
+    "contactPerson":"contact_person","expectedCloseDate":"expected_close_date",
+}
 
 # ==================== 商机管道 ====================
 
 @router.get("/api/pipeline/page")
 async def pipeline_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, stage: str = None,
-                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     q = select(BizPipeline).where(BizPipeline.is_deleted == 0)
     if keyword: q = q.where(or_(BizPipeline.name.contains(keyword), BizPipeline.customer.contains(keyword)))
     if stage: q = q.where(BizPipeline.stage == stage)
@@ -30,17 +46,22 @@ async def pipeline_detail(pipeline_id: int, db: AsyncSession = Depends(get_db)):
     return success(row_to_dict(r)) if r else fail("商机不存在")
 
 @router.post("/api/pipeline")
-async def pipeline_create(dto: dict, db: AsyncSession = Depends(get_db)):
-    p = BizPipeline(**{k: v for k, v in dto.items() if hasattr(BizPipeline, k)})
+async def pipeline_create(dto: dict, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    mapped = {PIPELINE_KEY_MAP.get(k, k): v for k, v in dto.items() if v is not None}
+    # 筛选仅存在于 BizPipeline 模型中的字段
+    valid = {k: v for k, v in mapped.items() if hasattr(BizPipeline, k)}
+    p = BizPipeline(**valid)
     db.add(p); await db.commit(); await db.refresh(p)
     return success(row_to_dict(p))
 
 @router.put("/api/pipeline/{pipeline_id}")
-async def pipeline_update(pipeline_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+async def pipeline_update(pipeline_id: int, dto: dict, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id))).scalar_one_or_none()
     if not r: return fail("商机不存在")
     for k, v in dto.items():
-        if hasattr(BizPipeline, k): setattr(r, k, v)
+        col = PIPELINE_KEY_MAP.get(k, k)
+        if hasattr(BizPipeline, col):
+            setattr(r, col, v)
     await db.commit(); return success()
 
 @router.delete("/api/pipeline/{pipeline_id}")
@@ -79,13 +100,19 @@ async def follow_delete(follow_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/attachment/upload")
 async def attachment_upload(file: UploadFile = File(...), bizType: str = Form(...), bizId: int = Form(...),
-                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     import os, uuid
+    ALLOWED_TYPES = {"jpg","jpeg","png","gif","pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","zip","rar"}
+    MAX_SIZE = 50 * 1024 * 1024  # 50MB
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in ALLOWED_TYPES:
+        return fail(f"不支持的文件类型: {ext}，允许: {', '.join(sorted(ALLOWED_TYPES))}")
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        return fail(f"文件大小超限，最大50MB，当前: {len(content)//1024//1024}MB")
     os.makedirs("uploads", exist_ok=True)
-    ext = file.filename.rsplit('.', 1)[-1] if '.' in file.filename else ''
     fname = f"{uuid.uuid4()}.{ext}"
     path = os.path.join("uploads", fname)
-    content = await file.read()
     with open(path, "wb") as f: f.write(content)
     await db.execute(text("INSERT INTO biz_attachment (biz_type, biz_id, file_name, file_type, file_size, file_url, upload_user_id) VALUES (:bt,:bi,:fn,:ft,:fs,:fu,:ui)"),
                      {"bt": bizType, "bi": bizId, "fn": file.filename, "ft": ext, "fs": len(content), "fu": f"/uploads/{fname}", "ui": user["id"]})
@@ -106,7 +133,7 @@ async def attachment_delete(att_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/campaign/page")
 async def campaign_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
-                        db: AsyncSession = Depends(get_db)):
+                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user_with_role)):
     q = select(BizCampaign).where(BizCampaign.is_deleted == 0)
     if keyword: q = q.where(BizCampaign.name.contains(keyword))
     q = q.order_by(BizCampaign.create_time.desc())

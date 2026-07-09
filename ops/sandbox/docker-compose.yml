@@ -8,21 +8,23 @@ x-logging: &default-logging
 
 services:
   api:
+    image: beike-platform-api:latest
     build:
       context: ../..
       dockerfile: ops/sandbox/Dockerfile.api-py
     container_name: beike-sandbox-api
     restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8080
     environment:
       TZ: Asia/Shanghai
-      db_host: rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com
-      db_port: '3306'
-      db_name: beike_platform
-      db_user: beike
-      db_password: BEIKEadmin123
-      jwt_secret: beike-cloud-dev-jwt-secret-2026-must-be-at-least-64-characters-long-for-hs384
-      jwt_access_expire_hours: '72'
-      jwt_refresh_expire_days: '30'
+      db_host: ${DB_HOST:-rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com}
+      db_port: ${DB_PORT:-3306}
+      db_name: ${DB_NAME:-beike_platform}
+      db_user: ${DB_USER:-beike}
+      db_password: ${DB_PASSWORD}
+      jwt_secret: ${JWT_SECRET}
+      jwt_access_expire_hours: ${JWT_ACCESS_EXPIRE_HOURS:-1}
+      jwt_refresh_expire_days: ${JWT_REFRESH_EXPIRE_DAYS:-7}
       upload_dir: /app/uploads
       log_dir: /app/logs
     volumes:

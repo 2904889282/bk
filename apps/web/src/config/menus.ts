@@ -12,22 +12,20 @@ export interface MenuItem {
 export const FALLBACK_MENUS: MenuItem[] = [
   { path: '/', name: '工作台', icon: 'DashboardOutlined' },
   {
-    name: 'LTC 线索管理', icon: 'FundOutlined',
+    name: '线索管理', icon: 'FundOutlined',
     children: [
+      { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'clue:list' },
       { path: '/ltc/kanban', name: '线索看板', icon: 'FundOutlined', permCode: 'pipeline:list' },
-      { path: '/ltc/pipeline', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'pipeline:list' },
+      { path: '/ltc/pipeline', name: '商机管道', icon: 'RiseOutlined', permCode: 'pipeline:list' },
       { path: '/ltc/alerts', name: '预警中心', icon: 'AlertOutlined', permCode: 'alert:list' },
       { path: '/ltc/analysis', name: '数据分析', icon: 'PieChartOutlined', permCode: 'pipeline:list' },
-      { path: '/ltc/leads', name: '线索管理', icon: 'AlertOutlined', permCode: 'clue:list' },
     ],
   },
   {
     name: '项目管理', icon: 'ProjectOutlined',
     children: [
-      { path: '/pm/kanban', name: '项目看板', icon: 'ProjectOutlined', permCode: 'project:list' },
       { path: '/pm/projects', name: '项目列表', icon: 'UnorderedListOutlined', permCode: 'project:list' },
-      { path: '/pm/risks', name: '风险管理', icon: 'SafetyOutlined', permCode: 'risk:list' },
-      { path: '/pm/talent', name: '人才池', icon: 'TeamOutlined', permCode: 'talent:list' },
+      { path: '/pm/kanban', name: '项目看板', icon: 'ProjectOutlined', permCode: 'project:list' },
       { path: '/pm/gantt', name: '项目甘特图', icon: 'BarChartOutlined', permCode: 'project:list' },
     ],
   },
@@ -45,9 +43,9 @@ export const FALLBACK_MENUS: MenuItem[] = [
 export const REGULAR_USER_MENUS: MenuItem[] = [
   { path: '/', name: '工作台', icon: 'DashboardOutlined' },
   {
-    name: 'LTC 线索管理', icon: 'FundOutlined',
+    name: '线索管理', icon: 'FundOutlined',
     children: [
-      { path: '/ltc/leads', name: '线索管理', icon: 'AlertOutlined', permCode: 'clue:list' },
+      { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'clue:list' },
     ],
   },
   {

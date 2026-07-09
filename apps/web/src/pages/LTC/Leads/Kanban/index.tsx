@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Statistic, Table, Tag, Space, Typography, Select } from 'antd';
+import { Card, Row, Col, Statistic, Table, Tag, Space, Typography, Select, Button } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import {
-  AimOutlined, WarningOutlined, RiseOutlined, ThunderboltOutlined,
+  AimOutlined, WarningOutlined, RiseOutlined, ThunderboltOutlined, PlusOutlined,
 } from '@ant-design/icons';
 import {
   fetchCluePage, fetchClueStats, fetchCampaigns, fetchCampaignDashboard,
   type ClueVO, type ClueStats, type CampaignItem, type CampaignDashboardVO,
 } from '../../../../api/clue';
 
-const { Text } = Typography;
+const { Text, Title } = Typography;
 
 function CountUp({ end }: { end: number }) {
   const [val, setVal] = useState(0);
@@ -101,6 +101,14 @@ export default function LeadsKanban() {
 
   return (
     <div>
+      {/* 顶部操作栏 */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Title level={5} style={{ margin: 0 }}>线索作战看板</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/ltc/leads?create=1')}>
+          新建线索
+        </Button>
+      </div>
+
       {/* 核心统计卡片 */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         {[

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Any
 from datetime import date, datetime
 from decimal import Decimal
@@ -27,9 +27,23 @@ class RegisterDTO(BaseModel):
     deptId: Optional[int] = None
     deptName: Optional[str] = None
 
+    @field_validator('password')
+    @classmethod
+    def password_min_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('密码至少6位')
+        return v
+
 class PasswordDTO(BaseModel):
     oldPassword: str
     newPassword: str
+
+    @field_validator('newPassword')
+    @classmethod
+    def password_min_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('新密码至少6位')
+        return v
 
 class SendCodeDTO(BaseModel):
     email: str
@@ -38,6 +52,13 @@ class ResetPasswordDTO(BaseModel):
     email: str
     code: str
     newPassword: str
+
+    @field_validator('newPassword')
+    @classmethod
+    def password_min_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('新密码至少6位')
+        return v
 
 # ==================== 项目 ====================
 class ProjectSaveDTO(BaseModel):

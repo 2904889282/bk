@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, Query, Body
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from models import SysUser, SysRole, SysPermission, SysUserRole, SysRolePermission, SysDept, BizCampaign, LoginDevice
-from security import get_current_user, hash_password
+from models import SysUser, SysRole, SysPermission, SysUserRole, SysRolePermission, SysDept, BizCampaign
+from security import get_current_user, get_current_user_with_role, require_admin, hash_password
 from schemas import success, fail
 
 router = APIRouter(tags=["系统管理"])
+
+def clamp_page(pageNum: int, pageSize: int):
+    return max(1, pageNum), min(max(1, pageSize), 100)
 
 def row_to_dict(r):
     return {c.name: getattr(r, c.name) for c in r.__table__.columns}
@@ -15,7 +18,9 @@ def row_to_dict(r):
 
 @router.get("/api/user/page")
 async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, status: str = None,
-                    deptId: int = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                    deptId: int = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
+    pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(SysUser).where(SysUser.is_deleted == 0)
     if keyword: q = q.where(or_(SysUser.username.contains(keyword), SysUser.real_name.contains(keyword)))
     if status: q = q.where(SysUser.status == int(status))
@@ -27,16 +32,18 @@ async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, s
     for r in rows:
         d = row_to_dict(r)
         d.pop('password', None)
-        rr = await db.execute(select(SysRole.code).select_from(SysUserRole).join(SysRole).where(SysUserRole.user_id == r.id))
+        rr = await db.execute(text("SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"), {"uid": r.id})
         d['roles'] = [x[0] for x in rr.all() if x[0]]
         records.append(d)
     return success({"records": records, "total": total})
 
 @router.get("/api/user/{user_id}")
-async def user_detail(user_id: int, db: AsyncSession = Depends(get_db)):
+async def user_detail(user_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     r = (await db.execute(select(SysUser).where(SysUser.id == user_id))).scalar_one_or_none()
     if not r: return fail("用户不存在")
-    d = row_to_dict(r); d.pop('password', None)
+    d = row_to_dict(r)
+    d.pop('password', None)
+    d.pop('is_deleted', None)
     return success(d)
 
 @router.post("/api/user")
@@ -76,17 +83,17 @@ async def user_reset_pwd(user_id: int, db: AsyncSession = Depends(get_db)):
 # ==================== 角色 ====================
 
 @router.get("/api/role/list")
-async def role_list(db: AsyncSession = Depends(get_db)):
+async def role_list(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     rows = (await db.execute(select(SysRole).where(SysRole.is_deleted == 0))).scalars().all()
     return success([row_to_dict(r) for r in rows])
 
 @router.get("/api/role/{role_id}/permission")
-async def role_perms(role_id: int, db: AsyncSession = Depends(get_db)):
+async def role_perms(role_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     rows = await db.execute(select(SysRolePermission.permission_id).where(SysRolePermission.role_id == role_id))
     return success([r[0] for r in rows.all()])
 
 @router.put("/api/role/permission")
-async def assign_perms(dto: dict = Body(...), db: AsyncSession = Depends(get_db)):
+async def assign_perms(dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     role_id = dto.get('roleId')
     await db.execute(select(SysRolePermission).where(SysRolePermission.role_id == role_id))
     # delete existing
@@ -96,19 +103,19 @@ async def assign_perms(dto: dict = Body(...), db: AsyncSession = Depends(get_db)
     await db.commit(); return success()
 
 @router.get("/api/role/permission/all")
-async def all_perms(db: AsyncSession = Depends(get_db)):
+async def all_perms(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     rows = (await db.execute(select(SysPermission).where(SysPermission.is_deleted == 0))).scalars().all()
     return success([row_to_dict(r) for r in rows])
 
 # ==================== 部门 ====================
 
 @router.get("/api/dept/list")
-async def dept_list(db: AsyncSession = Depends(get_db)):
+async def dept_list(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     rows = (await db.execute(select(SysDept).where(SysDept.is_deleted == 0))).scalars().all()
     return success([row_to_dict(r) for r in rows])
 
 @router.get("/api/dept/users")
-async def dept_users(db: AsyncSession = Depends(get_db)):
+async def dept_users(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     rows = (await db.execute(select(SysUser.id, SysUser.username, SysUser.real_name, SysUser.dept_id).where(SysUser.is_deleted == 0, SysUser.status == 1))).all()
     return success([{"id": r[0], "username": r[1], "realName": r[2], "deptId": r[3]} for r in rows])
 
@@ -133,7 +140,7 @@ async def log_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
 
 @router.get("/api/recycle/page")
 async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: str = None,
-                       db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                       db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     results = []; total = 0
     for tbl, name_col in [("biz_clue", "clue_name"), ("biz_project", "project_name"), ("biz_talent", "name"), ("biz_risk", "type")]:
         sql = f"SELECT id, '{tbl}' as biz_type, {name_col} as item_name, update_time FROM {tbl} WHERE is_deleted = 1"
@@ -144,11 +151,11 @@ async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: str = None
     return success({"records": results, "total": total})
 
 @router.put("/api/recycle/restore")
-async def recycle_restore(dto: dict = Body(...), db: AsyncSession = Depends(get_db)):
+async def recycle_restore(dto: dict = Body(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     await db.execute(text(f"UPDATE {dto['bizType']} SET is_deleted = 0 WHERE id = :id"), {"id": dto["id"]})
     await db.commit(); return success()
 
 @router.delete("/api/recycle/perm")
-async def recycle_perm_delete(dto: dict = Body(...), db: AsyncSession = Depends(get_db)):
+async def recycle_perm_delete(dto: dict = Body(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     await db.execute(text(f"DELETE FROM {dto['bizType']} WHERE id = :id"), {"id": dto["id"]})
     await db.commit(); return success()

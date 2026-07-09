@@ -4,7 +4,10 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from routers import auth, project, biz, system, ltc
+from database import engine
 
 app = FastAPI(title="贝壳管理平台", version="2.0.0")
 
@@ -17,8 +20,18 @@ app.include_router(system.router)
 app.include_router(ltc.router)
 
 @app.get("/api/health")
-def health():
-    return {"code": 200, "msg": "UP", "data": None}
+async def health():
+    """第一性原理：健康 = 进程存活 + 数据库可达。
+    不检查其他依赖，因为数据库是最小阻塞点——DB 挂了任何业务接口都会 500。"""
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return {"status": "healthy", "database": "connected"}
+    except Exception:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "database": "disconnected"},
+        )
 
 if __name__ == "__main__":
     import uvicorn

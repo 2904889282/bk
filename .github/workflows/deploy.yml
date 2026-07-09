@@ -1,0 +1,30 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches: [feat/project-integration]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -e
+            cd /opt/beike
+
+            echo "=== pre-check: disk space ==="
+            df -h / | tail -1
+
+            echo "=== pre-check: docker daemon ==="
+            docker info --format '{{.ServerVersion}}' > /dev/null && echo "docker OK"
+
+            echo "=== deploy ==="
+            bash scripts/rebuild2.sh
