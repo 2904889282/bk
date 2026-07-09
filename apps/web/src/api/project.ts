@@ -117,8 +117,9 @@ export async function fetchProjectDetail(id: number): Promise<ProjectVO> {
   return res.data;
 }
 
-export async function createProject(data: ProjectSaveDTO): Promise<void> {
-  await request.post('/api/project', data);
+export async function createProject(data: ProjectSaveDTO): Promise<any> {
+  const res = await request.post('/api/project', data);
+  return res.data;
 }
 
 export async function updateProject(id: number, data: ProjectSaveDTO): Promise<void> {
@@ -147,4 +148,79 @@ export async function savePeriod(data: ProjectPeriod): Promise<ProjectPeriod> {
 
 export async function deletePeriod(id: number): Promise<void> {
   await request.delete(`/api/project-period/${id}`);
+}
+
+// ==================== 项目仪表盘 ====================
+
+export interface ProjectDashboard {
+  project: ProjectVO;
+  periods: ProjectPeriod[];
+  weeklies: any[];
+  milestones: any[];
+  team: any[];
+  wbs: any[];
+  changes: any[];
+  risks: any[];
+}
+
+export async function fetchDashboard(projectId: number): Promise<ProjectDashboard> {
+  const res = await request.get(`/api/project/${projectId}/dashboard`);
+  return res.data;
+}
+
+// ==================== 周报 ====================
+
+export async function fetchWeeklies(projectId: number, month?: string): Promise<any[]> {
+  const res = await request.get(`/api/project/${projectId}/weekly`, { params: month ? { month } : {} });
+  return res.data;
+}
+
+export async function saveWeekly(projectId: number, data: any): Promise<any> {
+  const res = await request.post(`/api/project/${projectId}/weekly`, data);
+  return res.data;
+}
+
+// ==================== 里程碑 ====================
+
+export async function fetchMilestones(projectId: number): Promise<any[]> {
+  const res = await request.get(`/api/project/${projectId}/milestones`);
+  return res.data;
+}
+
+export async function saveMilestones(projectId: number, items: any[]): Promise<void> {
+  await request.post(`/api/project/${projectId}/milestones`, items);
+}
+
+// ==================== 团队 ====================
+
+export async function fetchTeam(projectId: number): Promise<any[]> {
+  const res = await request.get(`/api/project/${projectId}/team`);
+  return res.data;
+}
+
+export async function saveTeam(projectId: number, items: any[]): Promise<void> {
+  await request.post(`/api/project/${projectId}/team`, items);
+}
+
+// ==================== WBS ====================
+
+export async function fetchWBS(projectId: number): Promise<any[]> {
+  const res = await request.get(`/api/project/${projectId}/wbs`);
+  return res.data;
+}
+
+export async function saveWBS(projectId: number, items: any[]): Promise<void> {
+  await request.post(`/api/project/${projectId}/wbs`, items);
+}
+
+// ==================== 变更 ====================
+
+export async function fetchChanges(projectId: number): Promise<any[]> {
+  const res = await request.get(`/api/project/${projectId}/changes`);
+  return res.data;
+}
+
+export async function createChange(projectId: number, data: any): Promise<any> {
+  const res = await request.post(`/api/project/${projectId}/changes`, data);
+  return res.data;
 }

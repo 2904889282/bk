@@ -397,6 +397,11 @@ export async function fetchClueDetail(id: number): Promise<ClueVO> {
   }
 }
 
+export async function fetchClueDashboard(id: number): Promise<any> {
+  const res = await request.get(`/api/clue/${id}/dashboard`);
+  return res.data;
+}
+
 export async function createClue(data: ClueSaveDTO): Promise<void> {
   try {
     await request.post('/api/clue', data);

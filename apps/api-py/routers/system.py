@@ -3,7 +3,7 @@ from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import SysUser, SysRole, SysPermission, SysUserRole, SysRolePermission, SysDept, BizCampaign
-from security import get_current_user, hash_password
+from security import get_current_user, get_current_user_with_role, require_admin, hash_password
 from schemas import success, fail
 
 router = APIRouter(tags=["系统管理"])
@@ -18,7 +18,8 @@ def row_to_dict(r):
 
 @router.get("/api/user/page")
 async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, status: str = None,
-                    deptId: int = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                    deptId: int = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(SysUser).where(SysUser.is_deleted == 0)
     if keyword: q = q.where(or_(SysUser.username.contains(keyword), SysUser.real_name.contains(keyword)))

@@ -3,7 +3,7 @@ from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizPipeline, BizCampaign
-from security import get_current_user
+from security import get_current_user_with_role
 from schemas import success, fail
 
 router = APIRouter(tags=["LTC"])
@@ -15,7 +15,7 @@ def row_to_dict(r):
 
 @router.get("/api/pipeline/page")
 async def pipeline_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, stage: str = None,
-                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                        db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     q = select(BizPipeline).where(BizPipeline.is_deleted == 0)
     if keyword: q = q.where(or_(BizPipeline.name.contains(keyword), BizPipeline.customer.contains(keyword)))
     if stage: q = q.where(BizPipeline.stage == stage)
@@ -79,7 +79,7 @@ async def follow_delete(follow_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/attachment/upload")
 async def attachment_upload(file: UploadFile = File(...), bizType: str = Form(...), bizId: int = Form(...),
-                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+                           db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     import os, uuid
     ALLOWED_TYPES = {"jpg","jpeg","png","gif","pdf","doc","docx","xls","xlsx","ppt","pptx","txt","csv","zip","rar"}
     MAX_SIZE = 50 * 1024 * 1024  # 50MB
@@ -112,7 +112,7 @@ async def attachment_delete(att_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/campaign/page")
 async def campaign_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
-                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user_with_role)):
     q = select(BizCampaign).where(BizCampaign.is_deleted == 0)
     if keyword: q = q.where(BizCampaign.name.contains(keyword))
     q = q.order_by(BizCampaign.create_time.desc())

@@ -421,7 +421,7 @@ export default function LoginPage() {
               </div>
 
               <div className="text-center text-xs mt-4" style={{ color: "rgba(226,232,240,0.38)" }}>
-                演示账号：admin / admin
+                演示账号：admin / admin123
               </div>
             </>
           )}
