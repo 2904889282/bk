@@ -15,6 +15,7 @@ class SysUser(Base):
     phone = Column(String(16))
     status = Column(Integer, default=1)
     dept_id = Column("dept_id", BigInteger)
+    position_id = Column("position_id", BigInteger)
     role_type = Column("role_type", String(16), default="USER")
     create_by = Column("create_by", BigInteger)
     create_time = Column("create_time", DateTime, default=datetime.utcnow)
@@ -26,6 +27,15 @@ class SysDept(Base):
     __tablename__ = "sys_dept"
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(64), nullable=False)
+    parent_id = Column("parent_id", BigInteger, nullable=True)
+    sort_order = Column("sort_order", Integer, default=0)
+    is_deleted = Column("is_deleted", Integer, default=0)
+
+class SysPosition(Base):
+    __tablename__ = "sys_position"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False)
+    sort_order = Column("sort_order", Integer, default=0)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class SysRole(Base):
