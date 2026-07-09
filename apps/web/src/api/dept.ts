@@ -1,28 +1,26 @@
 import request from '../utils/request';
 
-/** 部门选项 */
-export interface DeptOption {
+export interface DeptNode {
   id: number;
   name: string;
+  parent_id?: number;
+  sort_order?: number;
+  children?: DeptNode[];
 }
 
-/** 用户简易选项（承接人下拉） */
-export interface UserOption {
-  id: number;
-  username: string;
-  realName: string;
-  label: string;
-  deptId: number;
-}
-
-/** 获取部门列表 */
-export async function fetchDeptList(): Promise<DeptOption[]> {
-  const res = await request.get('/api/dept/list');
+export async function fetchDeptTree(): Promise<DeptNode[]> {
+  const res = await request.get('/api/dept/tree');
   return res.data;
 }
 
-/** 获取用户列表（承接人下拉） */
-export async function fetchUserOptions(): Promise<UserOption[]> {
-  const res = await request.get('/api/dept/users');
-  return res.data;
+export async function createDept(name: string, parentId?: number | null) {
+  return request.post('/api/dept', { name, parentId });
+}
+
+export async function updateDept(id: number, name: string, parentId?: number | null) {
+  return request.put(`/api/dept/${id}`, { name, parentId });
+}
+
+export async function deleteDept(id: number) {
+  return request.delete(`/api/dept/${id}`);
 }

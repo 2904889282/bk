@@ -24,6 +24,8 @@ const PmRisks = lazy(() => import('./pages/PM/Risks'));
 const PmTalent = lazy(() => import('./pages/PM/Talent'));
 const PmGantt = lazy(() => import('./pages/PM/Gantt'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
+const AdminDepts = lazy(() => import('./pages/Admin/Depts'));
+const AdminPositions = lazy(() => import('./pages/Admin/Positions'));
 const RecycleBin = lazy(() => import('./pages/Admin/RecycleBin'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
 const ResourcesPage = lazy(() => import('./pages/Resources'));
@@ -190,6 +192,8 @@ function AppContent() {
               <Route path="pm/talent" element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
               <Route path="pm/gantt" element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
               <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
+              <Route path="admin/depts" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminDepts /></PermissionGuard>)} />
+              <Route path="admin/positions" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminPositions /></PermissionGuard>)} />
               <Route path="admin/recycle" element={withSuspense(<PermissionGuard permCode="recycle:list"><RecycleBin /></PermissionGuard>)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
               <Route path="resources" element={withSuspense(<ResourcesPage />)} />

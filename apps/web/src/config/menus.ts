@@ -33,6 +33,8 @@ export const FALLBACK_MENUS: MenuItem[] = [
     name: '系统管理', icon: 'SettingOutlined',
     children: [
       { path: '/admin/users', name: '用户管理', icon: 'UserOutlined', permCode: 'system:user:list' },
+      { path: '/admin/depts', name: '部门管理', icon: 'ClusterOutlined', permCode: 'system:user:list' },
+      { path: '/admin/positions', name: '职位管理', icon: 'IdcardOutlined', permCode: 'system:user:list' },
       { path: '/admin/recycle', name: '数据回收站', icon: 'DeleteOutlined', permCode: 'recycle:list' },
       { path: '/resources', name: '资源库', icon: 'FolderOpenOutlined' },
     ],
