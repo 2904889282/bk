@@ -20,6 +20,15 @@ jobs:
             set -e
             cd /opt/beike
 
+            echo "=== pre-check: docker mirror ==="
+            if ! grep -q 'registry-mirrors' /etc/docker/daemon.json 2>/dev/null; then
+              echo '{"registry-mirrors":["https://docker.m.daocloud.io"]}' > /etc/docker/daemon.json
+              systemctl restart docker
+              echo "docker mirror configured"
+            else
+              echo "docker mirror already set"
+            fi
+
             echo "=== pre-check: disk space ==="
             df -h / | tail -1
 
