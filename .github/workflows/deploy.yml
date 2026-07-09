@@ -26,5 +26,8 @@ jobs:
             echo "=== pre-check: docker daemon ==="
             docker info --format '{{.ServerVersion}}' > /dev/null && echo "docker OK"
 
+            echo "=== pulling latest code ==="
+            git pull origin feat/project-integration
+
             echo "=== deploy ==="
             bash scripts/rebuild2.sh
