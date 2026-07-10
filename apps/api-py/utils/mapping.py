@@ -24,6 +24,17 @@ def row_to_camel(r) -> dict:
     return to_camel(row_to_dict(r))
 
 
+def to_snake(camel_str: str) -> str:
+    """camelCase → snake_case 字符串转换"""
+    import re
+    return re.sub(r'(?<!^)(?=[A-Z])', '_', camel_str).lower()
+
+
+def to_snake_dict(d: dict) -> dict:
+    """字典键名 camelCase → snake_case"""
+    return {to_snake(k): v for k, v in d.items()}
+
+
 def json_serializer(obj):
     """JSON 序列化辅助：处理 date/datetime/Decimal 类型"""
     if isinstance(obj, (date, datetime)):

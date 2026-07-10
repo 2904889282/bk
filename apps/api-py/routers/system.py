@@ -157,13 +157,15 @@ async def dept_list(db: AsyncSession = Depends(get_db), user=Depends(get_current
     return success([row_to_dict(r) for r in rows])
 
 @router.post("/api/dept")
-async def dept_create(data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def dept_create(data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     dept = SysDept(name=data["name"], parent_id=data.get("parentId"), sort_order=data.get("sortOrder", 0))
     db.add(dept); await db.commit(); await db.refresh(dept)
     return success(row_to_dict(dept))
 
 @router.put("/api/dept/{dept_id}")
-async def dept_update(dept_id: int, data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def dept_update(dept_id: int, data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     dept = (await db.execute(select(SysDept).where(SysDept.id == dept_id))).scalar_one_or_none()
     if not dept: return fail("部门不存在")
     if "name" in data: dept.name = data["name"]
@@ -173,7 +175,8 @@ async def dept_update(dept_id: int, data: dict = Body(...), db: AsyncSession = D
     return success(row_to_dict(dept))
 
 @router.delete("/api/dept/{dept_id}")
-async def dept_delete(dept_id: int, db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def dept_delete(dept_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     # 检查子部门
     sub = await db.execute(select(SysDept).where(SysDept.parent_id == dept_id, SysDept.is_deleted == 0))
     if sub.scalars().first(): return fail("请先删除子部门")
@@ -195,13 +198,15 @@ async def position_list(db: AsyncSession = Depends(get_db), user=Depends(get_cur
     return success([row_to_dict(r) for r in rows])
 
 @router.post("/api/position")
-async def position_create(data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def position_create(data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     pos = SysPosition(name=data["name"], sort_order=data.get("sortOrder", 0))
     db.add(pos); await db.commit(); await db.refresh(pos)
     return success(row_to_dict(pos))
 
 @router.put("/api/position/{pos_id}")
-async def position_update(pos_id: int, data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def position_update(pos_id: int, data: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     pos = (await db.execute(select(SysPosition).where(SysPosition.id == pos_id))).scalar_one_or_none()
     if not pos: return fail("职位不存在")
     if "name" in data: pos.name = data["name"]
@@ -210,7 +215,8 @@ async def position_update(pos_id: int, data: dict = Body(...), db: AsyncSession 
     return success(row_to_dict(pos))
 
 @router.delete("/api/position/{pos_id}")
-async def position_delete(pos_id: int, db: AsyncSession = Depends(get_db), user=Depends(require_admin)):
+async def position_delete(pos_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     pos = (await db.execute(select(SysPosition).where(SysPosition.id == pos_id))).scalar_one_or_none()
     if not pos: return fail("职位不存在")
     pos.is_deleted = 1; await db.commit()

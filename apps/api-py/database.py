@@ -9,7 +9,7 @@ DATABASE_URL = f"mysql+aiomysql://{settings.db_user}:{settings.db_password}@{set
 pool_size = int(os.getenv("DB_POOL_SIZE", "10"))
 max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "5"))
 
-engine = create_async_engine(DATABASE_URL, pool_size=pool_size, max_overflow=max_overflow, echo=False)
+engine = create_async_engine(DATABASE_URL, pool_size=pool_size, max_overflow=max_overflow, pool_pre_ping=True, pool_recycle=3600, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 class Base(DeclarativeBase):
