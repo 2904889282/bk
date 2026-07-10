@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS biz_pipeline_member (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商机团队成员表';
 
 -- 5. 默认部门
-INSERT IGNORE INTO sys_dept (id, name) VALUES (1, '销售一部'), (2, '销售二部'), (3, '大客户组');
+INSERT IGNORE INTO sys_dept (id, name) VALUES (1, '平台一部'), (2, '平台二部'), (3, '平台三部');
 
 -- 6. 更新现有用户(默认部门/角色)
 UPDATE sys_user SET dept_id = 1, role_type = 'ADMIN' WHERE id = 1;

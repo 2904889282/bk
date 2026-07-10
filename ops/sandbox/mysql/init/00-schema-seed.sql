@@ -474,7 +474,7 @@ CREATE TABLE IF NOT EXISTS biz_attachment (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT IGNORE INTO sys_dept (id, name) VALUES
-(1, '销售一部'), (2, '销售二部'), (3, '大客户组');
+(1, '平台一部'), (2, '平台二部'), (3, '平台三部');
 
 INSERT IGNORE INTO sys_role (id, name, code, sort, is_deleted) VALUES
 (1, '超级管理员', 'ROLE_ADMIN', 1, 0),
@@ -548,13 +548,13 @@ INSERT IGNORE INTO biz_clue (
 (1, 'AI内容生产平台线索', '星河传媒', '数字化中心', '李总', '管理员',
  '100-300万', 180.00, 'A', '接触', '待评审', '否',
  '2026-07-02', '2026-07-02', '希望建设AI内容生产与审核工作台。', '内容生产周期长，审核分散。', '缩短内容制作周期并形成标准审核流程。',
- '销售一部', 'XS-202607-001', 1, '客户走访', '华东客户拜访',
+ '平台一部', 'XS-202607-001', 1, '客户走访', '华东客户拜访',
  '第一圈层', '传媒', '核心', 7, '2026-07-09',
  'normal', 180.00, NULL, 1, 1),
 (2, '达人矩阵运营线索', '云启消费', '市场部', '王经理', '管理员',
  '50-100万', 80.00, 'B', '沟通', '评审中', '是',
  '2026-07-03', '2026-07-03', '需要沉淀KOC达人矩阵和投放效果分析。', '达人资源分散，复盘口径不统一。', '统一达人资产管理和投放分析。',
- '销售一部', 'XS-202607-002', 1, '市场活动', '增长闭门会',
+ '平台一部', 'XS-202607-002', 1, '市场活动', '增长闭门会',
  '第二圈层', '消费品', '甜点', 14, '2026-07-17',
  'yellow', 80.00, NULL, 1, 1);
 
@@ -572,7 +572,7 @@ VALUES
 INSERT IGNORE INTO biz_project
 (id, project_name, client_name, project_manager, project_amount, project_status, progress, start_date, stage, project_level, dept_belong, source_clue_id, risk_count, description, create_by, update_by)
 VALUES
-(1, '沙箱示例项目', '星河传媒', '管理员', 180.00, '进行中', 35, '2026-07-05', '执行', 'A', '销售一部', 1, 1, '用于验证项目管理基础链路。', 1, 1);
+(1, '沙箱示例项目', '星河传媒', '管理员', 180.00, '进行中', 35, '2026-07-05', '执行', 'A', '平台一部', 1, 1, '用于验证项目管理基础链路。', 1, 1);
 
 INSERT IGNORE INTO biz_risk
 (id, project_id, type, level, description, solution, owner, status, create_by, update_by)

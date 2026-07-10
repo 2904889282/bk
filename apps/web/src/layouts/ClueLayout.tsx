@@ -234,7 +234,7 @@ export default function ClueLayout() {
                 {user?.name || '用户'}
               </div>
               <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                {(user?.roles || []).includes('ROLE_ADMIN') ? '管理员' : '销售经理'}
+                {(user?.roles || []).includes('ROLE_ADMIN') ? '管理员' : '平台运营'}
               </div>
             </div>
           </div>
