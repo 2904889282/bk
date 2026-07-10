@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button, Typography, App, Modal, Input, Select, Form, Drawer, Timeline, Tag } from 'antd';
 import {
   SearchOutlined, PlusOutlined, DownloadOutlined,
-  EditOutlined, DeleteOutlined, FilterOutlined,
-  CheckCircleFilled, CloseCircleFilled, ExclamationCircleFilled,
+  EditOutlined, DeleteOutlined,
+  CheckCircleFilled, CloseCircleFilled,
   RightOutlined, DownOutlined,
 } from '@ant-design/icons';
 import {
@@ -32,7 +32,7 @@ const ST_LONG: Record<string, string> = {
   '接触': '线索接触', '沟通': '沟通提案', '提案': '执行测试',
   '承接': '已承接', '延期': '已延期', '丢失': '已丢失',
 };
-const ST_LONG_NAME = ['线索接触', '沟通提案', '执行测试', '已承接', '已丢失', '已延期'];
+const ST_LONG_NAME: string[] = [];
 
 /* ============ 状态色（设计规范） ============ */
 const STYLE = {
@@ -790,7 +790,7 @@ export default function LeadsList() {
                             transition: 'all 0.15s', opacity: isLost ? 0.65 : 1,
                           }}
                           onMouseEnter={e => {
-                            e.currentTarget.style.borderColor = BRAND[300];
+                            e.currentTarget.style.borderColor = BRAND[500];
                             e.currentTarget.style.boxShadow = '0 4px 12px rgba(127,119,221,0.1)';
                             e.currentTarget.style.transform = 'translateY(-2px)';
                           }}
@@ -1090,11 +1090,11 @@ export default function LeadsList() {
               <span>共 {total} 条 · 第 {pg.p}/{tp || 1} 页</span>
               <div style={{ display: 'flex', gap: 4 }}>
                 <PgBtn disabled={pg.p <= 1} onClick={() => { load(1); }}>‹‹</PgBtn>
-                {pn[0] > 1 && <PgBtn disabled>...</PgBtn>}
+                {pn[0] > 1 && <PgBtn disabled onClick={() => {}}>...</PgBtn>}
                 {pn.map(n => (
                   <PgBtn key={n} active={n === pg.p} onClick={() => { load(n); }}>{n}</PgBtn>
                 ))}
-                {pn[pn.length - 1] < tp && <PgBtn disabled>...</PgBtn>}
+                {pn[pn.length - 1] < tp && <PgBtn disabled onClick={() => {}}>...</PgBtn>}
                 <PgBtn disabled={pg.p >= tp} onClick={() => { load(tp); }}>››</PgBtn>
               </div>
             </div>
