@@ -6,7 +6,7 @@ import { Result, Button, Spin } from 'antd';
  * 路由级权限守卫
  * 
  * 权限来源：前端 Zustand store 的 permissions 数组
- * 后端对应：Spring Security @PreAuthorize 注解
+ * 后端对应：FastAPI Depends(require_admin) / 角色检查
  * 
  * 正常模式下两者使用同一数据源（数据库），一致性好。
  * 演示模式（mock_xxx token）下：前端硬编码权限可能与后端不一致，

@@ -18,14 +18,14 @@ http://localhost:8080/
 
 之前无法访问的主要原因是打开了 `8080`。`8080` 是后端接口端口，浏览器页面应访问 `5173`。
 
-当前后端未监听 `8080` 时，通常是后端服务尚未启动。后端启动需要本机具备 Maven 依赖缓存或可访问 Maven 仓库，并且 MySQL 中存在 `beike_platform` 数据库。
+当前后端未监听 `8080` 时，通常是后端服务尚未启动。后端启动需要 Python 3.12+ 安装依赖（`pip install -r requirements.txt`）并配置数据库连接（`.env`），并且 MySQL 中存在 `beike_platform` 数据库。
 
 ## 2. 文件分类
 
 | 类型 | 目录 | 当前用途 | 二开建议 |
 | --- | --- | --- | --- |
 | 主前端程序 | `apps/web` | 当前 React 页面、路由、接口请求、组件 | 日常前端开发主要修改这里 |
-| 主后端程序 | `apps/api` | 当前 Spring Boot 单体后端 | 日常接口和业务逻辑主要修改这里 |
+| 主后端程序 | `apps/api-py` | 当前 Python FastAPI 后端 | 日常接口和业务逻辑主要修改这里 |
 | 数据脚本 | `docs/sql` | 初始化和版本升级 SQL | 数据结构变化时追加脚本 |
 | 产品/工程文档 | `docs` | 产品文档、工程说明 | 保留必要文档，避免模板说明 |
 | 运维部署 | `ops` | Docker、Nginx、K8s、CI/CD、监控日志 | 部署时使用，平时不参与本地启动 |
@@ -117,19 +117,18 @@ http://localhost:8080/
 6. 在 `controller` 添加接口。
 7. 回到前端补充 API 请求和页面。
 
-当前后端建议以 `apps/api` 为主线。`reference/microservices` 目前是微服务方向的参考代码，不建议作为默认启动或默认构建目标。
+当前后端主线为 `apps/api-py`（Python FastAPI）。`reference/microservices` 目录包含旧版 Spring Boot 参考代码，**不是当前主线后端**。
 
 后端本地依赖：
 
 ```text
-Java 17
-Maven
-MySQL localhost:3306/beike_platform
-账号 root
-密码 root
+Python 3.12+
+pip install -r apps/api-py/requirements.txt
+MySQL（通过 .env 配置连接）
+启动: cd apps/api-py && .\.venv\Scripts\python.exe main.py
 ```
 
-当前执行环境因为 Maven 仓库下载被限制，无法完成 `apps/api` 的编译依赖解析；在正常联网或依赖已缓存的开发机上再启动后端。
+生产环境通过 Docker Compose 部署（`ops/sandbox/docker-compose.yml`），无需本地安装 Java/Maven。
 
 ## 7. 清理规则
 

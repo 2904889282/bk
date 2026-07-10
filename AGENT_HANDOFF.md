@@ -7,7 +7,7 @@
 
 ## 技术栈
 - **前端**: React 19 + TypeScript + Vite + Ant Design 6 + Zustand (`apps/web/`)
-- **后端**: Spring Boot 3.3 + Java 17 + MyBatis-Plus + JWT (`apps/api/`)
+- **后端**: Python FastAPI + SQLAlchemy 2.0 + uvicorn (`apps/api-py/`)
 - **数据库**: 阿里云 RDS MySQL 8.0
 
 ---
@@ -16,7 +16,7 @@
 - **ECS**: 123.57.140.159，Ubuntu 22.04，Docker
 - **RDS**: `rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com`，账号 `beike`，密码 `BEIKEadmin123`
 - **项目路径**: `/opt/beike`（Git 仓库）
-- **docker-compose**: `/opt/beike/ops/sandbox/docker-compose.rds.yml`（只含 api+web，不含 mysql）
+- **docker-compose**: `/opt/beike/ops/sandbox/docker-compose.yml`（api-py + web，不在 ECS 上跑本地 mysql）
 - **SSH 密钥**: `C:\Users\EDY\.ssh\beike-project.pem`
 
 ---
@@ -33,7 +33,7 @@
 git add -A && git commit -m "xxx" && git push
 
 # 3. 云上更新
-ssh -i C:\Users\EDY\.ssh\beike-project.pem root@123.57.140.159 "cd /opt/beike && git pull && docker compose -f ops/sandbox/docker-compose.rds.yml build --no-cache && docker compose -f ops/sandbox/docker-compose.rds.yml up -d"
+ssh -i C:\Users\EDY\.ssh\beike-project.pem root@123.57.140.159 "cd /opt/beike && git pull && docker compose -f ops/sandbox/docker-compose.yml build && docker compose -f ops/sandbox/docker-compose.yml up -d"
 ```
 
 ---
@@ -41,8 +41,8 @@ ssh -i C:\Users\EDY\.ssh\beike-project.pem root@123.57.140.159 "cd /opt/beike &&
 ## 本地路径
 - 项目根目录: `C:\Users\EDY\CodeBuddy\20260630145325`
 - 前端源码: `apps/web/src/`
-- 后端源码: `apps/api/src/main/java/com/beike/platform/`
-- SQL: `apps/api/src/main/resources/schema.sql`
+- 后端源码: `apps/api-py/`（FastAPI, `main.py` 启动）
+- SQL: `docs/sql/`, `ops/sandbox/mysql/init/`
 
 ---
 
@@ -53,6 +53,7 @@ ssh -i C:\Users\EDY\.ssh\beike-project.pem root@123.57.140.159 "cd /opt/beike &&
 ---
 
 ## 注意事项
-- Docker compose 用 rds 文件，不是 sandbox（sandbox 包含本地 mysql，已废弃）
-- RDS 上改表后要同步更新 `schema.sql`
-- ECS 专属文件（`.env`, `docker-compose.rds.yml`）不在 Git 里
+- ECS 部署使用 `ops/sandbox/docker-compose.yml`（api-py + web，不含 mysql）
+- RDS 上改表后要同步更新 `docs/sql/` 中的迁移脚本
+- ECS 专属文件 `.env` 不在 Git 里（凭据安全）
+- `reference/microservices/` 下是旧版 Spring Boot Java 参考代码，不是当前主线后端

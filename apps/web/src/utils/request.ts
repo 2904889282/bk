@@ -76,7 +76,7 @@ request.interceptors.request.use(config => {
   const token = localStorage.getItem('beike_token') || sessionStorage.getItem('beike_token');
 
   // 拦截 mock 演示令牌（mock_xxx）：阻止发送无效令牌到后端
-  // mock 令牌无法通过 Spring Security JWT 校验，必然导致 HTTP 403，
+  // mock 令牌无法通过 FastAPI JWT 校验，必然导致 HTTP 403，
   // 此处提前拦截并给出明确指引，避免用户困惑。
   if (token && token.startsWith('mock_')) {
     const url = (config.url || '').toLowerCase();
