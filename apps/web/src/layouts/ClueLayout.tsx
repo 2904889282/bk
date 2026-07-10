@@ -4,7 +4,6 @@ import { Input } from 'antd';
 import {
   SearchOutlined,
   BellOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import { useState } from 'react';
 

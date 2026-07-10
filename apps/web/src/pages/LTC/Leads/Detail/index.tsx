@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Tag, Table, Button, Modal, Form, Input, Select, message, Timeline, Descriptions, Empty, Row, Col, Statistic } from 'antd';
+import { Card, Table, Button, Modal, Form, Input, Select, message, Timeline, Descriptions, Empty, Row, Col, Statistic } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, PhoneOutlined, HeartOutlined, MessageOutlined, CheckCircleFilled } from '@ant-design/icons';
 import { fetchClueDashboard, createClueFollow, type FollowSaveDTO } from '../../../../api/clue';
 

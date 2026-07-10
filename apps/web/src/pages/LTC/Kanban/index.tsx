@@ -1,11 +1,10 @@
 ﻿import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Typography, App, Modal, Form, Input, Select, Button } from 'antd';
+import { Card, App, Modal, Form, Input, Select, Button } from 'antd';
 import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { fetchCluePage, createClue, updateClue } from '../../../api/clue';
 import type { ClueVO, ClueSaveDTO } from '../../../api/clue';
 import { useNavigate } from 'react-router-dom';
 
-const { Text } = Typography;
 const { TextArea } = Input;
 
 const BRAND = {

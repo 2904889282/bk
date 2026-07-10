@@ -32,8 +32,6 @@ const ST_LONG: Record<string, string> = {
   '接触': '线索接触', '沟通': '沟通提案', '提案': '执行测试',
   '承接': '已承接', '延期': '已延期', '丢失': '已丢失',
 };
-const ST_LONG_NAME: string[] = [];
-
 /* ============ 状态色（设计规范） ============ */
 const STYLE = {
   statusBg: {

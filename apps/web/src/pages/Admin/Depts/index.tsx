@@ -6,7 +6,7 @@ import { fetchDeptTree, createDept, updateDept, deleteDept, type DeptNode } from
 
 function DeptPage() {
   const [treeData, setTreeData] = useState<DataNode[]>([]);
-  const [flatList, setFlatList] = useState<DeptNode[]>([]);
+  const [_flatList, setFlatList] = useState<DeptNode[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingNode, setEditingNode] = useState<{ id: number; name: string; parentId?: number | null } | null>(null);
   const [name, setName] = useState('');
@@ -66,7 +66,7 @@ function DeptPage() {
   };
 
   const handleDelete = async (id: number) => {
-    const res = await deleteDept(id);
+    const res: any = await deleteDept(id);
     if (res.code === 200) {
       loadData();
       message.success('已删除');
