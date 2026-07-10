@@ -41,8 +41,8 @@ class PasswordDTO(BaseModel):
     @field_validator('newPassword')
     @classmethod
     def password_min_length(cls, v):
-        if len(v) < 6:
-            raise ValueError('新密码至少6位')
+        if len(v) < 8:
+            raise ValueError('新密码至少8位')
         return v
 
 class SendCodeDTO(BaseModel):
@@ -56,8 +56,8 @@ class ResetPasswordDTO(BaseModel):
     @field_validator('newPassword')
     @classmethod
     def password_min_length(cls, v):
-        if len(v) < 6:
-            raise ValueError('新密码至少6位')
+        if len(v) < 8:
+            raise ValueError('新密码至少8位')
         return v
 
 # ==================== 项目 ====================

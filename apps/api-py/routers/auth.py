@@ -6,7 +6,10 @@ from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermissi
 from schemas import *
 from security import verify_password, hash_password, create_token, decode_token, get_current_user
 from config import settings
-import random, time, collections
+from security_code import code_store
+import logging, time, collections
+
+logger = logging.getLogger("auth")
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
@@ -99,16 +102,25 @@ async def change_password(dto: PasswordDTO, user=Depends(get_current_user), db: 
 
 @router.post("/send-code")
 async def send_code(dto: SendCodeDTO, db: AsyncSession = Depends(get_db)):
+    """验证码发送 — 仅通过邮件实际发送，不通过 HTTP 响应返回。
+    TODO: 接入 SMTP / 阿里云邮件服务实现实际发送"""
     r = await db.execute(select(SysUser).where(SysUser.email == dto.email))
-    if not r.scalar_one_or_none(): return fail("该邮箱未绑定账号")
-    code = str(random.randint(100000, 999999))
-    return success({"message": "验证码已发送", "code": code})
+    if not r.scalar_one_or_none():
+        return fail("该邮箱未绑定账号")
+    code = code_store.generate(dto.email)
+    logger.info(f"Verification code for {dto.email}: {code}")
+    # TODO: 接入邮件服务后，改为 send_email(to=dto.email, code=code)
+    return success({"message": "验证码已发送至注册邮箱，请查收"})
 
 @router.post("/reset-password")
 async def reset_password(dto: ResetPasswordDTO, db: AsyncSession = Depends(get_db)):
+    """密码重置 — 必须先通过 send-code 获取验证码"""
+    if not dto.code or not code_store.verify(dto.email, dto.code):
+        return fail("验证码无效或已过期")
     r = await db.execute(select(SysUser).where(SysUser.email == dto.email))
     u = r.scalar_one_or_none()
-    if not u: return fail("用户不存在")
+    if not u:
+        return fail("用户不存在")
     u.password = hash_password(dto.newPassword)
     await db.commit()
-    return success()
+    return success({"message": "密码已重置，请使用新密码登录"})

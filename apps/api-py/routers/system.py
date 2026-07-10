@@ -214,26 +214,45 @@ async def log_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
     cnt = (await db.execute(text("SELECT COUNT(*) FROM sys_operation_log"), {} if not keyword else {"kw": f"%{keyword}%", "kw2": f"%{keyword}%"})).scalar()
     return success({"records": [dict(r) for r in rows], "total": cnt})
 
-# ==================== 回收站 ====================
+# ==================== 回收站（白名单防SQL注入） ====================
+
+# 允许回收站操作的表名白名单
+_RECYCLE_ALLOWED_TABLES = {
+    "biz_clue", "biz_project", "biz_talent", "biz_risk",
+    "biz_alert", "biz_campaign", "biz_pipeline",
+}
+
+def _validate_biz_type(bizType: str) -> bool:
+    """白名单校验表名，防止SQL注入"""
+    return bizType in _RECYCLE_ALLOWED_TABLES
 
 @router.get("/api/recycle/page")
 async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: str = None,
                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     results = []; total = 0
     for tbl, name_col in [("biz_clue", "clue_name"), ("biz_project", "project_name"), ("biz_talent", "name"), ("biz_risk", "type")]:
-        sql = f"SELECT id, '{tbl}' as biz_type, {name_col} as item_name, update_time FROM {tbl} WHERE is_deleted = 1"
         if bizType and bizType != tbl: continue
-        rows = (await db.execute(text(sql))).mappings().all()
-        for r in rows: results.append(dict(r))
+        sql = f"SELECT id, :tbl as biz_type, {name_col} as item_name, update_time FROM {tbl} WHERE is_deleted = 1"
+        rows = (await db.execute(text(sql), {"tbl": tbl})).mappings().all()
+        for r in rows:
+            r = dict(r)
+            r["biz_type"] = tbl
+            results.append(r)
         total += len(results)
     return success({"records": results, "total": total})
 
 @router.put("/api/recycle/restore")
 async def recycle_restore(dto: dict = Body(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
-    await db.execute(text(f"UPDATE {dto['bizType']} SET is_deleted = 0 WHERE id = :id"), {"id": dto["id"]})
+    biz_type = dto.get("bizType", "")
+    if not _validate_biz_type(biz_type):
+        return fail("无效的业务类型")
+    await db.execute(text(f"UPDATE {biz_type} SET is_deleted = 0 WHERE id = :id"), {"id": dto["id"]})
     await db.commit(); return success()
 
 @router.delete("/api/recycle/perm")
 async def recycle_perm_delete(dto: dict = Body(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
-    await db.execute(text(f"DELETE FROM {dto['bizType']} WHERE id = :id"), {"id": dto["id"]})
+    biz_type = dto.get("bizType", "")
+    if not _validate_biz_type(biz_type):
+        return fail("无效的业务类型")
+    await db.execute(text(f"DELETE FROM {biz_type} WHERE id = :id"), {"id": dto["id"]})
     await db.commit(); return success()
