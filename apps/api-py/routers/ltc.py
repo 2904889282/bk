@@ -8,17 +8,7 @@ from schemas import success, fail
 
 router = APIRouter(tags=["LTC"])
 
-def _to_camel(d):
-    result = {}
-    for k, v in d.items():
-        parts = k.split('_')
-        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
-        result[camel] = v
-    return result
-
-def row_to_dict(r):
-    d = {c.key: getattr(r, c.key) for c in r.__table__.columns}
-    return _to_camel(d)
+from utils.mapping import row_to_camel as row_to_dict  # ltc.py 前端期望 camelCase
 
 # 前端 camelCase → 数据库 snake_case 映射
 PIPELINE_KEY_MAP = {

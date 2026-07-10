@@ -8,11 +8,10 @@ from schemas import success, fail
 
 router = APIRouter(tags=["系统管理"])
 
+from utils.mapping import row_to_dict
+
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)
-
-def row_to_dict(r):
-    return {c.name: getattr(r, c.name) for c in r.__table__.columns}
 
 # ==================== 用户 ====================
 
@@ -28,12 +27,21 @@ async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, s
     q = q.order_by(SysUser.create_time.desc())
     total = (await db.execute(select(func.count()).select_from(q.subquery()))).scalar()
     rows = (await db.execute(q.offset((pageNum-1)*pageSize).limit(pageSize))).scalars().all()
+    # 批量查询角色（避免 N+1）
+    user_ids = [r.id for r in rows]
+    role_map: dict = {}
+    if user_ids:
+        rr = await db.execute(
+            text("SELECT ur.user_id, r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id IN :uids AND r.is_deleted=0"),
+            {"uids": tuple(user_ids)}
+        )
+        for row in rr:
+            role_map.setdefault(row[0], []).append(row[1])
     records = []
     for r in rows:
         d = row_to_dict(r)
         d.pop('password', None)
-        rr = await db.execute(text("SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"), {"uid": r.id})
-        d['roles'] = [x[0] for x in rr.all() if x[0]]
+        d['roles'] = role_map.get(r.id, [])
         records.append(d)
     return success({"records": records, "total": total})
 

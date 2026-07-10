@@ -10,17 +10,9 @@ import json
 
 router = APIRouter(tags=["项目"])
 
-def _to_camel(d):
-    result = {}
-    for k, v in d.items():
-        parts = k.split('_')
-        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
-        result[camel] = v
-    return result
+from utils.mapping import row_to_dict, row_to_camel
 
-def project_to_dict(p):
-    d = {c.key: getattr(p, c.key) for c in p.__table__.columns}
-    return _to_camel(d)
+project_to_dict = row_to_camel  # 别名，保持现有调用兼容
 
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)

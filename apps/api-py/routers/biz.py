@@ -11,17 +11,7 @@ import io, traceback
 
 router = APIRouter(tags=["业务模块"])
 
-def _to_camel(d):
-    result = {}
-    for k, v in d.items():
-        parts = k.split('_')
-        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
-        result[camel] = v
-    return result
-
-def row_to_dict(r):
-    d = {c.key: getattr(r, c.key) for c in r.__table__.columns}
-    return _to_camel(d)
+from utils.mapping import row_to_camel as row_to_dict  # 旧代码兼容：row_to_dict 在 biz.py 中返回 camelCase
 
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)

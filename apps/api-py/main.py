@@ -3,9 +3,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import text
 from routers import auth, project, biz, system, ltc
@@ -80,6 +81,25 @@ app.include_router(project.router)
 app.include_router(biz.router)
 app.include_router(system.router)
 app.include_router(ltc.router)
+
+# 统一请求参数校验错误处理
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    return JSONResponse(
+        status_code=422,
+        content={"code": 422, "msg": f"参数校验失败: {errors[0]['msg'] if errors else '未知错误'}", "data": None}
+    )
+
+# 兜底异常处理：防止内部错误直接暴露给前端
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    print(f"[ERROR] Unhandled exception: {traceback.format_exc()}")
+    return JSONResponse(
+        status_code=500,
+        content={"code": 500, "msg": "系统内部错误，请联系管理员", "data": None}
+    )
 
 @app.get("/api/health")
 async def health():
