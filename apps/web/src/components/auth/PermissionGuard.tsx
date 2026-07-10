@@ -22,7 +22,7 @@ export default function PermissionGuard({
   permCode?: string;
   children: React.ReactNode;
 }) {
-  const { token, isLoggedIn, hasPermission, hasRole, isMockMode } = useAuth();
+  const { token, isLoggedIn, hasPermission } = useAuth();
 
   // 未登录
   if (!isLoggedIn) {
@@ -32,17 +32,12 @@ export default function PermissionGuard({
     return <Navigate to="/login" replace />;
   }
 
-  // 不需要权限码 或 管理员权限 或 拥有指定权限 → 放行
-  if (!permCode || hasRole('ROLE_ADMIN') || hasPermission(permCode)) {
+  // 不需要权限码 或 拥有指定权限 → 放行
+  if (!permCode || hasPermission(permCode)) {
     return <>{children}</>;
   }
 
-  // 演示模式下不拦截：前端权限与后端可能不一致，交给 BasicLayout 全局横幅和 API 拦截器处理
-  if (isMockMode()) {
-    return <>{children}</>;
-  }
-
-  // 真实后端模式：权限不足
+  // 权限不足
   return (
     <Result
       status="403"

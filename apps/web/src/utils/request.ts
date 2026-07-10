@@ -19,7 +19,8 @@ const pendingRequests = new Map<string, AbortController>();
 
 // 无感刷新状态
 let isRefreshing = false;
-let refreshQueue: ((token: string) => void)[] = [];
+type QueueEntry = { resolve: (token: string) => void; reject: (err: Error) => void };
+let refreshQueue: QueueEntry[] = [];
 
 const genKey = (config: AxiosRequestConfig) => {
   const { method, url, data } = config;
@@ -96,16 +97,17 @@ request.interceptors.request.use(config => {
     config.data = { ...(config.data || {}), confirm: true };
   }
 
-  // 非 GET 请求防重复提交
+  // 非 GET 请求防重复提交（AbortController 附加 key，避免竞态删除别人的锁）
   const method = config.method?.toUpperCase();
   if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method) && !config.headers['X-Allow-Duplicate']) {
     const key = genKey(config);
-    if (pendingRequests.has(key)) {
-      const controller = pendingRequests.get(key)!;
-      controller.abort();
+    const existing = pendingRequests.get(key);
+    if (existing) {
+      existing.abort();
       pendingRequests.delete(key);
     }
     const controller = new AbortController();
+    (controller as any)._reqKey = key;
     config.signal = controller.signal;
     pendingRequests.set(key, controller);
   }
@@ -118,10 +120,14 @@ request.interceptors.request.use(config => {
 request.interceptors.response.use(
   resp => {
     stopProgress();
-    // 清除防重复锁
+    // 清除防重复锁（仅删除自己的锁，避免误删其他请求的 controller）
     const method = resp.config.method?.toUpperCase();
     if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      pendingRequests.delete(genKey(resp.config));
+      const key = genKey(resp.config);
+      const existing = pendingRequests.get(key);
+      if (existing && (existing as any)._reqKey === key) {
+        pendingRequests.delete(key);
+      }
     }
 
     const body = resp.data;
@@ -138,11 +144,15 @@ request.interceptors.response.use(
   },
   async err => {
     stopProgress();
-    // 清除防重复锁
+    // 清除防重复锁（仅删除自己的锁）
     if (err.config) {
       const method = err.config.method?.toUpperCase();
       if (method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-        pendingRequests.delete(genKey(err.config));
+        const key = genKey(err.config);
+        const existing = pendingRequests.get(key);
+        if (existing && (existing as any)._reqKey === key) {
+          pendingRequests.delete(key);
+        }
       }
     }
 
@@ -166,10 +176,13 @@ request.interceptors.response.use(
       err.config._retry = true;
 
       if (isRefreshing) {
-        return new Promise(resolve => {
-          refreshQueue.push((newToken: string) => {
-            err.config.headers.Authorization = `Bearer ${newToken}`;
-            resolve(request(err.config));
+        return new Promise((resolve, reject) => {
+          refreshQueue.push({
+            resolve: (newToken: string) => {
+              err.config.headers.Authorization = `Bearer ${newToken}`;
+              resolve(request(err.config));
+            },
+            reject,
           });
         });
       }
@@ -188,13 +201,16 @@ request.interceptors.response.use(
         store.setItem('beike_token', newToken);
         if (newRefresh) store.setItem('beike_refresh_token', newRefresh);
 
-        refreshQueue.forEach(cb => cb(newToken));
+        refreshQueue.forEach(entry => entry.resolve(newToken));
         refreshQueue = [];
 
         err.config.headers.Authorization = `Bearer ${newToken}`;
         return request(err.config);
       } catch {
-        msg('登录已过期，请重新登录');
+        const refreshErr = new Error('登录已过期，请重新登录');
+        refreshQueue.forEach(entry => entry.reject(refreshErr));
+        refreshQueue = [];
+        msg(refreshErr.message);
         clearAuth();
         if (window.location.pathname !== '/login') {
           window.location.href = '/login';

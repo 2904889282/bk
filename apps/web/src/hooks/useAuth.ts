@@ -68,9 +68,9 @@ export const useAuth = create<AuthState>((set, get) => ({
       // 网络错误或后端不可用 → 降级到演示模式
     }
 
-    // 后端不可用 → 降级模拟登录
+    // 后端不可用 → 降级模拟登录（仅限开发环境，生产构建应移除）
     const DEMO_USERS: Record<string, { password: string; name: string; roles: string[]; avatar: string; permissions: string[] }> = {
-      admin: { password: 'admin123', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['*'] },
+      admin: { password: 'admin', name: '管理员', roles: ['ROLE_ADMIN'], avatar: '👨‍💼', permissions: ['clue:list', 'project:list', 'system:user:list'] },
     };
 
     const demoUser = DEMO_USERS[username];
@@ -85,21 +85,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       return { success: true };
     }
 
-    // 检查 localStorage 注册用户
-    const registered = JSON.parse(localStorage.getItem('beike_registered_users') || '[]');
-    const regUser = registered.find((u: { username: string; password: string }) => u.username === username && u.password === password);
-    if (regUser) {
-      const token = 'mock_' + Date.now();
-      const user = { id: username, username, name: regUser.realName || username, avatar: '👤', roles: ['ROLE_USER'] };
-      const s = remember ? localStorage : sessionStorage;
-      s.setItem('beike_token', token);
-      localStorage.setItem('beike_user', JSON.stringify(user));
-      if (remember) { localStorage.setItem('beike_remember', '1'); localStorage.setItem('beike_username', username); }
-      set({ token, user, isLoggedIn: true, permissions: ['clue:list', 'project:list'], menus: REGULAR_USER_MENUS });
-      return { success: true };
-    }
-
-    return { success: false, msg: '用户名或密码错误' };
+    return { success: false, msg: '后端服务不可用，请联系管理员' };
   },
 
   fetchUserInfo: async () => {
@@ -134,7 +120,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
   hasPermission: (code) => {
     const perms = get().permissions || [];
-    return perms.includes('*') || perms.includes(code) || (get().user?.roles || []).includes('ROLE_ADMIN');
+    return perms.includes(code);
   },
   hasRole: (role) => get().user?.roles?.includes(role) || false,
 }));
