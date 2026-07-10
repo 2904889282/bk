@@ -23,7 +23,13 @@ class Settings(BaseSettings):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if not self.jwt_secret:
-            self.jwt_secret = secrets.token_hex(48)
-            print("[WARNING] JWT_SECRET not set, using random key for this session only")
+            if os.environ.get("ENV", "dev") == "dev":
+                self.jwt_secret = secrets.token_hex(48)
+                print("[WARNING] JWT_SECRET not set, using random key for this session")
+            else:
+                raise ValueError(
+                    "JWT_SECRET must be set in production. "
+                    "Set it via the JWT_SECRET environment variable or .env file."
+                )
 
 settings = Settings()

@@ -3,12 +3,29 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import text
 from routers import auth, project, biz, system, ltc
 from database import engine
+
+# 全局请求体大小限制（排除文件上传接口）
+_MAX_BODY_SIZE = 10 * 1024 * 1024  # 10MB
+_EXCLUDED_PATHS = ("/api/clue/import", "/api/attachment/upload")
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            if not any(request.url.path.startswith(p) for p in _EXCLUDED_PATHS):
+                content_length = request.headers.get("content-length")
+                if content_length and int(content_length) > _MAX_BODY_SIZE:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"code": 413, "msg": "请求体过大，最大允许 10MB", "data": None},
+                    )
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -56,6 +73,7 @@ _ALLOWED_ORIGINS = [
     "https://beike.example.com",
 ]
 app.add_middleware(CORSMiddleware, allow_origins=_ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(RequestSizeLimitMiddleware)
 
 app.include_router(auth.router)
 app.include_router(project.router)

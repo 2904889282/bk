@@ -72,6 +72,15 @@ async def pipeline_delete(pipeline_id: int, db: AsyncSession = Depends(get_db)):
 
 # ==================== 线索跟进 ====================
 
+# 白名单：仅允许这些字段写入 biz_clue_follow 表
+_FOLLOW_ALLOWED_FIELDS = {
+    "clue_id", "follow_type", "follow_date", "follow_user_id",
+    "follow_user_name", "contact_person", "core_conclusion",
+    "detail_content", "next_plan", "next_deadline", "new_status",
+    "weekly_review_notes", "status_change_reason", "confirm_long_interval",
+    "create_time",
+}
+
 @router.get("/api/clue/{clue_id}/follow")
 async def follow_list(clue_id: int, db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(text("SELECT * FROM biz_clue_follow WHERE clue_id = :cid AND is_deleted = 0 ORDER BY follow_date DESC"), {"cid": clue_id})).mappings().all()
@@ -80,15 +89,18 @@ async def follow_list(clue_id: int, db: AsyncSession = Depends(get_db)):
 @router.post("/api/clue/follow")
 async def follow_create(dto: dict, db: AsyncSession = Depends(get_db)):
     from datetime import datetime
-    dto['create_time'] = datetime.utcnow()
-    cols = ','.join(dto.keys()); vals = ','.join(f":{k}" for k in dto)
-    await db.execute(text(f"INSERT INTO biz_clue_follow ({cols}) VALUES ({vals})"), dto)
+    safe = {k: v for k, v in dto.items() if k in _FOLLOW_ALLOWED_FIELDS}
+    safe['create_time'] = datetime.utcnow()
+    cols = ','.join(safe.keys()); vals = ','.join(f":{k}" for k in safe)
+    await db.execute(text(f"INSERT INTO biz_clue_follow ({cols}) VALUES ({vals})"), safe)
     await db.commit(); return success()
 
 @router.put("/api/clue/follow/{follow_id}")
 async def follow_update(follow_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
-    sets = ','.join(f"{k}=:{k}" for k in dto); dto['id'] = follow_id
-    await db.execute(text(f"UPDATE biz_clue_follow SET {sets} WHERE id = :id"), dto)
+    safe = {k: v for k, v in dto.items() if k in _FOLLOW_ALLOWED_FIELDS}
+    safe['id'] = follow_id
+    sets = ','.join(f"{k}=:{k}" for k in safe if k != 'id')
+    await db.execute(text(f"UPDATE biz_clue_follow SET {sets} WHERE id = :id"), safe)
     await db.commit(); return success()
 
 @router.delete("/api/clue/follow/{follow_id}")

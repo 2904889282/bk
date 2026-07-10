@@ -30,8 +30,8 @@ class RegisterDTO(BaseModel):
     @field_validator('password')
     @classmethod
     def password_min_length(cls, v):
-        if len(v) < 6:
-            raise ValueError('密码至少6位')
+        if len(v) < 8:
+            raise ValueError('密码至少8位')
         return v
 
 class PasswordDTO(BaseModel):
