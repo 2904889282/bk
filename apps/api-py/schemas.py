@@ -69,7 +69,7 @@ class ProjectSaveDTO(BaseModel):
     projectManager: str
     deliveryManager: Optional[str] = None
     productManager: Optional[str] = None
-    projectAmount: float = 0
+    projectAmount: Decimal = Decimal("0")
     projectLevel: str = "B"
     projectStatus: str = "进行中"
     deptBelong: str = ""

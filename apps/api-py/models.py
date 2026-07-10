@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, BigInteger, String, Integer, Text, Date, DateTime, DECIMAL, JSON, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from database import Base
+
+# timezone-aware 时间（替代已弃用的 _utcnow）
+def _utcnow():
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 # ==================== 系统表 ====================
 
@@ -18,9 +22,9 @@ class SysUser(Base):
     position_id = Column("position_id", BigInteger)
     role_type = Column("role_type", String(16), default="USER")
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class SysDept(Base):
@@ -97,9 +101,9 @@ class BizProject(Base):
     stage = Column(String(32))
     description = Column(Text)
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizProjectPeriod(Base):
@@ -140,9 +144,9 @@ class BizProjectPeriod(Base):
     risk_assessment = Column("risk_assessment", Text)
     supplier = Column(String(256))
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizClue(Base):
@@ -180,9 +184,9 @@ class BizClue(Base):
     remark = Column(Text)
     dept_belong = Column("dept_belong", String(64))
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizTalent(Base):
@@ -196,9 +200,9 @@ class BizTalent(Base):
     status = Column(String(16), default="normal")
     talent_type = Column("talent_type", String(16), default="internal")
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizRisk(Base):
@@ -212,9 +216,9 @@ class BizRisk(Base):
     owner = Column(String(64))
     status = Column(String(16), default="open")
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizAlert(Base):
@@ -227,9 +231,9 @@ class BizAlert(Base):
     manager = Column(String(64))
     status = Column(String(16), default="open")
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizPipeline(Base):
@@ -252,8 +256,8 @@ class BizPipeline(Base):
     contact_person = Column("contact_person", String(64))
     expected_close_date = Column("expected_close_date", Date)
     tags = Column(Text)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizCampaign(Base):
@@ -269,9 +273,9 @@ class BizCampaign(Base):
     priority = Column(String(8), default="NORMAL")
     manager_name = Column("manager_name", String(64))
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 # ==================== 项目扩展表 ====================
@@ -288,9 +292,9 @@ class BizProjectWeekly(Base):
     issue_severity = Column("issue_severity", String(16), default="normal")
     next_week_plan = Column("next_week_plan", Text)
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizProjectMilestone(Base):
@@ -304,9 +308,9 @@ class BizProjectMilestone(Base):
     status = Column(String(16), default="pending")
     sort_order = Column("sort_order", Integer, default=0)
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizProjectTeam(Base):
@@ -319,9 +323,9 @@ class BizProjectTeam(Base):
     responsibility = Column(String(8))
     sort_order = Column("sort_order", Integer, default=0)
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizProjectWBS(Base):
@@ -342,9 +346,9 @@ class BizProjectWBS(Base):
     status = Column(String(16), default="pending")
     sort_order = Column("sort_order", Integer, default=0)
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
 
 class BizProjectChange(Base):
@@ -360,7 +364,7 @@ class BizProjectChange(Base):
     impact_analysis = Column("impact_analysis", Text)
     status = Column(String(16), default="pending")
     create_by = Column("create_by", BigInteger)
-    create_time = Column("create_time", DateTime, default=datetime.utcnow)
+    create_time = Column("create_time", DateTime, default=_utcnow)
     update_by = Column("update_by", BigInteger)
-    update_time = Column("update_time", DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)

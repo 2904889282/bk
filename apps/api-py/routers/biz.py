@@ -6,7 +6,7 @@ from database import get_db
 from models import BizTalent, BizRisk, BizAlert, BizClue, BizCampaign, BizProject
 from schemas import *
 from security import get_current_user_with_role
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 import io, traceback
 
 router = APIRouter(tags=["业务模块"])
@@ -176,16 +176,24 @@ async def clue_stats(db: AsyncSession = Depends(get_db), user=Depends(get_curren
     """线索统计数据：总量、待跟进、已承接、已转化"""
     base_q = select(BizClue).where(BizClue.is_deleted == 0)
     is_admin = "ROLE_ADMIN" in user.get("roles", [])
-    if not is_admin and user.get("realName"):
-        base_q = base_q.where(BizClue.beike_owner == user["realName"])
-    sub = base_q.subquery()
+    owner_filter = BizClue.beike_owner == user["realName"] if not is_admin and user.get("realName") else None
+
+    q = base_q
+    if owner_filter is not None:
+        q = base_q.where(owner_filter)
+    sub = q.subquery()
     total = (await db.execute(select(func.count()).select_from(sub))).scalar() or 0
-    pending = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "接触")))).scalar() or 0
-    if not is_admin and user.get("realName"):
-        pending = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "接触", BizClue.beike_owner == user["realName"])))).scalar() or 0
-    accepted = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "承接")))).scalar() or 0
-    if not is_admin and user.get("realName"):
-        accepted = (await db.execute(select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "承接", BizClue.beike_owner == user["realName"])))).scalar() or 0
+
+    pending_q = select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "接触"))
+    if owner_filter is not None:
+        pending_q = pending_q.where(owner_filter)
+    pending = (await db.execute(pending_q)).scalar() or 0
+
+    accepted_q = select(func.count()).select_from(select(BizClue).where(BizClue.is_deleted == 0, BizClue.clue_status == "承接"))
+    if owner_filter is not None:
+        accepted_q = accepted_q.where(owner_filter)
+    accepted = (await db.execute(accepted_q)).scalar() or 0
+
     converted = (await db.execute(text("SELECT COUNT(DISTINCT c.id) FROM biz_clue c JOIN biz_project p ON p.source_clue_id = c.id WHERE c.is_deleted = 0 AND p.is_deleted = 0"))).scalar() or 0
     return success({"total": total, "pending": pending, "accepted": accepted, "converted": converted})
 
@@ -478,7 +486,7 @@ async def clue_import(
             clue_data.setdefault("clue_status", "接触")
             clue_data.setdefault("health_status", "normal")
             clue_data["create_by"] = user["id"]
-            clue_data["create_time"] = datetime.utcnow()
+            clue_data["create_time"] = datetime.now(timezone.utc).replace(tzinfo=None)
 
             to_insert.append(BizClue(**clue_data))
             existing_pairs.add(pair_key)

@@ -78,9 +78,9 @@ async def follow_list(clue_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("/api/clue/follow")
 async def follow_create(dto: dict, db: AsyncSession = Depends(get_db)):
-    from datetime import datetime
+    from datetime import datetime, timezone
     safe = {k: v for k, v in dto.items() if k in _FOLLOW_ALLOWED_FIELDS}
-    safe['create_time'] = datetime.utcnow()
+    safe['create_time'] = datetime.now(timezone.utc).replace(tzinfo=None)
     cols = ','.join(safe.keys()); vals = ','.join(f":{k}" for k in safe)
     await db.execute(text(f"INSERT INTO biz_clue_follow ({cols}) VALUES ({vals})"), safe)
     await db.commit(); return success()

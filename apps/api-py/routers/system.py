@@ -246,7 +246,7 @@ async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: str = None
             r = dict(r)
             r["biz_type"] = tbl
             results.append(r)
-        total += len(results)
+        total += len(rows)  # 只累加当前表的数量，不是累计总数
     return success({"records": results, "total": total})
 
 @router.put("/api/recycle/restore")

@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     jwt_access_expire_hours: int = 1
     jwt_refresh_expire_days: int = 7
-    upload_dir: str = "./uploads"
-    log_dir: str = "./logs"
+    upload_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+    log_dir: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
