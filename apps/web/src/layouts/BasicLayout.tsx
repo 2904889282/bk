@@ -85,7 +85,7 @@ export default function BasicLayout() {
         message.warning('后端服务返回异常状态，请检查后端日志');
       }
     } catch {
-      message.info('后端服务仍未连接，请确认是否已启动（cd apps/api && mvn spring-boot:run）');
+      message.info('后端服务仍未连接，请确认是否已启动（cd apps/api-py && python main.py）');
     } finally {
       setCheckingHealth(false);
     }
@@ -115,7 +115,7 @@ export default function BasicLayout() {
       } },
     ]}} trigger={['click']} placement="bottomRight">
       <Space style={{ cursor: 'pointer', userSelect: 'none' }}>
-        <Typography.Text style={{ color: 'var(--color-text-secondary)', fontSize: 13 }}>{user?.name}</Typography.Text>
+        <Typography.Text style={{ color: 'var(--veer-body)', fontSize: 13 }}>{user?.name}</Typography.Text>
       </Space>
     </Dropdown>
   );
@@ -130,7 +130,7 @@ export default function BasicLayout() {
           style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
         >
           <Logo size={28} showText={false} />
-          {/* 悬停弹出切换面板 */}
+          {/* 悬停弹出切换面板 — Vercel 层叠阴影风格 */}
           <div style={{
             position: 'absolute',
             left: 8,
@@ -138,16 +138,15 @@ export default function BasicLayout() {
             marginTop: 12,
             padding: '16px 20px',
             borderRadius: 12,
-            background: isDark ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
-            backdropFilter: 'blur(16px)',
-            border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.06)',
+            background: isDark ? '#0a0a0a' : '#ffffff',
+            border: isDark ? '1px solid #2a2a2a' : '1px solid #ebebeb',
             boxShadow: isDark
-              ? '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)'
-              : '0 8px 32px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
+              ? '0px 2px 4px rgba(0,0,0,0.35), 0px 8px 16px -4px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06) inset'
+              : '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 16px -4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
             opacity: logoHovered ? 1 : 0,
             transform: logoHovered ? 'translateY(0) scale(1)' : 'translateY(-4px) scale(0.96)',
             pointerEvents: logoHovered ? 'auto' : 'none',
-            transition: 'opacity 0.25s cubic-bezier(0.16,1,0.3,1), transform 0.25s cubic-bezier(0.16,1,0.3,1)',
+            transition: 'opacity 0.2s cubic-bezier(0.4,0,0.2,1), transform 0.2s cubic-bezier(0.4,0,0.2,1)',
             whiteSpace: 'nowrap',
             zIndex: 1000,
             display: 'flex',
@@ -158,18 +157,18 @@ export default function BasicLayout() {
             onClick={() => { setLogoHovered(false); navigate(switchTarget); }}
           >
             <div style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 6,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-              color: isDark ? '#94a3b8' : '#64748b',
+              background: isDark ? '#141414' : '#f5f5f5',
+              color: isDark ? '#a1a1a1' : '#4d4d4d',
             }}>
               {switchIcon}
             </div>
             <div>
-              <Typography.Text strong style={{ fontSize: 13, color: isDark ? '#e2e8f0' : '#1e293b', display: 'block' }}>
+              <Typography.Text strong style={{ fontSize: 13, color: isDark ? '#fafafa' : '#171717', display: 'block' }}>
                 切换到
               </Typography.Text>
-              <Typography.Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
+              <Typography.Text style={{ fontSize: 12, color: isDark ? '#a1a1a1' : '#4d4d4d' }}>
                 {switchLabel}
               </Typography.Text>
             </div>
@@ -203,7 +202,7 @@ export default function BasicLayout() {
           title="演示模式"
           description={
             <Space orientation="vertical" size={4}>
-              <span>后端服务未连接，页面数据无法加载。请启动后端服务（cd apps/api && mvn spring-boot:run）后使用真实账号重新登录。</span>
+              <span>后端服务未连接，页面数据无法加载。请启动后端服务（cd apps/api-py && python main.py）后使用真实账号重新登录。</span>
               <Button size="small" loading={checkingHealth} onClick={handleCheckConnection}>
                 检查连接
               </Button>

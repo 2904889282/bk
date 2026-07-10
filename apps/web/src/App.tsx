@@ -8,6 +8,7 @@ import PermissionGuard from './components/auth/PermissionGuard';
 import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
+import ClueLayout from './layouts/ClueLayout';
 
 const LoginPage = lazy(() => import('./pages/Login'));
 const PortalPage = lazy(() => import('./pages/Portal'));
@@ -77,20 +78,38 @@ function AppContent() {
       theme={{
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#2563eb',
-          colorInfo: '#2563eb',
-          colorSuccess: '#059669',
-          colorWarning: '#d97706',
-          colorError: '#dc2626',
-          borderRadius: 8,
+          /* ── Vercel Ink 墨水黑主色 ── */
+          colorPrimary: isDark ? '#fafafa' : '#171717',
+          colorInfo: '#0070f3',
+          colorSuccess: '#0070f3',
+          colorWarning: '#f5a623',
+          colorError: '#ee0000',
+          colorLink: '#0070f3',
+          colorLinkHover: '#0761d1',
+          colorLinkActive: '#0059c8',
+
+          /* ── Vercel geist-radius: sm=6px ── */
+          borderRadius: 6,
           borderRadiusLG: 12,
-          borderRadiusSM: 6,
-          colorBgContainer: isDark ? '#0f172a' : '#ffffff',
-          colorBgElevated: isDark ? '#1e293b' : '#ffffff',
-          colorBgLayout: isDark ? '#0a0f1a' : '#f1f5f9',
-          colorBorder: isDark ? '#1e293b' : '#e2e8f0',
-          colorBorderSecondary: isDark ? '#0f172a' : '#f1f5f9',
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+          borderRadiusSM: 4,
+
+          /* ── Vercel 表面体系 ── */
+          colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
+          colorBgElevated: isDark ? '#141414' : '#ffffff',
+          colorBgLayout: isDark ? '#0d0d0d' : '#fafafa',
+          colorBgSpotlight: isDark ? '#1a1a1a' : '#f5f5f5',
+          colorBorder: isDark ? '#2a2a2a' : '#ebebeb',
+          colorBorderSecondary: isDark ? '#1a1a1a' : '#ebebeb',
+          colorFillAlter: isDark ? '#141414' : '#f5f5f5',
+
+          /* ── Vercel 文字体系 ── */
+          colorText: isDark ? '#fafafa' : '#171717',
+          colorTextSecondary: isDark ? '#a1a1a1' : '#4d4d4d',
+          colorTextTertiary: isDark ? '#666666' : '#888888',
+          colorTextQuaternary: isDark ? '#444444' : '#a1a1a1',
+
+          /* ── 字体 — Inter 优先（Geist 开源替代）── */
+          fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
           fontSize: 14,
           fontSizeHeading1: 30,
           fontSizeHeading2: 24,
@@ -98,28 +117,42 @@ function AppContent() {
           fontSizeHeading4: 16,
           fontSizeHeading5: 14,
           lineHeight: 1.5714,
+
+          /* ── 控件高度 ── */
           controlHeight: 36,
           controlHeightLG: 42,
           controlHeightSM: 30,
+
+          /* ── 间距 ── */
           padding: 16,
           paddingLG: 24,
           paddingXS: 8,
           paddingSM: 12,
-          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06), 0 1px 4px rgba(15, 23, 42, 0.04)',
-          boxShadowSecondary: '0 1px 3px rgba(15, 23, 42, 0.06)',
+
+          /* ── Vercel 层叠阴影（L3 作为默认卡片阴影）── */
+          boxShadow:
+            isDark
+              ? '0px 2px 4px rgba(0,0,0,0.3), 0px 8px 8px -8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06) inset'
+              : '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 8px -8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+          boxShadowSecondary:
+            isDark
+              ? '0px 1px 2px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06) inset'
+              : '0px 1px 1px rgba(0,0,0,0.02), 0px 2px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+
+          /* ── 动效 ── */
           motionDurationSlow: '0.3s',
           motionDurationMid: '0.2s',
           motionDurationFast: '0.1s',
-          motionEaseInOut: 'cubic-bezier(0.16, 1, 0.3, 1)',
+          motionEaseInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
         },
         components: {
           Menu: {
             itemBorderRadius: 6,
             itemMarginInline: 8,
             subMenuItemBg: 'transparent',
-            itemActiveBg: isDark ? '#1e3a5f' : '#eff6ff',
-            itemSelectedBg: isDark ? '#1e3a5f' : '#eff6ff',
-            itemSelectedColor: '#2563eb',
+            itemActiveBg: isDark ? '#1a1a1a' : '#f5f5f5',
+            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
+            itemSelectedColor: isDark ? '#fafafa' : '#171717',
             itemHeight: 40,
             iconSize: 16,
           },
@@ -129,14 +162,16 @@ function AppContent() {
           },
           Table: {
             borderRadius: 8,
-            headerBg: isDark ? '#1e293b' : '#f8fafc',
-            headerColor: isDark ? '#94a3b8' : '#475569',
-            rowHoverBg: isDark ? '#1e293b' : '#f8fafc',
+            headerBg: isDark ? '#141414' : '#fafafa',
+            headerColor: isDark ? '#a1a1a1' : '#4d4d4d',
+            headerSplitColor: isDark ? '#2a2a2a' : '#ebebeb',
+            rowHoverBg: isDark ? '#1a1a1a' : '#fafafa',
+            borderColor: isDark ? '#2a2a2a' : '#ebebeb',
           },
           Button: {
-            borderRadius: 8,
-            borderRadiusLG: 10,
-            borderRadiusSM: 6,
+            borderRadius: 6,
+            borderRadiusLG: 8,
+            borderRadiusSM: 4,
             controlHeight: 36,
             controlHeightLG: 42,
             controlHeightSM: 30,
@@ -144,16 +179,21 @@ function AppContent() {
             paddingInlineLG: 20,
             paddingInlineSM: 12,
             fontWeight: 500,
+            primaryShadow: 'none',
+            defaultShadow: 'none',
+            dangerShadow: 'none',
           },
           Input: {
-            borderRadius: 8,
-            borderRadiusLG: 10,
-            borderRadiusSM: 6,
+            borderRadius: 6,
+            borderRadiusLG: 8,
+            borderRadiusSM: 4,
             controlHeight: 36,
             controlHeightLG: 42,
             controlHeightSM: 30,
             paddingInline: 12,
-            colorBgContainer: isDark ? '#0f172a' : '#ffffff',
+            colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
+            activeBorderColor: isDark ? '#fafafa' : '#171717',
+            hoverBorderColor: isDark ? '#a1a1a1' : '#4d4d4d',
           },
           Modal: {
             borderRadiusLG: 12,
@@ -163,7 +203,21 @@ function AppContent() {
             borderRadiusSM: 4,
           },
           Tabs: {
-            borderRadius: 8,
+            borderRadius: 6,
+            itemActiveColor: isDark ? '#fafafa' : '#171717',
+            itemHoverColor: isDark ? '#a1a1a1' : '#4d4d4d',
+            itemSelectedColor: isDark ? '#fafafa' : '#171717',
+            inkBarColor: isDark ? '#fafafa' : '#171717',
+          },
+          Segmented: {
+            borderRadius: 6,
+            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
+          },
+          Select: {
+            borderRadius: 6,
+          },
+          DatePicker: {
+            borderRadius: 6,
           },
         },
       }}
@@ -177,14 +231,18 @@ function AppContent() {
         ) : (
           <Routes>
             <Route path="/login" element={withSuspense(<LoginPage />)} />
-            {/* 业务模块 — 共用 BasicLayout 导航栏 */}
+            {/* 线索板块 — 统一使用 ClueLayout 侧边栏 */}
+            <Route path="ltc" element={<PrivateRoute><ClueLayout /></PrivateRoute>}>
+              <Route path="dashboard" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
+              <Route path="kanban" element={withSuspense(<PermissionGuard permCode="clue:list"><LtcKanban /></PermissionGuard>)} />
+              <Route path="leads" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
+              <Route path="leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
+              <Route path="pipeline" element={withSuspense(<PermissionGuard permCode="pipeline:list"><PipelineList /></PermissionGuard>)} />
+              <Route path="alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
+              <Route path="analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
+            </Route>
+            {/* 项目/管理板块 — 通用 BasicLayout */}
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
-              <Route path="ltc/kanban" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcKanban /></PermissionGuard>)} />
-              <Route path="ltc/pipeline" element={withSuspense(<PermissionGuard permCode="pipeline:list"><PipelineList /></PermissionGuard>)} />
-              <Route path="ltc/alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
-              <Route path="ltc/analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
-              <Route path="ltc/leads" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
-              <Route path="ltc/leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
               <Route path="pm/kanban" element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
               <Route path="pm/projects" element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
               <Route path="projects/:id" element={withSuspense(<PermissionGuard permCode="project:list"><ProjectDetail /></PermissionGuard>)} />
@@ -199,7 +257,7 @@ function AppContent() {
               <Route path="resources" element={withSuspense(<ResourcesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
             </Route>
-            {/* 未知路径回退 → 也是 BasicLayout */}
+            {/* 未知路径回退 */}
             <Route path="*" element={<Navigate to="/ltc/kanban" replace />} />
           </Routes>
         )}

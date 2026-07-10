@@ -14,8 +14,9 @@ export const FALLBACK_MENUS: MenuItem[] = [
   {
     name: '线索管理', icon: 'FundOutlined',
     children: [
-      { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'clue:list' },
+      { path: '/ltc/dashboard', name: '数据看板', icon: 'DashboardOutlined', permCode: 'clue:list' },
       { path: '/ltc/kanban', name: '线索看板', icon: 'FundOutlined', permCode: 'pipeline:list' },
+      { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'clue:list' },
       { path: '/ltc/pipeline', name: '商机管道', icon: 'RiseOutlined', permCode: 'pipeline:list' },
       { path: '/ltc/alerts', name: '预警中心', icon: 'AlertOutlined', permCode: 'alert:list' },
       { path: '/ltc/analysis', name: '数据分析', icon: 'PieChartOutlined', permCode: 'pipeline:list' },
@@ -47,6 +48,7 @@ export const REGULAR_USER_MENUS: MenuItem[] = [
   {
     name: '线索管理', icon: 'FundOutlined',
     children: [
+      { path: '/ltc/dashboard', name: '数据看板', icon: 'DashboardOutlined', permCode: 'clue:list' },
       { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined', permCode: 'clue:list' },
     ],
   },

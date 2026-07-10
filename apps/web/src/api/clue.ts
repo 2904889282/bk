@@ -597,6 +597,53 @@ export async function deleteClueFollow(id: number): Promise<void> {
   await request.delete(`/api/clue/follow/${id}`);
 }
 
+// ==================== Excel 导入 ====================
+
+export interface ClueImportResult {
+  total: number;
+  success: number;
+  skip: number;
+  errors: Array<{ row: number; reason: string }>;
+}
+
+export async function importCluesFromExcel(file: File): Promise<ClueImportResult> {
+  const formData = new FormData();
+  formData.append('file', file);
+  // 使用 axios 原始实例发送 formData，绕过 contentType 自动设置
+  const axios = (await import('axios')).default;
+  const token = localStorage.getItem('beike_token') || sessionStorage.getItem('beike_token');
+  const res = await axios.post('/api/clue/import', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+  const body = res.data;
+  if (body && typeof body === 'object' && body.code === 200) {
+    return body.data;
+  }
+  throw new Error(body?.msg || body?.message || '导入失败');
+}
+
+export async function downloadClueImportTemplate(): Promise<void> {
+  const token = localStorage.getItem('beike_token') || sessionStorage.getItem('beike_token');
+  const resp = await fetch('/api/clue/import/template', {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!resp.ok) {
+    throw new Error('下载模板失败');
+  }
+  const blob = await resp.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', '线索导入模板.xlsx');
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ==================== 回收站 ====================
 
 export async function fetchRecyclePage(params: { pageNum: number; pageSize: number; type?: string }): Promise<{ records: any[]; total: number }> {
