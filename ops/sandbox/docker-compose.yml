@@ -13,7 +13,7 @@ services:
       context: ../..
       dockerfile: ops/sandbox/Dockerfile.api-py
     container_name: beike-sandbox-api
-    restart: unless-stopped
+    restart: always
     command: uvicorn main:app --host 0.0.0.0 --port 8080
     environment:
       TZ: Asia/Shanghai
@@ -46,7 +46,7 @@ services:
       context: ../..
       dockerfile: ops/sandbox/Dockerfile.web
     container_name: beike-sandbox-web
-    restart: unless-stopped
+    restart: always
     ports:
       - '80:80'
     depends_on:

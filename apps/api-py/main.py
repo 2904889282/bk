@@ -91,8 +91,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # 兜底异常处理：防止内部错误直接暴露给前端
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    import traceback
-    print(f"[ERROR] Unhandled exception: {traceback.format_exc()}")
+    import logging
+    logging.getLogger("app").error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"code": 500, "msg": "系统内部错误，请联系管理员", "data": None}
