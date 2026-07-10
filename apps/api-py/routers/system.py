@@ -55,19 +55,24 @@ async def user_detail(user_id: int, db: AsyncSession = Depends(get_db), user=Dep
     return success(d)
 
 @router.post("/api/user")
-async def user_create(dto: dict = Body(...), db: AsyncSession = Depends(get_db)):
+async def user_create(dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     r = await db.execute(select(SysUser).where(SysUser.username == dto.get('username')))
     if r.scalar_one_or_none(): return fail("用户名已存在")
-    user = SysUser(username=dto['username'], password=hash_password(dto.get('password','123456')),
+    # 未提供密码时自动生成随机强密码
+    import secrets, string
+    password = dto.get('password') or ''.join(secrets.choice(string.ascii_letters + string.digits + '!@#$%^&*') for _ in range(12))
+    user = SysUser(username=dto['username'], password=hash_password(password),
                    real_name=dto.get('realName'), email=dto.get('email'), phone=dto.get('phone'),
                    status=dto.get('status',1), dept_id=dto.get('deptId'), role_type=dto.get('roleType','USER'))
     db.add(user); await db.flush()
     if dto.get('roleId'): db.add(SysUserRole(user_id=user.id, role_id=dto['roleId']))
     await db.commit()
-    return success()
+    return success({"msg": f"用户创建成功", "generatedPassword": password if not dto.get('password') else None})
 
 @router.put("/api/user/{user_id}")
-async def user_update(user_id: int, dto: dict = Body(...), db: AsyncSession = Depends(get_db)):
+async def user_update(user_id: int, dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     r = (await db.execute(select(SysUser).where(SysUser.id == user_id))).scalar_one_or_none()
     if not r: return fail("用户不存在")
     for k in ['realName','email','phone','status','deptId','roleType']:
@@ -75,18 +80,22 @@ async def user_update(user_id: int, dto: dict = Body(...), db: AsyncSession = De
     await db.commit(); return success()
 
 @router.put("/api/user/{user_id}/status")
-async def user_toggle(user_id: int, db: AsyncSession = Depends(get_db)):
+async def user_toggle(user_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     r = (await db.execute(select(SysUser).where(SysUser.id == user_id))).scalar_one_or_none()
     if not r: return fail("用户不存在")
     r.status = 0 if r.status == 1 else 1; await db.commit()
     return success()
 
 @router.put("/api/user/{user_id}/reset-password")
-async def user_reset_pwd(user_id: int, db: AsyncSession = Depends(get_db)):
+async def user_reset_pwd(user_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    require_admin(user)
     r = (await db.execute(select(SysUser).where(SysUser.id == user_id))).scalar_one_or_none()
     if not r: return fail("用户不存在")
-    r.password = hash_password("123456"); await db.commit()
-    return success({"msg": "密码已重置为123456"})
+    import secrets, string
+    new_pwd = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(10))
+    r.password = hash_password(new_pwd); await db.commit()
+    return success({"msg": "密码已重置", "newPassword": new_pwd})
 
 # ==================== 角色 ====================
 

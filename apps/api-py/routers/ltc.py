@@ -115,7 +115,8 @@ async def attachment_upload(file: UploadFile = File(...), bizType: str = Form(..
     os.makedirs("uploads", exist_ok=True)
     fname = f"{uuid.uuid4()}.{ext}"
     path = os.path.join("uploads", fname)
-    with open(path, "wb") as f: f.write(content)
+    import asyncio
+    await asyncio.to_thread(lambda: open(path, "wb").write(content))
     await db.execute(text("INSERT INTO biz_attachment (biz_type, biz_id, file_name, file_type, file_size, file_url, upload_user_id) VALUES (:bt,:bi,:fn,:ft,:fs,:fu,:ui)"),
                      {"bt": bizType, "bi": bizId, "fn": file.filename, "ft": ext, "fs": len(content), "fu": f"/uploads/{fname}", "ui": user["id"]})
     await db.commit()

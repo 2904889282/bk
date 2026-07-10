@@ -108,7 +108,7 @@ async def send_code(dto: SendCodeDTO, db: AsyncSession = Depends(get_db)):
     if not r.scalar_one_or_none():
         return fail("该邮箱未绑定账号")
     code = code_store.generate(dto.email)
-    logger.info(f"Verification code for {dto.email}: {code}")
+    logger.info(f"Verification code sent to {dto.email}")
     # TODO: 接入邮件服务后，改为 send_email(to=dto.email, code=code)
     return success({"message": "验证码已发送至注册邮箱，请查收"})
 
