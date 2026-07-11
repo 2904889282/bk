@@ -94,7 +94,6 @@ export default function PmGantt() {
                 const inRange = startIdx >= 0 && endIdx >= 0 && mi >= startIdx && mi <= endIdx;
                 const isFirst = mi === startIdx;
                 const isLast = mi === endIdx;
-                const barWidth = isFirst || isLast ? 85 : 100;
                 return (
                   <div key={m} style={{minWidth:72,height:40,position:'relative',flexShrink:0}}>
                     {inRange && (
