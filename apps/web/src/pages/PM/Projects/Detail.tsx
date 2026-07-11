@@ -3,19 +3,17 @@
  */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Drawer, message } from 'antd';
-import { fetchDashboard, updateProject, type ProjectVO, type ProjectDashboard } from '../../../api/project';
+import { message } from 'antd';
+import { fetchDashboard, updateProject, type ProjectDashboard } from '../../../api/project';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 
 const T = { s1:'#0f1011', s2:'#141516', hl:'#23252a', hls:'#34343a', ink:'#f7f8f8', ink2:'#d0d6e0', ink3:'#8a8f98', ink4:'#757880', p:'#5e6ad2', ok:'#27a644', warn:'#d4a030', err:'#e05050', bg:'#010102' };
 const RATING: Record<string,string> = { A:'#e5484d', B:'#f5a623', C:'#6b7280' };
-const fmtMoney = (n?: number|string) => { const v=Number(n); if(!v||isNaN(v)) return ''; if(v>=10000) return `¥${(v/10000).toFixed(0)}万`; return `¥${v.toFixed(0)}`; };
 
 const InlineInput = ({ value, onChange }: { value: string; onChange: (v:string)=>void }) => (
-  <input defaultValue={value} onBlur={e => { if(e.target.value !== value) onChange(e.target.value); }}
+  <input defaultValue={value} onBlur={e => { if(e.target.value !== value) onChange(e.target.value); e.target.style.borderColor = T.hl; }}
     style={{ background: T.s2, border: `1px solid ${T.hl}`, borderRadius: 6, padding: '5px 8px', fontSize: 13, color: T.ink, fontFamily: 'inherit', outline: 'none', width: '100%' }}
-    onFocus={e => e.target.style.borderColor = T.hls}
-    onBlur={e => e.target.style.borderColor = T.hl} />
+    onFocus={e => e.target.style.borderColor = T.hls} />
 );
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
