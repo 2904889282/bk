@@ -40,7 +40,6 @@ export default function PMProjects() {
   const navigate = useNavigate();
   const PER_PAGE = 15;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [ratingFilter, setRatingFilter] = useState<string | null>(null);
   const [deptFilter, setDeptFilter] = useState<string | null>(null);
@@ -58,7 +57,7 @@ export default function PMProjects() {
       if (ratingFilter) params.projectLevel = ratingFilter;
       if (deptFilter) params.deptBelong = deptFilter;
       const res = await fetchProjectPage(params);
-      setProjects(res.records || []); setTotal(res.total || 0); setPage(p);
+      setProjects(res.records || []); setPage(p);
     } catch {}
   }, [search, ratingFilter, deptFilter]);
 
@@ -183,9 +182,9 @@ export default function PMProjects() {
           <span>第 {page}/{tp||1} 页</span>
           <div style={{display:'flex', gap:3}}>
             {page>1 && <PgBtn onClick={()=>{setPage(1);scrollTo(0,0)}}>1</PgBtn>}
-            {page>2 && <PgBtn disabled>…</PgBtn>}
+            {page>2 && <PgBtn disabled onClick={()=>{}}>…</PgBtn>}
             {Array.from({length: tp}, (_,i) => i+1).filter(n => n >= page-2 && n <= page+2).map(n => <PgBtn key={n} active={n===page} onClick={()=>{setPage(n);scrollTo(0,0)}}>{n}</PgBtn>)}
-            {page<tp-1 && <PgBtn disabled>…</PgBtn>}
+            {page<tp-1 && <PgBtn disabled onClick={()=>{}}>…</PgBtn>}
             {page<tp && <PgBtn onClick={()=>{setPage(tp);scrollTo(0,0)}}>{tp}</PgBtn>}
           </div>
         </div>
