@@ -31,7 +31,7 @@ class RegisterDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('密码至少8位')
+            raise ValueError('密码至少6位')
         return v
 
 class PasswordDTO(BaseModel):
@@ -42,7 +42,7 @@ class PasswordDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('新密码至少8位')
+            raise ValueError('新密码至少6位')
         return v
 
 class SendCodeDTO(BaseModel):
@@ -57,7 +57,7 @@ class ResetPasswordDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('新密码至少8位')
+            raise ValueError('新密码至少6位')
         return v
 
 # ==================== 项目 ====================

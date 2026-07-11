@@ -9,6 +9,7 @@ import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
 import ClueLayout from './layouts/ClueLayout';
+import PMLayout from './layouts/PMLayout';
 
 const LoginPage = lazy(() => import('./pages/Login'));
 const PortalPage = lazy(() => import('./pages/Portal'));
@@ -24,6 +25,13 @@ const ProjectDetail = lazy(() => import('./pages/PM/Projects/Detail'));
 const PmRisks = lazy(() => import('./pages/PM/Risks'));
 const PmTalent = lazy(() => import('./pages/PM/Talent'));
 const PmGantt = lazy(() => import('./pages/PM/Gantt'));
+// 新项目管理板块 v2
+const PMDashboard = lazy(() => import('./pages/PM/Dashboard'));
+const PMBoard = lazy(() => import('./pages/PM/Board'));
+const PMGoals = lazy(() => import('./pages/PM/Goals'));
+const PMRevenue = lazy(() => import('./pages/PM/Revenue'));
+const PMTeam = lazy(() => import('./pages/PM/Team'));
+const PMStaff = lazy(() => import('./pages/PM/Staff'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
 const AdminDepts = lazy(() => import('./pages/Admin/Depts'));
 const AdminPositions = lazy(() => import('./pages/Admin/Positions'));
@@ -241,14 +249,23 @@ function AppContent() {
               <Route path="alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
               <Route path="analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
             </Route>
-            {/* 项目/管理板块 — 通用 BasicLayout */}
+            {/* 项目板块 v2 — Linear 暗色设计系统 */}
+            <Route path="pm" element={<PrivateRoute><PMLayout /></PrivateRoute>}>
+              <Route path="dashboard" element={withSuspense(<PermissionGuard permCode="project:list"><PMDashboard /></PermissionGuard>)} />
+              <Route path="board"     element={withSuspense(<PermissionGuard permCode="project:list"><PMBoard /></PermissionGuard>)} />
+              <Route path="projects"  element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
+              <Route path="goals"     element={withSuspense(<PermissionGuard permCode="project:list"><PMGoals /></PermissionGuard>)} />
+              <Route path="revenue"   element={withSuspense(<PermissionGuard permCode="project:list"><PMRevenue /></PermissionGuard>)} />
+              <Route path="team"      element={withSuspense(<PermissionGuard permCode="project:list"><PMTeam /></PermissionGuard>)} />
+              <Route path="staff"     element={withSuspense(<PermissionGuard permCode="project:list"><PMStaff /></PermissionGuard>)} />
+              <Route path="gantt"     element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
+              <Route path="kanban"    element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
+              <Route path="risks"     element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
+              <Route path="talent"    element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
+            </Route>
+            {/* 项目详情(旧) + 管理板块 — 通用 BasicLayout */}
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
-              <Route path="pm/kanban" element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
-              <Route path="pm/projects" element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
               <Route path="projects/:id" element={withSuspense(<PermissionGuard permCode="project:list"><ProjectDetail /></PermissionGuard>)} />
-              <Route path="pm/risks" element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
-              <Route path="pm/talent" element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
-              <Route path="pm/gantt" element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
               <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
               <Route path="admin/depts" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminDepts /></PermissionGuard>)} />
               <Route path="admin/positions" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminPositions /></PermissionGuard>)} />
