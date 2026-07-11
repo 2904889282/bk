@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { Modal, App } from 'antd';
-import { createProject, updateProject, fetchProjectPage, type ProjectVO, type ProjectSaveDTO } from '../../api/project';
+import { createProject, updateProject, fetchProjectPage, type ProjectVO } from '../../api/project';
 
 const T = { s1:'#0f1011', s2:'#141516', hl:'#23252a', hls:'#34343a', ink:'#f7f8f8', ink2:'#d0d6e0', ink3:'#8a8f98', ink4:'#757880', p:'#5e6ad2' };
 
@@ -26,15 +26,13 @@ export default function ProjectModal({ open, editProject, onClose }: Props) {
   const [rating, setRating] = useState('B');
   const [status, setStatus] = useState('进行中');
   const [month, setMonth] = useState(() => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; });
+  void month; // reserved for future use
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [contact, setContact] = useState('');
   const [supplier, setSupplier] = useState('');
   const [amount, setAmount] = useState('');
   const [code, setCode] = useState('');
-  const [clientInfo, setClientInfo] = useState('');
-  const [goalName, setGoalName] = useState('');
-  const [goalTarget, setGoalTarget] = useState('');
   const [risk, setRisk] = useState('');
   const [summary, setSummary] = useState('');
   const [saving, setSaving] = useState(false);
@@ -61,7 +59,7 @@ export default function ProjectModal({ open, editProject, onClose }: Props) {
     } else {
       setName(''); setManager(''); setDeliveryMgr(''); setProductMgr(''); setDept(''); setRating('B');
       setStatus('进行中'); setContact(''); setSupplier(''); setAmount(''); setCode(''); setRisk('');
-      setSummary(''); setClientInfo(''); setGoalName(''); setGoalTarget(''); setStartDate(''); setEndDate('');
+      setSummary(''); setStartDate(''); setEndDate('');
       const d=new Date(); setMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
     }
   }, [open, editProject]);
@@ -87,7 +85,7 @@ export default function ProjectModal({ open, editProject, onClose }: Props) {
   );
 
   return (
-    <Modal title={null} open={open} onCancel={() => onClose()} footer={null} width={640} closable={false} styles={{body:{padding:0},content:{background:T.s1,border:`1px solid ${T.hl}`,borderRadius:12}}}>
+    <Modal title={null} open={open} onCancel={() => onClose()} footer={null} width={640} closable={false} styles={{body:{padding:0}}} style={{background:T.s1}}>
       <div style={{padding:'20px 24px',borderBottom:`1px solid ${T.hl}`,fontSize:16,fontWeight:600,color:T.ink}}>
         {editProject ? '编辑项目' : '新增项目'}
       </div>
