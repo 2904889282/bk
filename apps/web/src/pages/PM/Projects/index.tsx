@@ -1,306 +1,241 @@
-import { useEffect, useState } from 'react';
-import { Table, Button, Tag, Input, Select, Space, Card, Typography, message, Modal } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, FundProjectionScreenOutlined } from '@ant-design/icons';
+/**
+ * 项目列表 — 表格 + 筛选 + 分组 + 分页 + 批量操作
+ * 参考: 项目管理系统_完整规范文档.md §3.3
+ */
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../hooks/useAuth';
-import { isMockTokenError } from '../../../utils/request';
-import Permission from '../../../components/auth/Permission';
-import ProjectForm from './Form';
-import {
-  fetchProjectPage,
-  deleteProject,
-  deleteProjectBatch,
-  type ProjectVO,
-  type ProjectPageParams,
-} from '../../../api/project';
+import { fetchProjectPage, deleteProjectBatch, type ProjectVO } from '../../../api/project';
 
-const STATUS_OPTIONS = ['进行中', '暂停', '已交付', '已终止'];
-const LEVEL_OPTIONS = ['S', 'A', 'B', 'C'];
+const T = {
+  s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
+  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
+  p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050',
+};
+const RATING: Record<string, string> = { A: '#e5484d', B: '#f5a623', C: '#6b7280' };
 
-const STATUS_COLORS: Record<string, string> = {
-  '进行中': 'blue',
-  '暂停': 'orange',
-  '已交付': 'green',
-  '已终止': 'default',
+const fmtMoney = (n?: number | string) => {
+  const v = Number(n); if (!v || isNaN(v)) return ''; if (v >= 10000) return `¥${(v/10000).toFixed(0)}万`; return `¥${v.toFixed(0)}`;
 };
 
-const LEVEL_COLORS: Record<string, string> = {
-  S: 'red',
-  A: 'orange',
-  B: 'blue',
-  C: 'default',
+/* 项目家族名清洗 */
+const cleanFamily = (name: string) =>
+  name.replace(/[-–—]\d+月$/, '').replace(/\d{4,6}/g, '').replace(/[-–—]\s*Q\d$/i, '')
+      .replace(/[-–—]?\s*副本\s*$/, '').replace(/[（(]副本[）)]/, '').toLowerCase().trim();
+
+/* 评级色标 */
+const RatingDot = ({ level }: { level: string }) => (
+  <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:20, height:18, borderRadius:4, fontSize:10, fontWeight:600, background:RATING[level] ? `${RATING[level]}22` : 'transparent', color:RATING[level]||T.ink4, border: level==='C'||!RATING[level]?`1px solid ${T.hl}`:'none' }}>{level||'-'}</span>
+);
+const StatusTag = ({ status }: { status: string }) => {
+  const isActive = status === '进行中' || status === '正式执行';
+  const isDone = status === '已完成';
+  return (
+    <span style={{ display:'inline-flex', padding:'3px 9px', borderRadius:999, fontSize:10, fontWeight:500, whiteSpace:'nowrap',
+      background: isActive ? 'rgba(94,106,210,0.15)' : isDone ? 'rgba(39,166,68,0.15)' : 'rgba(138,143,152,0.1)',
+      color: isActive ? T.p : isDone ? '#5ad478' : T.ink3 }}>{status||'-'}</span>
+  );
 };
 
-export default function PmProjects() {
+export default function PMProjects() {
   const navigate = useNavigate();
-  const { isMockMode } = useAuth();
-  const demoMode = isMockMode();
-  // 筛选
-  const [keyword, setKeyword] = useState('');
-  const [status, setStatus] = useState<string | undefined>(undefined);
-  const [projectLevel, setProjectLevel] = useState<string | undefined>(undefined);
-  const [deptBelong, setDeptBelong] = useState<string | undefined>(undefined);
-
-  // 分页
-  const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const PER_PAGE = 15;
+  const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [total, setTotal] = useState(0);
-  const [list, setList] = useState<ProjectVO[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [ratingFilter, setRatingFilter] = useState<string | null>(null);
+  const [deptFilter, setDeptFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortField, setSortField] = useState<string | null>(null);
+  const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [groupBy, setGroupBy] = useState<'none'|'family'>('none');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // 选中
-  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
-
-  // 表单
-  const [formOpen, setFormOpen] = useState(false);
-  const [editId, setEditId] = useState<number | null>(null);
-
-  const buildParams = (pn: number, ps: number): ProjectPageParams => {
-    const params: ProjectPageParams = { pageNum: pn, pageSize: ps };
-    if (keyword) params.keyword = keyword;
-    if (status) params.status = status;
-    if (projectLevel) params.projectLevel = projectLevel;
-    if (deptBelong) params.deptBelong = deptBelong;
-    return params;
-  };
-
-  const loadData = async (pn = pageNum, ps = pageSize) => {
-    setLoading(true);
+  const load = useCallback(async (p = 1) => {
     try {
-      const res = await fetchProjectPage(buildParams(pn, ps));
-      setList(res.records);
-      setTotal(res.total);
-    } catch (err: unknown) {
-      if (!isMockTokenError(err)) {
-        message.error('加载项目数据失败');
-      }
-    } finally {
-      setLoading(false);
+      const params: any = { pageNum: p, pageSize: 200 };
+      if (search) params.keyword = search;
+      if (ratingFilter) params.projectLevel = ratingFilter;
+      if (deptFilter) params.deptBelong = deptFilter;
+      const res = await fetchProjectPage(params);
+      setProjects(res.records || []); setTotal(res.total || 0); setPage(p);
+    } catch {}
+  }, [search, ratingFilter, deptFilter]);
+
+  useEffect(() => { load(1); }, [load]);
+
+  const depts = useMemo(() => [...new Set(projects.map(p => p.deptBelong).filter(Boolean))], [projects]);
+
+  /* 排序 */
+  const sorted = useMemo(() => {
+    const d = [...projects];
+    if (sortField) {
+      d.sort((a:any,b:any) => {
+        const va = a[sortField] ?? '', vb = b[sortField] ?? '';
+        if (typeof va==='number') return sortDir==='asc'?va-vb:vb-va;
+        return sortDir==='asc'?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+      });
     }
-  };
+    return d;
+  }, [projects, sortField, sortDir]);
 
-  useEffect(() => {
-    setPageNum(1);
-    loadData(1, pageSize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [keyword, status, projectLevel, deptBelong]);
+  /* 分页 */
+  const paged = useMemo(() => sorted.slice((page-1)*PER_PAGE, page*PER_PAGE), [sorted, page]);
+  const tp = Math.ceil(sorted.length / PER_PAGE);
 
-  const onPageChange = (pn: number, ps: number) => {
-    setPageNum(pn);
-    setPageSize(ps);
-    loadData(pn, ps);
-  };
+  /* 分组 */
+  const families = useMemo(() => {
+    const m = new Map<string, ProjectVO[]>();
+    projects.forEach(p => { const f = cleanFamily(p.projectName); if (!m.has(f)) m.set(f,[]); m.get(f)!.push(p); });
+    return m;
+  }, [projects]);
 
-  const refreshList = () => loadData(pageNum, pageSize);
-
-  const handleDelete = async (id: number) => {
-    await deleteProject(id);
-    message.success('已删除');
-    refreshList();
-  };
-
+  /* 批量 */
+  const toggleSel = (id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = () => setSelected(selected.size === paged.length ? new Set() : new Set(paged.map(p => p.id)));
   const handleBatchDelete = async () => {
-    if (selectedRowKeys.length === 0) return;
-    await deleteProjectBatch(selectedRowKeys);
-    message.success(`已批量删除 ${selectedRowKeys.length} 个项目`);
-    setSelectedRowKeys([]);
-    refreshList();
+    try { await deleteProjectBatch([...selected]); setSelected(new Set()); load(page); } catch {}
   };
 
-  const openCreate = () => {
-    setEditId(null);
-    setFormOpen(true);
+  const toggleSort = (field: string) => {
+    if (sortField === field) { setSortDir(d => d==='asc'?'desc':'asc'); } else { setSortField(field); setSortDir('asc'); }
   };
 
-  const openEdit = (id: number) => {
-    setEditId(id);
-    setFormOpen(true);
-  };
-
-  const columns = [
-    {
-      title: '项目名称',
-      dataIndex: 'projectName',
-      key: 'projectName',
-      width: 180,
-      render: (v: string) => <strong>{v}</strong>,
-    },
-    {
-      title: '客户公司',
-      dataIndex: 'clientCompany',
-      key: 'clientCompany',
-      width: 130,
-    },
-    {
-      title: '项目经理',
-      dataIndex: 'projectManager',
-      key: 'projectManager',
-      width: 90,
-    },
-    {
-      title: '合同金额',
-      dataIndex: 'projectAmount',
-      key: 'projectAmount',
-      width: 110,
-      render: (v: number) => <strong>¥{v?.toLocaleString() ?? 0}</strong>,
-    },
-    {
-      title: '项目等级',
-      dataIndex: 'projectLevel',
-      key: 'projectLevel',
-      width: 90,
-      render: (v: string) =>
-        v ? <Tag color={LEVEL_COLORS[v] || 'default'}>{v}</Tag> : '-',
-    },
-    {
-      title: '项目状态',
-      dataIndex: 'projectStatus',
-      key: 'projectStatus',
-      width: 100,
-      render: (v: string) => (
-        <Tag color={STATUS_COLORS[v] || 'default'}>{v}</Tag>
-      ),
-    },
-    {
-      title: '所属部门',
-      dataIndex: 'deptBelong',
-      key: 'deptBelong',
-      width: 100,
-    },
-    {
-      title: '开始日期',
-      dataIndex: 'startDate',
-      key: 'startDate',
-      width: 110,
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 200,
-      fixed: 'right' as const,
-      render: (_: unknown, r: ProjectVO) => (
-        <Space>
-          <Button size="small" icon={<FundProjectionScreenOutlined />} onClick={() => navigate(`/projects/${r.id}`)}>
-            详情
-          </Button>
-          <Permission code="project:edit">
-            <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r.id)} />
-          </Permission>
-          <Permission code="project:delete">
-            <Button size="small" danger icon={<DeleteOutlined />}
-              onClick={() => Modal.confirm({
-                title: '确认删除', content: `确定删除项目「${r.projectName}」？`,
-                okText: '确认删除', cancelText: '取消', okButtonProps: { danger: true },
-                onOk: () => handleDelete(r.id),
-              })} />
-          </Permission>
-        </Space>
-      ),
-    },
-  ];
+  const tgGroup = (g: string) => setCollapsedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
 
   return (
-    <Card>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <Input
-          prefix={<SearchOutlined />}
-          placeholder="搜索项目名称/客户"
-          value={keyword}
-          onChange={(e) => {
-            setKeyword(e.target.value);
-          }}
-          style={{ width: 200 }}
-          allowClear
-        />
-        <Select
-          placeholder="项目状态"
-          value={status}
-          onChange={(v) => setStatus(v)}
-          allowClear
-          style={{ width: 120 }}
-          options={STATUS_OPTIONS.map((s) => ({ value: s, label: s }))}
-        />
-        <Select
-          placeholder="项目等级"
-          value={projectLevel}
-          onChange={(v) => setProjectLevel(v)}
-          allowClear
-          style={{ width: 110 }}
-          options={LEVEL_OPTIONS.map((s) => ({ value: s, label: s }))}
-        />
-        <Input
-          placeholder="所属部门"
-          value={deptBelong}
-          onChange={(e) => setDeptBelong(e.target.value || undefined)}
-          style={{ width: 140 }}
-          allowClear
-        />
+    <div>
+      <h2 style={{ fontSize:20, fontWeight:600, margin:'0 0 16px', letterSpacing:'-0.3px', color:T.ink }}>项目列表</h2>
 
-        <Permission code="project:batch">
-          <Button
-            danger
-            disabled={!selectedRowKeys.length}
-            onClick={() => {
-              if (selectedRowKeys.length === 0) return;
-              Modal.confirm({
-                title: '批量删除确认',
-                content: `确定删除选中的 ${selectedRowKeys.length} 个项目？此操作不可撤销。`,
-                okText: '确认删除',
-                cancelText: '取消',
-                okButtonProps: { danger: true },
-                onOk: handleBatchDelete,
-              });
-            }}
-          >
-            批量删除({selectedRowKeys.length || 0})
-          </Button>
-        </Permission>
+      {/* 评级筛选 pills */}
+      <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
+        <button onClick={() => setRatingFilter(null)} style={pillStyle(!ratingFilter)}>全部</button>
+        {['A','B','C'].map(r => <button key={r} onClick={() => setRatingFilter(ratingFilter===r?null:r)} style={pillStyle(ratingFilter===r)}>{r}级</button>)}
+      </div>
 
-        <Permission code="project:create">
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            新建项目
-          </Button>
-        </Permission>
-      </Space>
+      {/* 部门筛选 + 搜索 */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, flexWrap:'wrap' }}>
+        {depts.slice(0,8).map(d => <button key={d} onClick={() => setDeptFilter(deptFilter===d?null:d)} style={pillStyle(deptFilter===d)}>{d}</button>)}
+        <input placeholder="搜索项目..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ marginLeft:'auto', background:T.s2, border:`1px solid ${T.hl}`, borderRadius:8, padding:'7px 12px', fontSize:13, color:T.ink, outline:'none', width:200, fontFamily:'inherit' }} />
+        <select value={groupBy} onChange={e => setGroupBy(e.target.value as any)}
+          style={{ background:T.s2, border:`1px solid ${T.hl}`, borderRadius:8, padding:'7px 8px', fontSize:12, color:T.ink3, fontFamily:'inherit', cursor:'pointer' }}>
+          <option value="none">不分组</option><option value="family">按家族</option>
+        </select>
+      </div>
 
-      <Table
-        columns={columns}
-        dataSource={list}
-        rowKey="id"
-        size="middle"
-        loading={loading}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys as number[]),
-        }}
-        pagination={{
-          current: pageNum,
-          pageSize,
-          total,
-          showSizeChanger: true,
-          showTotal: (t) => `共 ${t} 条`,
-          onChange: onPageChange,
-        }}
-        scroll={{ x: 1200 }}
-        locale={{
-          emptyText: demoMode && !loading ? (
-            <Space orientation="vertical" size={8} style={{ padding: 24 }}>
-              <Typography.Text type="secondary">演示模式下无法加载项目数据</Typography.Text>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>请启动后端服务后使用真实账号重新登录</Typography.Text>
-            </Space>
-          ) : '暂无项目数据',
-        }}
-      />
+      {/* 摘要栏 */}
+      <div style={{ display:'flex', alignItems:'center', gap:20, padding:'10px 16px', marginBottom:12, background:T.s2, borderRadius:8, fontSize:12, color:T.ink3 }}>
+        {depts.slice(0,5).map(d => <span key={d}><b style={{color:T.ink}}>{d}</b>: {projects.filter(p=>p.deptBelong===d).length}个</span>)}
+        <div style={{ display:'flex', alignItems:'center', gap:6, height:18, borderRadius:4, overflow:'hidden', background:T.s1, marginLeft:'auto' }}>
+          {['A','B','C'].map(r => {
+            const cnt = projects.filter(p => p.projectLevel===r).length;
+            return cnt > 0 ? <div key={r} onClick={() => setRatingFilter(r)} style={{ cursor:'pointer', background:RATING[r], minWidth:24, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:600, color:'#fff' }}>{r}{cnt}</div> : null;
+          })}
+        </div>
+        <span style={{color:T.ink4}}>共 {sorted.length} 条 · 第 {page}/{tp||1} 页</span>
+      </div>
 
-      <ProjectForm
-        open={formOpen}
-        editId={editId}
-        onClose={() => setFormOpen(false)}
-        onSuccess={() => {
-          setFormOpen(false);
-          refreshList();
-        }}
-      />
-    </Card>
+      {/* 批量操作栏 */}
+      {selected.size > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:10, background:T.s2, border:`1px solid ${T.hl}`, borderRadius:8, padding:'10px 16px', marginBottom:12, animation:'slideDown 0.2s ease' }}>
+          <span style={{fontSize:12, color:T.ink2}}>已选 <b style={{color:T.ink}}>{selected.size}</b> 项</span>
+          <button onClick={() => setSelected(new Set())} style={btnStyle}>取消</button>
+          <button onClick={handleBatchDelete} style={{...btnStyle, color:T.err}}>批量删除</button>
+        </div>
+      )}
+
+      {/* 表格 */}
+      <div style={{ background:T.s1, border:`1px solid ${T.hl}`, borderRadius:12, overflow:'hidden' }}>
+        {/* 表头 */}
+        <div style={{ display:'grid', gridTemplateColumns:'34px minmax(140px,1.2fr) 90px 80px 72px 80px 72px 52px', padding:'10px 16px', borderBottom:`1px solid ${T.hl}`, fontSize:11, fontWeight:500, color:T.ink4, background:T.s1, position:'sticky', top:0, zIndex:10 }}>
+          <span style={{textAlign:'center'}}><input type="checkbox" checked={selected.size>0&&paged.every(p=>selected.has(p.id))} onChange={toggleAll} style={{accentColor:T.p,width:14,height:14}} /></span>
+          <span onClick={()=>toggleSort('projectName')} style={{cursor:'pointer', color:sortField==='projectName'?T.p:T.ink4}}>项目名称 {sortField==='projectName'&&(sortDir==='asc'?'▲':'▼')}</span>
+          <span>经理</span><span>部门</span><span>评级</span><span>状态</span>
+          <span onClick={()=>toggleSort('projectAmount')} style={{cursor:'pointer', color:sortField==='projectAmount'?T.p:T.ink4}}>营收 {sortField==='projectAmount'&&(sortDir==='asc'?'▲':'▼')}</span>
+          <span style={{textAlign:'center'}}>操作</span>
+        </div>
+
+        {/* 表体 */}
+        {groupBy === 'none' ? (
+          paged.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} />)
+        ) : (
+          /* 分组视图 */
+          Array.from(families.entries()).sort((a,b) => b[1].length - a[1].length).map(([fam, items]) => {
+            const isCollapsed = collapsedGroups.has(fam);
+            return (
+              <div key={fam}>
+                <div onClick={() => tgGroup(fam)} style={{ display:'grid', gridTemplateColumns:'34px 1fr auto 52px', padding:'10px 16px', borderBottom:`1px solid ${T.hl}`, fontSize:12, fontWeight:500, cursor:'pointer', color:T.ink2, background:T.s2 }}
+                  onMouseEnter={e => { e.currentTarget.style.background = T.hl; }} onMouseLeave={e => { e.currentTarget.style.background = T.s2; }}>
+                  <span style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', transition:'transform 0.15s', transform: isCollapsed?'rotate(-90deg)':'none', fontSize:10, color:T.ink4 }}>▼</span>
+                  <span>{fam || '其他项目'}</span>
+                  <span style={{ fontSize:11, color:T.ink4 }}>{items.length} 个月</span>
+                </div>
+                {!isCollapsed && items.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} isGroup />)}
+              </div>
+            );
+          })
+        )}
+        {sorted.length === 0 && <div style={{ textAlign:'center', padding:60, color:T.ink4, fontSize:13 }}>暂无项目</div>}
+
+        {/* 分页 */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', borderTop:`1px solid ${T.hl}`, fontSize:12, color:T.ink4 }}>
+          <span>第 {page}/{tp||1} 页</span>
+          <div style={{display:'flex', gap:3}}>
+            {page>1 && <PgBtn onClick={()=>{setPage(1);scrollTo(0,0)}}>1</PgBtn>}
+            {page>2 && <PgBtn disabled>…</PgBtn>}
+            {Array.from({length: tp}, (_,i) => i+1).filter(n => n >= page-2 && n <= page+2).map(n => <PgBtn key={n} active={n===page} onClick={()=>{setPage(n);scrollTo(0,0)}}>{n}</PgBtn>)}
+            {page<tp-1 && <PgBtn disabled>…</PgBtn>}
+            {page<tp && <PgBtn onClick={()=>{setPage(tp);scrollTo(0,0)}}>{tp}</PgBtn>}
+          </div>
+        </div>
+      </div>
+    </div>
   );
+}
+
+/* === 行组件 === */
+function Row({ p, idx, sel, onToggle, onOpen, isGroup }: { p: ProjectVO; idx: number; sel: boolean; onToggle: ()=>void; onOpen: ()=>void; isGroup?: boolean }) {
+  const amount = Number(p.projectAmount);
+  const progress = p.progress || 0;
+  return (
+    <div style={{ display:'grid', gridTemplateColumns:'34px minmax(140px,1.2fr) 90px 80px 72px 80px 72px 52px', padding:'11px 16px', borderBottom:`1px solid ${T.hl}`, cursor:'pointer', fontSize:13, color:T.ink,
+      background: sel ? 'rgba(94,106,210,0.06)' : idx%2===0 ? T.s1 : 'transparent', transition:'background 0.08s', position:'relative', opacity: isGroup ? 0.7 : 1,
+    }}
+      onDoubleClick={onOpen} onContextMenu={e => { e.preventDefault(); onOpen(); }}
+      onMouseEnter={e => { if(!sel) e.currentTarget.style.background = T.s2; }}
+      onMouseLeave={e => { if(!sel) e.currentTarget.style.background = idx%2===0 ? T.s1 : 'transparent'; }}>
+      <span style={{textAlign:'center'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={sel} onChange={onToggle} style={{accentColor:T.p,width:14,height:14}} /></span>
+      <div>
+        <span style={{fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block'}} onClick={onOpen}>{p.projectName}</span>
+        <div style={{display:'flex', alignItems:'center', gap:6, marginTop:2}}>
+          <div style={{flex:1, height:4, background:T.s2, borderRadius:2, overflow:'hidden', maxWidth:80}}>
+            <div style={{height:'100%', borderRadius:2, width:`${progress}%`, background:T.p, transition:'width 0.3s'}} />
+          </div>
+          <span style={{fontSize:11, color:T.ink3}}>{progress}%</span>
+        </div>
+      </div>
+      <span style={{fontSize:12, color:T.ink3}}>{p.projectManager||'-'}</span>
+      <span style={{fontSize:12, color:T.ink3}}>{p.deptBelong||'-'}</span>
+      <span><RatingDot level={p.projectLevel} /></span>
+      <span><StatusTag status={p.projectStatus||'-'} /></span>
+      <span style={{fontSize:12, fontWeight:500}}>{fmtMoney(amount)||'-'}</span>
+      <div onClick={e => e.stopPropagation()} style={{display:'flex',alignItems:'center',gap:2,justifyContent:'center'}}>
+        <button onClick={e => { e.stopPropagation(); onOpen(); }} style={btnSm}>详情</button>
+      </div>
+    </div>
+  );
+}
+
+/* === 样式工具 === */
+const pillStyle = (active: boolean) => ({
+  padding:'3px 11px', borderRadius:999, fontSize:11, color:active?T.ink:T.ink3,
+  background:active?T.s2:'transparent', border:active?`1px solid ${T.hls}`:`1px solid ${T.hl}`,
+  cursor:'pointer', whiteSpace:'nowrap' as const, fontFamily:'inherit',
+});
+const btnStyle: React.CSSProperties = { padding:'5px 12px', borderRadius:6, border:`1px solid ${T.hl}`, background:'transparent', color:T.ink3, fontSize:12, fontFamily:'inherit', cursor:'pointer' };
+const btnSm: React.CSSProperties = { padding:'3px 6px', borderRadius:4, fontSize:11, color:T.ink3, cursor:'pointer', border:'none', background:'transparent', fontFamily:'inherit' };
+
+function PgBtn({ children, active, disabled, onClick }: { children: React.ReactNode; active?: boolean; disabled?: boolean; onClick: ()=>void }) {
+  return <button onClick={disabled?undefined:onClick} style={{ padding:'5px 11px', borderRadius:6, border:`1px solid ${T.hl}`, background:active?T.s2:'transparent', color:active?T.ink:disabled?T.ink4:T.ink3, fontSize:12, fontFamily:'inherit', cursor:disabled?'default':'pointer', fontWeight:active?600:400 }}>{children}</button>;
 }
