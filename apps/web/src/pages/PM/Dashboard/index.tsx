@@ -115,7 +115,7 @@ export default function PMDashboard() {
             </div>
             <div style={{ fontSize: 11, color: T.ink4, marginTop: 4 }}>{item.sub}</div>
           </div>
-        )))}
+        ))}
       </div>
 
       {/* 待填写提醒 Banner */}
