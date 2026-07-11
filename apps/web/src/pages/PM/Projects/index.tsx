@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchProjectPage, deleteProject, deleteProjectBatch, updateProject, type ProjectVO } from '../../../api/project';
 import ContextMenu, { type ContextMenuAction } from '../../../components/project/ContextMenu';
+import ProjectModal from '../../../components/project/ProjectModal';
 
 const T = {
   s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
@@ -51,6 +52,8 @@ export default function PMProjects() {
   const [groupBy, setGroupBy] = useState<'none'|'family'>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const [ctx, setCtx] = useState<{ x:number; y:number; project: ProjectVO } | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<ProjectVO | null>(null);
 
   const load = useCallback(async (p = 1) => {
     try {
@@ -116,7 +119,10 @@ export default function PMProjects() {
 
   return (
     <div>
-      <h2 style={{ fontSize:20, fontWeight:600, margin:'0 0 16px', letterSpacing:'-0.3px', color:T.ink }}>项目列表</h2>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+        <h2 style={{fontSize:20,fontWeight:600,margin:0,letterSpacing:'-0.3px',color:T.ink}}>项目列表</h2>
+        <button onClick={() => { setEditTarget(null); setModalOpen(true); }} style={{padding:'7px 16px',borderRadius:8,border:'none',background:T.p,color:'#fff',fontSize:13,fontFamily:'inherit',cursor:'pointer',fontWeight:500}}>+ 新增项目</button>
+      </div>
 
       {/* 评级筛选 pills */}
       <div style={{ display:'flex', gap:6, marginBottom:10, flexWrap:'wrap' }}>
@@ -202,6 +208,7 @@ export default function PMProjects() {
         </div>
       </div>
 
+      <ProjectModal open={modalOpen} editProject={editTarget} onClose={saved => { setModalOpen(false); setEditTarget(null); if (saved) load(page); }} />
       <ContextMenu x={ctx?.x||0} y={ctx?.y||0} open={!!ctx} actions={ctxActions} onClose={() => setCtx(null)} />
     </div>
   );
