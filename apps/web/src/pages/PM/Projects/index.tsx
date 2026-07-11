@@ -4,7 +4,8 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProjectPage, deleteProjectBatch, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, deleteProject, deleteProjectBatch, updateProject, type ProjectVO } from '../../../api/project';
+import ContextMenu, { type ContextMenuAction } from '../../../components/project/ContextMenu';
 
 const T = {
   s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
@@ -49,6 +50,7 @@ export default function PMProjects() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [groupBy, setGroupBy] = useState<'none'|'family'>('none');
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [ctx, setCtx] = useState<{ x:number; y:number; project: ProjectVO } | null>(null);
 
   const load = useCallback(async (p = 1) => {
     try {
@@ -101,6 +103,16 @@ export default function PMProjects() {
   };
 
   const tgGroup = (g: string) => setCollapsedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
+
+  /* 右键菜单 */
+  const ctxActions: ContextMenuAction[] = ctx ? [
+    { label: '查看详情', icon: '📋', onClick: () => navigate(`/projects/${ctx.project.id}`) },
+    { label: '复制项目', icon: '📋', onClick: () => {}, dividerAfter: true },
+    { label: '状态: 进行中', onClick: () => updateProject(ctx.project.id, {projectStatus:'进行中'} as any).then(()=>load(page)).catch(()=>{})},
+    { label: '状态: 已完成', onClick: () => updateProject(ctx.project.id, {projectStatus:'已完成'} as any).then(()=>load(page)).catch(()=>{})},
+    { label: '状态: 暂停', onClick: () => updateProject(ctx.project.id, {projectStatus:'暂停'} as any).then(()=>load(page)).catch(()=>{}), dividerAfter: true},
+    { label: '删除项目', icon: '🗑', danger: true, onClick: () => { deleteProject(ctx.project.id).then(()=>load(page)).catch(()=>{}); }},
+  ] : [];
 
   return (
     <div>
@@ -157,7 +169,7 @@ export default function PMProjects() {
 
         {/* 表体 */}
         {groupBy === 'none' ? (
-          paged.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} />)
+          paged.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} />)
         ) : (
           /* 分组视图 */
           Array.from(families.entries()).sort((a,b) => b[1].length - a[1].length).map(([fam, items]) => {
@@ -170,7 +182,7 @@ export default function PMProjects() {
                   <span>{fam || '其他项目'}</span>
                   <span style={{ fontSize:11, color:T.ink4 }}>{items.length} 个月</span>
                 </div>
-                {!isCollapsed && items.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} isGroup />)}
+                {!isCollapsed && items.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} isGroup />)}
               </div>
             );
           })
@@ -189,19 +201,21 @@ export default function PMProjects() {
           </div>
         </div>
       </div>
+
+      <ContextMenu x={ctx?.x||0} y={ctx?.y||0} open={!!ctx} actions={ctxActions} onClose={() => setCtx(null)} />
     </div>
   );
 }
 
 /* === 行组件 === */
-function Row({ p, idx, sel, onToggle, onOpen, isGroup }: { p: ProjectVO; idx: number; sel: boolean; onToggle: ()=>void; onOpen: ()=>void; isGroup?: boolean }) {
+function Row({ p, idx, sel, onToggle, onOpen, onCtx, isGroup }: { p: ProjectVO; idx: number; sel: boolean; onToggle: ()=>void; onOpen: ()=>void; onCtx: (e:React.MouseEvent)=>void; isGroup?: boolean }) {
   const amount = Number(p.projectAmount);
   const progress = p.progress || 0;
   return (
     <div style={{ display:'grid', gridTemplateColumns:'34px minmax(140px,1.2fr) 90px 80px 72px 80px 72px 52px', padding:'11px 16px', borderBottom:`1px solid ${T.hl}`, cursor:'pointer', fontSize:13, color:T.ink,
       background: sel ? 'rgba(94,106,210,0.06)' : idx%2===0 ? T.s1 : 'transparent', transition:'background 0.08s', position:'relative', opacity: isGroup ? 0.7 : 1,
     }}
-      onDoubleClick={onOpen} onContextMenu={e => { e.preventDefault(); onOpen(); }}
+      onDoubleClick={onOpen} onContextMenu={onCtx}
       onMouseEnter={e => { if(!sel) e.currentTarget.style.background = T.s2; }}
       onMouseLeave={e => { if(!sel) e.currentTarget.style.background = idx%2===0 ? T.s1 : 'transparent'; }}>
       <span style={{textAlign:'center'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={sel} onChange={onToggle} style={{accentColor:T.p,width:14,height:14}} /></span>
