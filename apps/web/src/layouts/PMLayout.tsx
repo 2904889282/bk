@@ -70,10 +70,11 @@ export default function PMLayout() {
           <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.3px' }}>贝壳项目管理</span>
         </div>
         <Input
-          placeholder="搜索项目..."
+          placeholder="搜索项目...  (Ctrl+K)"
           prefix={<SearchOutlined style={{ color: TOKENS.ink4 }} />}
           value={searchValue}
           onChange={e => setSearchValue(e.target.value)}
+          onPressEnter={() => { if (searchValue.trim()) navigate(`/pm/projects?search=${encodeURIComponent(searchValue)}`); }}
           style={{ flex: 1, maxWidth: 380, background: TOKENS.s1, border: `1px solid ${TOKENS.hl}`, borderRadius: 8, color: TOKENS.ink }}
         />
         <div style={{ flex: 1 }} />

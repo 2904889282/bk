@@ -5,26 +5,12 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchProjectPage, updateProject, type ProjectVO } from '../../../api/project';
+import { T, RATING, fmtMoney } from '../tokens';
 
-const T = {
-  s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
-  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
-  p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050',
-};
-
-const RATING: Record<string, string> = { A: '#e5484d', B: '#f5a623', C: '#6b7280' };
 const STATUS_COLORS: Record<string, string> = {
   '进行中': T.p, '正式执行': T.p, '已完成': T.ok, '暂停': T.warn, '终止': T.err,
 };
-const BOARD_STATUSES = ['正式执行', '暂停', '已完成'];
-
-/* 工具 */
-const fmtMoney = (n?: number | string) => {
-  const v = Number(n);
-  if (!v || isNaN(v)) return '';
-  if (v >= 10000) return `¥${(v / 10000).toFixed(0)}万`;
-  return `¥${v.toFixed(0)}`;
-};
+const BOARD_STATUSES = ['进行中', '正式执行', '暂停', '已完成'];
 
 export default function PMBoard() {
   const navigate = useNavigate();

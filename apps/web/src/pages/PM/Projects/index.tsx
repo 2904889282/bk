@@ -7,17 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { fetchProjectPage, deleteProject, deleteProjectBatch, updateProject, type ProjectVO } from '../../../api/project';
 import ContextMenu, { type ContextMenuAction } from '../../../components/project/ContextMenu';
 import ProjectModal from '../../../components/project/ProjectModal';
-
-const T = {
-  s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
-  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
-  p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050',
-};
-const RATING: Record<string, string> = { A: '#e5484d', B: '#f5a623', C: '#6b7280' };
-
-const fmtMoney = (n?: number | string) => {
-  const v = Number(n); if (!v || isNaN(v)) return ''; if (v >= 10000) return `¥${(v/10000).toFixed(0)}万`; return `¥${v.toFixed(0)}`;
-};
+import { T, RATING, fmtMoney } from '../tokens';
 
 /* 项目家族名清洗 */
 const cleanFamily = (name: string) =>
@@ -98,6 +88,7 @@ export default function PMProjects() {
   const toggleSel = (id: number) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = () => setSelected(selected.size === paged.length ? new Set() : new Set(paged.map(p => p.id)));
   const handleBatchDelete = async () => {
+    if (!confirm(`确定要删除选中的 ${selected.size} 个项目吗？`)) return;
     try { await deleteProjectBatch([...selected]); setSelected(new Set()); load(page); } catch {}
   };
 
