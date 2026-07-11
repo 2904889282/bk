@@ -58,9 +58,12 @@ export default function PMDashboard() {
   const stats = useMemo(() => {
     const total = projects.length;
     const totalRevenue = projects.reduce((s, p) => s + Number(p.projectAmount ?? 0), 0);
-    const withGoals = projects.filter(p => p.description && p.description.length > 0).length;
+    // 评级分布
+    const aCount = projects.filter(p => p.projectLevel === 'A').length;
+    const bCount = projects.filter(p => p.projectLevel === 'B').length;
+    const cCount = projects.filter(p => p.projectLevel === 'C').length;
     const active = projects.filter(p => p.projectStatus === '进行中' || p.projectStatus === '正式执行').length;
-    return { total, totalRevenue, withGoals, active };
+    return { total, totalRevenue, aCount, bCount, cCount, active };
   }, [projects]);
 
   /* 部门分布 */
@@ -95,7 +98,7 @@ export default function PMDashboard() {
         {[
           { label: '项目总数', value: stats.total, sub: `${stats.active} 个进行中`, color: T.p },
           { label: '预计总营收', value: fmtMoney(stats.totalRevenue), sub: `${projects.length} 个项目`, color: T.ok },
-          { label: '评级分布', value: `${stats.withGoals}`, sub: 'A/B/C 级项目', color: T.warn },
+          { label: '评级分布', value: `${stats.aCount}/${stats.bCount}/${stats.cCount}`, sub: 'A / B / C 级项目', color: T.warn },
           {
             label: '活跃项目', value: stats.active, sub: `${projects.length ? Math.round(stats.active / stats.total * 100) : 0}% 占比`,
             color: T.err,
@@ -104,7 +107,7 @@ export default function PMDashboard() {
         ].map((item, i) => (
           <div key={i} onClick={item.onClick} style={{
             background: T.s1, border: `1px solid ${T.hl}`, borderRadius: 12, padding: '18px 20px',
-            transition: 'all 0.15s', cursor: item.label === '评级分布' ? 'pointer' : 'default',
+            transition: 'all 0.15s', cursor: item.onClick ? 'pointer' : 'default',
           }}
             onMouseEnter={e => { e.currentTarget.style.background = T.s2; e.currentTarget.style.borderColor = T.hls; }}
             onMouseLeave={e => { e.currentTarget.style.background = T.s1; e.currentTarget.style.borderColor = T.hl; }}
@@ -118,14 +121,14 @@ export default function PMDashboard() {
         ))}
       </div>
 
-      {/* 待填写提醒 Banner */}
+      {/* Banner — 跳转关键目标页 */}
       {stats.active > 0 && (
         <div onClick={() => navigate('/pm/goals')} style={{
           background: 'rgba(94,106,210,0.06)', border: '1px solid rgba(94,106,210,0.2)',
           borderRadius: 8, padding: '10px 14px', marginBottom: 24, cursor: 'pointer',
           fontSize: 12, color: T.p, display: 'flex', alignItems: 'center', gap: 8,
         }}>
-          <span>📋</span> 本周有 <strong>{stats.active}</strong> 个项目待填写进度，点击前往关键目标页填写
+          <span>📋</span> 当前 <strong>{stats.active}</strong> 个项目进行中，点击前往关键目标页跟踪进度
         </div>
       )}
 
