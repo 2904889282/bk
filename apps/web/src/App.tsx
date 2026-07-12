@@ -12,7 +12,6 @@ const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
 const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
 const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
-const PipelineList = lazy(() => import('./pages/Pipeline/List'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
 const StatPlaceholder = lazy(() => import('./pages/StatPlaceholder'));
@@ -192,7 +191,6 @@ function AppContent() {
               <Route path="ltc/kanban" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />
-              <Route path="ltc/pipeline" element={withSuspense(<PipelineList />)} />
               <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
               {/* 管理板块 */}

@@ -18,7 +18,6 @@ export const UNIFIED_MENUS: MenuItem[] = [
       { path: '/ltc/dashboard', name: '数据看板', icon: 'DashboardOutlined' },
       { path: '/ltc/kanban', name: '线索看板', icon: 'FundOutlined' },
       { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined' },
-      { path: '/ltc/pipeline', name: '商机管道', icon: 'RiseOutlined' },
       { path: '/ltc/alerts', name: '预警中心', icon: 'AlertOutlined' },
       { path: '/ltc/analysis', name: '数据分析', icon: 'PieChartOutlined' },
     ],
