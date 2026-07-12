@@ -6,7 +6,8 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from 'antd';
 import { SearchOutlined, BellOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import CmdPalette, { type CmdAction } from '../components/ui/CmdPalette';
 
 /* Linear 风格暗色设计令牌 */
 const TOKENS = {
@@ -42,6 +43,21 @@ export default function PMLayout() {
   const user = useAuth(s => s.user);
   const [searchValue, setSearchValue] = useState('');
   const [collapsed, setCollapsed] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+
+  const cmdActions: CmdAction[] = NAV_ITEMS.map(item => ({
+    id: item.key, label: item.label, desc: item.route,
+    action: () => navigate(item.route),
+  }));
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); }
+      if (document.activeElement === document.body && e.key === 'Escape') setCmdOpen(false);
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, []);
 
   const activeKey = NAV_ITEMS.find(item => location.pathname.startsWith(item.route))?.key || 'dashboard';
 
@@ -131,6 +147,7 @@ export default function PMLayout() {
           <Outlet />
         </main>
       </div>
+      <CmdPalette open={cmdOpen} onClose={() => setCmdOpen(false)} actions={cmdActions} />
     </div>
   );
 }
