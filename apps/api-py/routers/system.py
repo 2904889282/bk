@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, Query, Body
 from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -117,6 +118,7 @@ async def role_perms(role_id: int, db: AsyncSession = Depends(get_db), user=Depe
 
 @router.put("/api/role/permission")
 async def assign_perms(dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
+    require_admin(user)
     role_id = dto.get('roleId')
     await db.execute(select(SysRolePermission).where(SysRolePermission.role_id == role_id))
     # delete existing
@@ -186,6 +188,9 @@ async def dept_delete(dept_id: int, db: AsyncSession = Depends(get_db), user=Dep
     # 检查子部门
     sub = await db.execute(select(SysDept).where(SysDept.parent_id == dept_id, SysDept.is_deleted == 0))
     if sub.scalars().first(): return fail("请先删除子部门")
+    # 检查关联用户
+    users_in_dept = await db.execute(select(SysUser).where(SysUser.dept_id == dept_id, SysUser.is_deleted == 0))
+    if users_in_dept.scalars().first(): return fail("该部门下还有用户，无法删除")
     dept = (await db.execute(select(SysDept).where(SysDept.id == dept_id))).scalar_one_or_none()
     if not dept: return fail("部门不存在")
     dept.is_deleted = 1  # pyright: ignore[reportAttributeAccessIssue]
@@ -285,8 +290,13 @@ async def recycle_restore(dto: dict = Body(...), db: AsyncSession = Depends(get_
 
 @router.delete("/api/recycle/perm")
 async def recycle_perm_delete(dto: dict = Body(...), db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
+    """永久删除 — 数据不可恢复，请谨慎操作。调用前应确保已备份关键数据。"""
     biz_type = dto.get("bizType", "")
     if not _validate_biz_type(biz_type):
         return fail("无效的业务类型")
+    # 记录审计日志：永久删除操作
+    import logging
+    logger = logging.getLogger("system")
+    logger.warning(f"永久删除 biz_type={biz_type} id={dto.get('id')}，操作时间={datetime.now(timezone.utc)}")
     await db.execute(text(f"DELETE FROM {biz_type} WHERE id = :id"), {"id": dto["id"]})
     await db.commit(); return success()

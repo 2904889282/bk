@@ -1,4 +1,5 @@
 import os
+import uuid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +30,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """启动时自动执行数据库迁移（幂等，不会重复执行）"""
+    # TODO: 迁移到 Alembic 管理 — 以下 DDL 不应混入应用启动代码
     async with engine.begin() as conn:
         # sys_dept 加层级字段
         result = await conn.execute(text("SHOW COLUMNS FROM sys_dept LIKE 'parent_id'"))
@@ -56,6 +58,7 @@ async def lifespan(app: FastAPI):
         if not result.fetchone():
             await conn.execute(text("ALTER TABLE sys_user ADD COLUMN position_id BIGINT"))
             print("[migrate] sys_user +position_id")
+    # END TODO: 迁移到 Alembic 管理
 
     yield
 
@@ -70,7 +73,26 @@ _ALLOWED_ORIGINS = [
     "http://123.57.140.159",
     "https://beike.example.com",
 ]
-app.add_middleware(CORSMiddleware, allow_origins=_ALLOWED_ORIGINS, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    """为每个请求注入 X-Request-ID，便于跨服务日志关联。
+    
+    若请求头中已携带 X-Request-ID 则复用，否则自动生成 UUID。
+    响应头中同步回传 X-Request-ID 供前端/网关追踪。
+    """
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-Refresh-Token"],
+)
 app.add_middleware(RequestSizeLimitMiddleware)
 
 app.include_router(auth.router)
