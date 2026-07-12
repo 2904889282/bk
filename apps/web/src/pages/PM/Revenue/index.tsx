@@ -62,7 +62,7 @@ export default function PMRevenue() {
             <div style={{fontSize:28,fontWeight:600,color:k.color}}>{k.value}</div>
             {k.sub ? <div style={{fontSize:11,color:T.ink4,marginTop:4}}>{k.sub}</div> : null}
           </div>
-        )))}
+        ))}
       </div>
 
       {/* 预计 vs 实际对比卡片 */}
