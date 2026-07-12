@@ -25,26 +25,20 @@ ROLE_HIERARCHY = {
     "ROLE_USER":   1,
 }
 
-# 受数据权限控制的表 → 匹配字段列表（基于 realName 的字段）
-# 格式: 表模型 → [ 用于匹配用户 realName 的列名 ]
-OWNER_NAME_FIELDS = {
-    "project":       ["project_manager", "delivery_manager", "product_manager"],
-    "clue":          ["beike_owner"],
-    "risk":          ["owner"],
-    "alert":         ["manager"],
-    "pipeline":      ["manager_name"],
-    "talent":        [],
+# 受数据权限控制的表 → 所有者字段映射（单一数据源）
+# 格式: 表标识 → {"name": [realName匹配字段], "id": [user_id匹配字段]}
+_OWNER_FIELDS = {
+    "project":  {"name": ["project_manager", "delivery_manager", "product_manager"], "id": ["create_by"]},
+    "clue":     {"name": ["beike_owner"], "id": ["create_by"]},
+    "risk":     {"name": ["owner"], "id": []},
+    "alert":    {"name": ["manager"], "id": []},
+    "pipeline": {"name": ["manager_name"], "id": ["owner_id"]},
+    "talent":   {"name": [], "id": []},
 }
 
-# 受数据权限控制的表 → 基于 user_id 的字段
-OWNER_ID_FIELDS = {
-    "project":       ["create_by"],
-    "clue":          ["create_by"],
-    "pipeline":      ["owner_id"],
-    "talent":        [],
-    "risk":          [],
-    "alert":         [],
-}
+# 从 _OWNER_FIELDS 动态推导，保持向后兼容的导出接口
+OWNER_NAME_FIELDS = {k: v["name"] for k, v in _OWNER_FIELDS.items()}
+OWNER_ID_FIELDS = {k: v["id"] for k, v in _OWNER_FIELDS.items()}
 
 
 # ══════════════════════════════════════════════
@@ -116,7 +110,9 @@ def build_owner_filter(user: dict, table_key: str):
 
     real_name = user.get("realName", "")
     if not real_name:
-        return None
+        # 非管理员且无 realName → 返回永假条件，禁止查看任何数据
+        logger.warning(f"User {user.get('id')} has no realName — denying all data access for table '{table_key}'")
+        return {"denyAll": True, "realName": "", "nameFields": [], "userId": user.get("id"), "idFields": []}
 
     return {
         "realName": real_name,
@@ -227,6 +223,10 @@ class PermissionChecker:
         from sqlalchemy import or_
 
         if self._is_admin or not self._real_name:
+            if not self._is_admin and not self._real_name:
+                logger.warning(f"User {self._user_id} has no realName — denying all data access via get_filter_cond")
+                from sqlalchemy import false as sa_false
+                return sa_false()
             return None
 
         conds = []

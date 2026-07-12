@@ -15,6 +15,17 @@ from utils.mapping import row_to_dict, row_to_camel
 
 project_to_dict = row_to_camel  # 别名，保持现有调用兼容
 
+# 模块级常量：camelCase → snake_case 映射表，避免在 create/update 中重复定义
+PROJECT_KEY_MAP = {
+    "projectName": "project_name", "projectNumber": "project_number",
+    "clientName": "client_name", "clientContact": "client_contact",
+    "projectManager": "project_manager", "deliveryManager": "delivery_manager",
+    "productManager": "product_manager", "projectAmount": "project_amount",
+    "projectLevel": "project_level", "projectStatus": "project_status",
+    "deptBelong": "dept_belong", "startDate": "start_date",
+    "expectEndDate": "expect_end_date", "riskAssessment": "risk_assessment",
+}
+
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)
 
@@ -25,7 +36,6 @@ async def check_project_owner(project_id: int, db: AsyncSession, user: dict, act
         select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0)
     )).scalar_one_or_none()
     if not r:
-        from utils.response import fail
         return fail("项目不存在"), None
     require_ownership(user, project_to_dict(r), "project")
     return None, r
@@ -64,12 +74,7 @@ async def detail(project_id: int, db: AsyncSession = Depends(get_db), user=Depen
 @router.post("/api/project")
 async def create(dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     data = dto.model_dump(exclude_none=True)
-    key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
-               "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
-               "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
-               "projectStatus":"project_status","deptBelong":"dept_belong","startDate":"start_date",
-               "expectEndDate":"expect_end_date","riskAssessment":"risk_assessment"}
-    mapped = {key_map.get(k, k): v for k, v in data.items()}
+    mapped = {PROJECT_KEY_MAP.get(k, k): v for k, v in data.items()}
     mapped["create_by"] = user["id"]  # 记录创建者
     p = BizProject(**mapped)
     db.add(p); await db.commit(); await db.refresh(p)
@@ -80,13 +85,8 @@ async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depend
     """编辑项目 — 管理员可编辑全部，非管理员只能编辑自己管理的"""
     err, r = await check_project_owner(project_id, db, user, "修改")
     if err: return err
-    key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
-               "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
-               "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
-               "projectStatus":"project_status","deptBelong":"dept_belong","startDate":"start_date",
-               "expectEndDate":"expect_end_date","riskAssessment":"risk_assessment"}
     for k, v in dto.model_dump(exclude_unset=True).items():
-        setattr(r, key_map.get(k, k), v)
+        setattr(r, PROJECT_KEY_MAP.get(k, k), v)
     await db.commit()
     return success()
 
@@ -157,18 +157,36 @@ async def period_delete(period_id: int, db: AsyncSession = Depends(get_db), user
 
 @router.get("/api/project/{project_id}/dashboard")
 async def dashboard(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    """一次请求返回项目全部数据 — 需要项目所有权"""
+    """一次请求返回项目全部数据 — 需要项目所有权。
+    并行化策略：依次执行主项目查询（必须先完成以做权限校验），
+    然后将 7 个互不依赖的子查询通过 asyncio.gather 并行执行，减少串行等待时间。
+    """
+    import asyncio
     checker = PermissionChecker(user)
     proj = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not proj: return fail("项目不存在")
     require_ownership(user, project_to_dict(proj), "project")
-    periods = (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc()))).scalars().all()
-    weeklies = (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0).order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc()))).scalars().all()
-    milestones = (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
-    team = (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
-    wbs = (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
-    changes = (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
-    risks = (await db.execute(text("SELECT * FROM biz_risk WHERE project_id=:pid AND is_deleted=0 ORDER BY create_time DESC"), {"pid": project_id})).mappings().all()
+
+    # 将 7 个独立子查询并行执行（每个都需要独立的 execute 调用创建新的 result proxy）
+    async def _periods():
+        return (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc()))).scalars().all()
+    async def _weeklies():
+        return (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0).order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc()))).scalars().all()
+    async def _milestones():
+        return (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
+    async def _team():
+        return (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
+    async def _wbs():
+        return (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
+    async def _changes():
+        return (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
+    async def _risks():
+        return (await db.execute(text("SELECT * FROM biz_risk WHERE project_id=:pid AND is_deleted=0 ORDER BY create_time DESC"), {"pid": project_id})).mappings().all()
+
+    periods, weeklies, milestones, team, wbs, changes, risks = await asyncio.gather(
+        _periods(), _weeklies(), _milestones(), _team(), _wbs(), _changes(), _risks()
+    )
+
     return success({
         "project": project_to_dict(proj),
         "periods": [project_to_dict(p) for p in periods],

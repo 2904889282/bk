@@ -4,10 +4,29 @@ from datetime import date, datetime
 from decimal import Decimal
 
 # ==================== 通用 ====================
-def success(data=None, msg="操作成功"):
+def success(data=None, msg: str = "操作成功"):
+    """构建成功响应。
+
+    Args:
+        data: 响应数据，默认为 None。
+        msg: 成功消息。生产环境调用时应传入具体成功信息，
+             避免使用默认值"操作成功"掩盖实际业务语义。
+
+    Returns:
+        dict: 包含 code/msg/data 的标准响应字典。
+    """
     return {"code": 200, "msg": msg, "data": data}
 
-def fail(msg="操作失败"):
+def fail(msg: str = "操作失败"):
+    """构建失败响应。
+
+    Args:
+        msg: 失败消息。生产环境调用时应传入具体错误原因，
+             避免使用默认值"操作失败"掩盖实际错误信息。
+
+    Returns:
+        dict: 包含 code/msg/data 的标准响应字典。
+    """
     return {"code": 400, "msg": msg, "data": None}
 
 class PageResult(BaseModel):
@@ -31,7 +50,7 @@ class RegisterDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('密码至少6位')
+            raise ValueError('密码至少8位')
         return v
 
 class PasswordDTO(BaseModel):
@@ -42,7 +61,7 @@ class PasswordDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('新密码至少6位')
+            raise ValueError('新密码至少8位')
         return v
 
 class SendCodeDTO(BaseModel):
@@ -57,7 +76,7 @@ class ResetPasswordDTO(BaseModel):
     @classmethod
     def password_min_length(cls, v):
         if len(v) < 8:
-            raise ValueError('新密码至少6位')
+            raise ValueError('新密码至少8位')
         return v
 
 # ==================== 项目 ====================

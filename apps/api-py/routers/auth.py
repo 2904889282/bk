@@ -1,32 +1,51 @@
 from fastapi import APIRouter, Depends, Request, Body
-from sqlalchemy import select, text
+from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermission, SysDept, BizTalent
+from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermission, SysDept, BizTalent, SysLoginAttempt
 from schemas import *
 from security import verify_password, hash_password, create_token, decode_token, get_current_user
 from config import settings
 from security_code import code_store
-import logging, time, collections
+import logging, time
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger("auth")
 
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
-_login_attempts = collections.defaultdict(list)
-
-def check_rate_limit(ip: str) -> bool:
-    now = time.time()
-    _login_attempts[ip] = [t for t in _login_attempts[ip] if now - t < 60]
-    if len(_login_attempts[ip]) >= 5:
+async def check_rate_limit(db: AsyncSession, key: str, attempt_type: str = "login", max_attempts: int = 5, window_seconds: int = 60) -> bool:
+    """DB-based rate limiter — works correctly across multiple workers.
+    
+    Stores attempt records in sys_login_attempt table and checks count within the sliding window.
+    Periodically cleans up expired records to prevent unbounded growth.
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    # Clean expired records (opportunistic cleanup)
+    await db.execute(
+        text("DELETE FROM sys_login_attempt WHERE create_time < :cutoff"),
+        {"cutoff": cutoff}
+    )
+    # Count recent attempts
+    count_result = await db.execute(
+        text("SELECT COUNT(*) FROM sys_login_attempt WHERE `key`=:key AND attempt_type=:atype AND create_time >= :cutoff"),
+        {"key": key, "atype": attempt_type, "cutoff": cutoff}
+    )
+    count = count_result.scalar() or 0
+    if count >= max_attempts:
         return False
-    _login_attempts[ip].append(now)
+    # Record this attempt
+    await db.execute(
+        text("INSERT INTO sys_login_attempt (`key`, attempt_type, create_time) VALUES (:key, :atype, :now)"),
+        {"key": key, "atype": attempt_type, "now": datetime.now(timezone.utc)}
+    )
+    await db.commit()
     return True
 
 @router.post("/login")
 async def login(dto: LoginDTO, request: Request, db: AsyncSession = Depends(get_db)):
     ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
-    if not check_rate_limit(ip):
+    if not await check_rate_limit(db, ip, "login"):
         return fail("登录尝试过于频繁，请60秒后重试")
     result = await db.execute(select(SysUser).where(SysUser.username == dto.username))
     user = result.scalar_one_or_none()
@@ -34,8 +53,8 @@ async def login(dto: LoginDTO, request: Request, db: AsyncSession = Depends(get_
         return fail("用户名或密码错误")
     if user.status != 1:
         return fail("账号已被禁用")
-    token = create_token(user.id, user.username, settings.jwt_access_expire_hours)
-    refresh = create_token(user.id, user.username, settings.jwt_refresh_expire_days * 24)
+    token = create_token(user.id, user.username, settings.jwt_access_expire_hours, "access")
+    refresh = create_token(user.id, user.username, settings.jwt_refresh_expire_days * 24, "refresh")
     # 角色（raw SQL 避免 join 歧义）
     from sqlalchemy import text
     rr = await db.execute(text("SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid AND r.is_deleted=0"), {"uid": user.id})
@@ -66,7 +85,13 @@ async def register(dto: RegisterDTO, db: AsyncSession = Depends(get_db)):
                    real_name=dto.realName, email=dto.email, status=1,
                    dept_id=dept_id, role_type="USER")
     db.add(user); await db.flush()
-    db.add(SysUserRole(user_id=user.id, role_id=3))
+    # 查询默认角色（优先 ROLE_USER，回退 role_id=3）
+    default_role = (await db.execute(select(SysRole).where(SysRole.code == "ROLE_USER", SysRole.is_deleted == 0))).scalar_one_or_none()
+    if default_role:
+        db.add(SysUserRole(user_id=user.id, role_id=default_role.id))
+    else:
+        logger.warning("默认角色 ROLE_USER 不存在，回退使用 role_id=3")
+        db.add(SysUserRole(user_id=user.id, role_id=3))
     # 人才池
     db.add(BizTalent(name=dto.realName or dto.username, role="外部人员", talent_type="external", status="normal", utilization=0))
     await db.commit()
@@ -78,8 +103,10 @@ async def refresh_token(dto: dict = Body(...)):
     if not token: return fail("缺少refreshToken")
     payload = decode_token(token)
     if not payload: return fail("refreshToken无效或已过期")
-    new_token = create_token(int(payload["sub"]), payload["username"], settings.jwt_access_expire_hours)
-    new_refresh = create_token(int(payload["sub"]), payload["username"], settings.jwt_refresh_expire_days * 24)
+    if payload.get("type") != "refresh":
+        return fail("仅支持refreshToken刷新，请使用正确的token类型")
+    new_token = create_token(int(payload["sub"]), payload["username"], settings.jwt_access_expire_hours, "access")
+    new_refresh = create_token(int(payload["sub"]), payload["username"], settings.jwt_refresh_expire_days * 24, "refresh")
     return success({"token": new_token, "refreshToken": new_refresh})
 
 @router.get("/userinfo")
@@ -104,6 +131,9 @@ async def change_password(dto: PasswordDTO, user=Depends(get_current_user), db: 
 async def send_code(dto: SendCodeDTO, db: AsyncSession = Depends(get_db)):
     """验证码发送 — 仅通过邮件实际发送，不通过 HTTP 响应返回。
     TODO: 接入 SMTP / 阿里云邮件服务实现实际发送"""
+    # 频率限制：同一邮箱 60 秒内最多 3 次
+    if not await check_rate_limit(db, dto.email, "send_code", max_attempts=3):
+        return fail("验证码发送过于频繁，请60秒后重试")
     r = await db.execute(select(SysUser).where(SysUser.email == dto.email))
     if not r.scalar_one_or_none():
         return fail("该邮箱未绑定账号")

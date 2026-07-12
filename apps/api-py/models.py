@@ -3,9 +3,9 @@ from sqlalchemy import Column, BigInteger, String, Integer, Text, Date, DateTime
 from sqlalchemy.orm import relationship
 from database import Base
 
-# timezone-aware 时间（替代已弃用的 _utcnow）
+# timezone-aware UTC 时间（保持 tzinfo 以便跨时区比较）
 def _utcnow():
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(timezone.utc)
 
 # ==================== 系统表 ====================
 
@@ -188,6 +188,8 @@ class BizClue(Base):
     update_by = Column("update_by", BigInteger)
     update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
+    converted_opportunity_id = Column("converted_opportunity_id", BigInteger)
+    is_converted = Column("is_converted", Boolean, default=False)
 
 class BizTalent(Base):
     __tablename__ = "biz_talent"
@@ -369,3 +371,13 @@ class BizProjectChange(Base):
     update_by = Column("update_by", BigInteger)
     update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
+
+# ==================== 安全/限流 ====================
+
+class SysLoginAttempt(Base):
+    """登录/验证码频率限制记录 — 替代进程内存字典，支持多 worker 部署"""
+    __tablename__ = "sys_login_attempt"
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    key = Column(String(255), nullable=False, index=True, comment="限流键（IP 或邮箱）")
+    attempt_type = Column("attempt_type", String(32), nullable=False, default="login", comment="尝试类型: login/send_code")
+    create_time = Column("create_time", DateTime, default=_utcnow)

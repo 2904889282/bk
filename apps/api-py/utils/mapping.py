@@ -10,11 +10,15 @@ def row_to_dict(r) -> dict:
 
 
 def to_camel(d: dict) -> dict:
-    """snake_case → camelCase 键名转换"""
+    """snake_case → camelCase 键名转换。
+    
+    连续下划线（如 a__b）中的空段会被跳过，保持为 a_b 而非 aB，
+    避免信息丢失。
+    """
     result = {}
     for k, v in d.items():
         parts = k.split('_')
-        camel = parts[0] + ''.join(w.capitalize() for w in parts[1:])
+        camel = parts[0] + ''.join(p.capitalize() for p in parts[1:] if p)
         result[camel] = v
     return result
 

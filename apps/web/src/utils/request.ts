@@ -92,9 +92,16 @@ request.interceptors.request.use(config => {
 
   if (token) config.headers.Authorization = `Bearer ${token}`;
 
-  // DELETE 请求统一携带确认标记
+  // DELETE 请求统一携带确认标记。
+  // 仅对已知需要 confirm 的 API 路径自动附加（如 /api/project/ 删除端点检查 body.confirm）。
+  // 若无匹配的路径模式，可通过请求头 X-Confirm-Delete: true 显式启用。
+  // 注意：此行为是前端侧约定，后端对应端点需检查 body.get("confirm")。
   if (config.method?.toUpperCase() === 'DELETE' && config.url?.includes('/api/')) {
-    config.data = { ...(config.data || {}), confirm: true };
+    const shouldConfirm = config.headers['X-Confirm-Delete'] === 'true'
+      || (config.url.includes('/api/project/') && !config.url.includes('/api/project-period/'));
+    if (shouldConfirm) {
+      config.data = { ...(config.data || {}), confirm: true };
+    }
   }
 
   // 非 GET 请求防重复提交（AbortController 附加 key，避免竞态删除别人的锁）

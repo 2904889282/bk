@@ -609,20 +609,15 @@ export interface ClueImportResult {
 export async function importCluesFromExcel(file: File): Promise<ClueImportResult> {
   const formData = new FormData();
   formData.append('file', file);
-  // 使用 axios 原始实例发送 formData，绕过 contentType 自动设置
-  const axios = (await import('axios')).default;
-  const token = localStorage.getItem('beike_token') || sessionStorage.getItem('beike_token');
-  const res = await axios.post('/api/clue/import', formData, {
+  // 使用项目封装的 request 实例，确保经过统一拦截器（认证刷新、防重复提交等）
+  const res = await request.post('/api/clue/import', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Allow-Duplicate': 'true',
     },
   });
-  const body = res.data;
-  if (body && typeof body === 'object' && body.code === 200) {
-    return body.data;
-  }
-  throw new Error(body?.msg || body?.message || '导入失败');
+  // request 拦截器已自动解包 {code, msg, data} → data
+  return res.data as ClueImportResult;
 }
 
 export async function downloadClueImportTemplate(): Promise<void> {

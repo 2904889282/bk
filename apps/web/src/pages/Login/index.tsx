@@ -420,9 +420,11 @@ export default function LoginPage() {
                 <a className="auth-link text-sm ml-1 font-medium" onClick={() => setIsRegister(true)}>立即注册</a>
               </div>
 
-              <div className="text-center text-xs mt-4" style={{ color: "rgba(226,232,240,0.38)" }}>
-                演示账号：admin / admin123
-              </div>
+              {(import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO === 'true') && (
+                <div className="text-center text-xs mt-4" style={{ color: "rgba(226,232,240,0.38)" }}>
+                  演示账号：admin / admin123
+                </div>
+              )}
             </>
           )}
         </div>

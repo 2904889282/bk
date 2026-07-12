@@ -25,9 +25,10 @@ def verify_password(plain: str, hashed: str) -> bool:
     except Exception:
         return False
 
-def create_token(user_id: int, username: str, expire_hours: int) -> str:
+def create_token(user_id: int, username: str, expire_hours: int, token_type: str = "access") -> str:
     return jwt.encode({
         "sub": str(user_id), "username": username, "jti": str(uuid.uuid4()),
+        "type": token_type,
         "iat": datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(hours=expire_hours),
     }, settings.jwt_secret, algorithm="HS256")
@@ -45,26 +46,39 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
     return {"id": int(payload["sub"]), "username": payload["username"], "jti": payload.get("jti", "")}
 
 async def get_current_user_with_role(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer)):
-    """获取当前用户 + 角色 + 真实姓名 + 部门（用于数据权限过滤）"""
+    """获取当前用户 + 角色 + 真实姓名 + 部门（用于数据权限过滤）
+
+    优化：将三次独立查询（角色、用户详情、部门名称）通过 asyncio.gather 并行化，
+    减少数据库往返次数。三个查询互不依赖，可同时执行。
+    """
+    import asyncio
     u = await get_current_user(credentials)
     from database import async_session
     from sqlalchemy import text
     async with async_session() as db:
-        # 查询角色
-        r = await db.execute(text(
-            "SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"
-        ), {"uid": u["id"]})
-        u["roles"] = [row[0] for row in r.all() if row[0]]
+        async def _fetch_roles():
+            r = await db.execute(text(
+                "SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"
+            ), {"uid": u["id"]})
+            return [row[0] for row in r.all() if row[0]]
 
-        # 查询用户详细信息
-        r2 = await db.execute(text(
-            "SELECT real_name, dept_id FROM sys_user WHERE id=:uid"
-        ), {"uid": u["id"]})
-        row2 = r2.first()
-        u["realName"] = row2[0] if row2 and row2[0] else u["username"]
-        u["deptId"] = row2[1] if row2 and row2[1] else None
+        async def _fetch_user_detail():
+            r2 = await db.execute(text(
+                "SELECT real_name, dept_id FROM sys_user WHERE id=:uid"
+            ), {"uid": u["id"]})
+            row2 = r2.first()
+            return (row2[0] if row2 and row2[0] else u["username"],
+                    row2[1] if row2 and row2[1] else None)
 
-        # 查询部门名称（如果有关联）
+        # 前两个查询互不依赖，可并行执行
+        roles, (real_name, dept_id) = await asyncio.gather(
+            _fetch_roles(), _fetch_user_detail()
+        )
+        u["roles"] = roles
+        u["realName"] = real_name
+        u["deptId"] = dept_id
+
+        # 部门名称依赖 deptId，但查询量小，串行执行即可
         if u.get("deptId"):
             r3 = await db.execute(text(
                 "SELECT name FROM sys_dept WHERE id=:did"

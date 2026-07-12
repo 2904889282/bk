@@ -22,6 +22,49 @@ let connected = false;
 const notificationCache: Notification[] = [];
 let unread = 0;
 
+/** 清除所有认证信息并跳转到登录页 */
+function redirectToLogin() {
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  ['beike_token', 'beike_refresh_token', 'beike_user'].forEach(k => {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  });
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
+/** 尝试使用 refreshToken 获取新 token，成功后自动重连 */
+async function handleTokenRefresh() {
+  const refreshToken = localStorage.getItem('beike_refresh_token') || sessionStorage.getItem('beike_refresh_token');
+  if (!refreshToken) {
+    redirectToLogin();
+    return;
+  }
+  try {
+    const resp = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    if (!resp.ok) { redirectToLogin(); return; }
+    const body = await resp.json();
+    const newToken = body?.data?.token || body?.token;
+    if (newToken) {
+      const store = localStorage.getItem('beike_token') ? localStorage : sessionStorage;
+      store.setItem('beike_token', newToken);
+      if (body?.data?.refreshToken || body?.refreshToken) {
+        store.setItem('beike_refresh_token', body?.data?.refreshToken || body?.refreshToken);
+      }
+      doConnect(newToken);
+    } else {
+      redirectToLogin();
+    }
+  } catch {
+    redirectToLogin();
+  }
+}
+
 function doConnect(token: string) {
   if (ws) return;
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -58,7 +101,15 @@ function doConnect(token: string) {
     }
   };
 
-  ws.onclose = () => { connected = false; ws = null; notifyListeners(); scheduleReconnect(token); };
+  ws.onclose = (event) => {
+    connected = false; ws = null; notifyListeners();
+    // 认证失败（策略违规 1008 或自定义认证失败码 4401），尝试刷新 token 后重连
+    if (event.code === 1008 || event.code === 4401) {
+      handleTokenRefresh();
+      return;
+    }
+    scheduleReconnect(token);
+  };
   ws.onerror = () => { ws?.close(); };
 }
 
