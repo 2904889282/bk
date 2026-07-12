@@ -40,12 +40,9 @@ export default function PMDashboard() {
   const stats = useMemo(() => {
     const total = projects.length;
     const totalRevenue = projects.reduce((s, p) => s + Number(p.projectAmount ?? 0), 0);
-    // 评级分布
-    const aCount = projects.filter(p => p.projectLevel === 'A').length;
-    const bCount = projects.filter(p => p.projectLevel === 'B').length;
-    const cCount = projects.filter(p => p.projectLevel === 'C').length;
+    const withGoals = projects.filter(p => p.description && p.description.length > 0).length;
     const active = projects.filter(p => p.projectStatus === '进行中' || p.projectStatus === '正式执行').length;
-    return { total, totalRevenue, aCount, bCount, cCount, active };
+    return { total, totalRevenue, withGoals, active };
   }, [projects]);
 
   /* 部门分布 */
@@ -80,10 +77,10 @@ export default function PMDashboard() {
         {[
           { label: '项目总数', value: stats.total, sub: `${stats.active} 个进行中`, color: T.p },
           { label: '预计总营收', value: fmtMoney(stats.totalRevenue), sub: `${projects.length} 个项目`, color: T.ok },
-          { label: '评级分布', value: `${stats.aCount}/${stats.bCount}/${stats.cCount}`, sub: 'A / B / C 级项目', color: T.warn },
+          { label: '设有关键目标', value: stats.withGoals, sub: `${projects.length ? Math.round(stats.withGoals / Math.max(stats.total, 1) * 100) : 0}% 覆盖率`, color: T.warn },
           {
-            label: '活跃项目', value: stats.active, sub: `${projects.length ? Math.round(stats.active / stats.total * 100) : 0}% 占比`,
-            color: T.err,
+            label: '本周待填写', value: stats.active, sub: stats.active > 0 ? '点击前往关键目标页' : '全部已更新',
+            color: stats.active > 0 ? T.err : T.ok,
             onClick: () => navigate('/pm/goals'),
           },
         ].map((item, i) => (
@@ -133,7 +130,7 @@ export default function PMDashboard() {
           </div>
           {monthRevenue.slice(-6).map(([m, v]) => (
             <BarChartRow key={m} label={m.slice(5) + '月'} value={v} max={maxMonthRev}
-              fill={T.ok} showVal={fmtMoney(v)} />
+              fill="#e5484d" showVal={fmtMoney(v)} />
           ))}
           {monthRevenue.length === 0 && (
             <div style={{ textAlign: 'center', padding: 40, color: T.ink4, fontSize: 12 }}>暂无数据</div>

@@ -5,7 +5,7 @@
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from 'antd';
-import { SearchOutlined, BellOutlined } from '@ant-design/icons';
+import { SearchOutlined, BellOutlined, PlusOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import CmdPalette, { type CmdAction } from '../components/ui/CmdPalette';
 
@@ -29,7 +29,7 @@ const TOKENS = {
 const NAV_ITEMS = [
   { key: 'dashboard', route: '/pm/dashboard', icon: '◆', label: '数据看板' },
   { key: 'board',     route: '/pm/board',     icon: '▦', label: '项目看板' },
-  { key: 'list',      route: '/pm/projects',  icon: '☰', label: '项目列表' },
+  { key: 'list',      route: '/pm/projects',  icon: '☰', label: '项目列表', badge: true },
   { key: 'goals',     route: '/pm/goals',     icon: '◎', label: '关键目标' },
   { key: 'revenue',   route: '/pm/revenue',   icon: '¥', label: '营收分析' },
   { key: 'team',      route: '/pm/team',      icon: '◒', label: '团队管理' },
@@ -94,6 +94,8 @@ export default function PMLayout() {
           style={{ flex: 1, maxWidth: 380, background: TOKENS.s1, border: `1px solid ${TOKENS.hl}`, borderRadius: 8, color: TOKENS.ink }}
         />
         <div style={{ flex: 1 }} />
+        <span onClick={() => setCmdOpen(true)} style={{ padding:'5px 11px',borderRadius:999,fontSize:11,color:TOKENS.ink3,border:`1px solid ${TOKENS.hl}`,cursor:'pointer',fontFamily:'monospace',background:'transparent' }}>⌘K</span>
+        <button onClick={() => navigate('/pm/projects')} style={{padding:'6px 14px',borderRadius:999,border:'none',background:TOKENS.p,color:'#fff',fontSize:12,fontFamily:'inherit',cursor:'pointer',fontWeight:500,display:'flex',alignItems:'center',gap:4}}><PlusOutlined /> 新增</button>
         <span style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: TOKENS.ink4 }}>
           <BellOutlined />
         </span>

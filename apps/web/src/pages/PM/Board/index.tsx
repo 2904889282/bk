@@ -77,8 +77,8 @@ export default function PMBoard() {
       {/* 分组切换药丸 */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {[
-          { k: 'status' as const, l: '按状态' },
           { k: 'rating' as const, l: '按评级' },
+          { k: 'status' as const, l: '按状态' },
           { k: 'dept' as const, l: '按部门' },
         ].map(item => (
           <button key={item.k} onClick={() => setGroupMode(item.k)} style={{
@@ -110,7 +110,7 @@ export default function PMBoard() {
               background: T.s1, border: `1px solid ${T.hl}`, borderRadius: 8,
               fontSize: 13, fontWeight: 600, color: T.ink,
             }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: STATUS_COLORS[group.key] || T.p }} />
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: groupMode==='rating'?(RATING[group.key.replace('级','')]||T.p):(STATUS_COLORS[group.key]||T.p) }} />
               {group.key}
               <span style={{ marginLeft: 'auto', fontSize: 10, color: T.ink4, background: T.s2, padding: '1px 7px', borderRadius: 999 }}>
                 {group.items.length}
