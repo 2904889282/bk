@@ -3,7 +3,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { message } from 'antd';
+import { App } from 'antd';
 import { fetchDashboard, updateProject, type ProjectDashboard } from '../../../api/project';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 
@@ -26,6 +26,7 @@ const Section = ({ title, children }: { title: string; children: React.ReactNode
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [dash, setDash] = useState<ProjectDashboard | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,8 +35,8 @@ export default function ProjectDetail() {
     fetchDashboard(Number(id)).then(d => setDash(d)).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 80, color: T.ink4 }}>加载中...</div>;
-  if (!dash?.project) return <div style={{ textAlign: 'center', padding: 80, color: T.ink4 }}>项目不存在</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 80, color: T.ink4, background: T.bg, minHeight: '100vh' }}>加载中...</div>;
+  if (!dash?.project) return <div style={{ textAlign: 'center', padding: 80, color: T.ink4, background: T.bg, minHeight: '100vh' }}>项目不存在</div>;
 
   const p = dash.project;
   const milestones = dash.milestones || [];
@@ -47,7 +48,7 @@ export default function ProjectDetail() {
   };
 
   return (
-    <div style={{ paddingBottom: 40, maxWidth: 900, color: T.ink, fontFamily: 'inherit' }}>
+    <div style={{ paddingBottom: 40, maxWidth: 900, color: T.ink, fontFamily: 'inherit', background: T.bg, minHeight: '100vh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <span onClick={() => navigate(-1)} style={{ cursor: 'pointer', color: T.ink4 }}>
           <ArrowLeftOutlined /> 返回
