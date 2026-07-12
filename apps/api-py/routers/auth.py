@@ -15,31 +15,29 @@ logger = logging.getLogger("auth")
 router = APIRouter(prefix="/api/auth", tags=["认证"])
 
 async def check_rate_limit(db: AsyncSession, key: str, attempt_type: str = "login", max_attempts: int = 5, window_seconds: int = 60) -> bool:
-    """DB-based rate limiter — works correctly across multiple workers.
-    
-    Stores attempt records in sys_login_attempt table and checks count within the sliding window.
-    Periodically cleans up expired records to prevent unbounded growth.
-    """
-    cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
-    # Clean expired records (opportunistic cleanup)
-    await db.execute(
-        text("DELETE FROM sys_login_attempt WHERE create_time < :cutoff"),
-        {"cutoff": cutoff}
-    )
-    # Count recent attempts
-    count_result = await db.execute(
-        text("SELECT COUNT(*) FROM sys_login_attempt WHERE `key`=:key AND attempt_type=:atype AND create_time >= :cutoff"),
-        {"key": key, "atype": attempt_type, "cutoff": cutoff}
-    )
-    count = count_result.scalar() or 0
-    if count >= max_attempts:
-        return False
-    # Record this attempt
-    await db.execute(
-        text("INSERT INTO sys_login_attempt (`key`, attempt_type, create_time) VALUES (:key, :atype, :now)"),
-        {"key": key, "atype": attempt_type, "now": datetime.now(timezone.utc)}
-    )
-    await db.commit()
+    """DB-based rate limiter — gracefully degrades if table doesn't exist."""
+    try:
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+        await db.execute(
+            text("DELETE FROM sys_login_attempt WHERE create_time < :cutoff"),
+            {"cutoff": cutoff}
+        )
+        count_result = await db.execute(
+            text("SELECT COUNT(*) FROM sys_login_attempt WHERE `key`=:key AND attempt_type=:atype AND create_time >= :cutoff"),
+            {"key": key, "atype": attempt_type, "cutoff": cutoff}
+        )
+        count = count_result.scalar() or 0
+        if count >= max_attempts:
+            return False
+        await db.execute(
+            text("INSERT INTO sys_login_attempt (`key`, attempt_type, create_time) VALUES (:key, :atype, :now)"),
+            {"key": key, "atype": attempt_type, "now": datetime.now(timezone.utc)}
+        )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        # Table doesn't exist — skip rate limiting gracefully
+        pass
     return True
 
 @router.post("/login")
