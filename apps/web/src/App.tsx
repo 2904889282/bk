@@ -16,8 +16,6 @@ const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
 const PipelineList = lazy(() => import('./pages/Pipeline/List'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
-const AdminDepts = lazy(() => import('./pages/Admin/Depts'));
-const AdminPositions = lazy(() => import('./pages/Admin/Positions'));
 const RecycleBin = lazy(() => import('./pages/Admin/RecycleBin'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
 const ResourcesPage = lazy(() => import('./pages/Resources'));
@@ -228,8 +226,6 @@ function AppContent() {
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
               {/* 管理板块 */}
               <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
-              <Route path="admin/depts" element={withSuspense(<AdminDepts />)} />
-              <Route path="admin/positions" element={withSuspense(<AdminPositions />)} />
               <Route path="admin/recycle" element={withSuspense(<RecycleBin />)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
               <Route path="resources" element={withSuspense(<ResourcesPage />)} />
