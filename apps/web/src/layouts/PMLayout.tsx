@@ -6,7 +6,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from 'antd';
 import { SearchOutlined, BellOutlined } from '@ant-design/icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import CmdPalette, { type CmdAction } from '../components/ui/CmdPalette';
 
 /* Linear 风格暗色设计令牌 */
