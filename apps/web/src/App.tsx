@@ -15,19 +15,6 @@ const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
 const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
 const PipelineList = lazy(() => import('./pages/Pipeline/List'));
-const PmKanban = lazy(() => import('./pages/PM/Kanban'));
-const PmProjects = lazy(() => import('./pages/PM/Projects'));
-const ProjectDetail = lazy(() => import('./pages/PM/Projects/Detail'));
-const PmRisks = lazy(() => import('./pages/PM/Risks'));
-const PmTalent = lazy(() => import('./pages/PM/Talent'));
-const PmGantt = lazy(() => import('./pages/PM/Gantt'));
-// 新项目管理板块 v2
-const PMDashboard = lazy(() => import('./pages/PM/Dashboard'));
-const PMBoard = lazy(() => import('./pages/PM/Board'));
-const PMGoals = lazy(() => import('./pages/PM/Goals'));
-const PMRevenue = lazy(() => import('./pages/PM/Revenue'));
-const PMTeam = lazy(() => import('./pages/PM/Team'));
-const PMStaff = lazy(() => import('./pages/PM/Staff'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
 const AdminDepts = lazy(() => import('./pages/Admin/Depts'));
 const AdminPositions = lazy(() => import('./pages/Admin/Positions'));
@@ -239,20 +226,7 @@ function AppContent() {
               <Route path="ltc/pipeline" element={withSuspense(<PipelineList />)} />
               <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
-              {/* 项目板块 */}
-              <Route path="pm/dashboard" element={withSuspense(<PMDashboard />)} />
-              <Route path="pm/board" element={withSuspense(<PMBoard />)} />
-              <Route path="pm/projects" element={withSuspense(<PmProjects />)} />
-              <Route path="pm/goals" element={withSuspense(<PMGoals />)} />
-              <Route path="pm/revenue" element={withSuspense(<PMRevenue />)} />
-              <Route path="pm/team" element={withSuspense(<PMTeam />)} />
-              <Route path="pm/staff" element={withSuspense(<PMStaff />)} />
-              <Route path="pm/gantt" element={withSuspense(<PmGantt />)} />
-              <Route path="pm/kanban" element={withSuspense(<PmKanban />)} />
-              <Route path="pm/risks" element={withSuspense(<PmRisks />)} />
-              <Route path="pm/talent" element={withSuspense(<PmTalent />)} />
               {/* 管理板块 */}
-              <Route path="projects/:id" element={withSuspense(<ProjectDetail />)} />
               <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
               <Route path="admin/depts" element={withSuspense(<AdminDepts />)} />
               <Route path="admin/positions" element={withSuspense(<AdminPositions />)} />
