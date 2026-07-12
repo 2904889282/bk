@@ -6,6 +6,7 @@ import { useAuth } from './hooks/useAuth';
 import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
+import PermissionGuard from './components/auth/PermissionGuard';
 
 const LoginPage = lazy(() => import('./pages/Login'));
 const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
@@ -193,7 +194,7 @@ function AppContent() {
               <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
               {/* 管理板块 */}
-              <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
+              <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
             </Route>
