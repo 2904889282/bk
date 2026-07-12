@@ -187,7 +187,6 @@ function AppContent() {
             {/* 统一布局 — 所有页面共用 BasicLayout 侧边栏 */}
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
               {/* 线索板块 */}
-              <Route path="ltc/dashboard" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/kanban" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />

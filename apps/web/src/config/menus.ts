@@ -15,7 +15,6 @@ export const UNIFIED_MENUS: MenuItem[] = [
   {
     name: '线索管理', icon: 'FundOutlined',
     children: [
-      { path: '/ltc/dashboard', name: '数据看板', icon: 'DashboardOutlined' },
       { path: '/ltc/kanban', name: '线索看板', icon: 'FundOutlined' },
       { path: '/ltc/leads', name: '线索列表', icon: 'UnorderedListOutlined' },
       { path: '/ltc/alerts', name: '预警中心', icon: 'AlertOutlined' },
