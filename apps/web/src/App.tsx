@@ -3,7 +3,6 @@ import { useEffect, lazy, Suspense } from 'react';
 import { App as AntdApp, ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuth } from './hooks/useAuth';
-import { useTheme } from './store/useTheme';
 import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
@@ -54,16 +53,13 @@ function AppInit() {
 }
 
 function AppContent() {
-  const { isDark } = useTheme();
-
   return (
     <ConfigProvider
       locale={zhCN}
       theme={{
-        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
+        algorithm: theme.defaultAlgorithm,
         token: {
-          /* ── Vercel Ink 墨水黑主色 ── */
-          colorPrimary: isDark ? '#fafafa' : '#171717',
+          colorPrimary: '#171717',
           colorInfo: '#0070f3',
           colorSuccess: '#0070f3',
           colorWarning: '#f5a623',
@@ -71,28 +67,20 @@ function AppContent() {
           colorLink: '#0070f3',
           colorLinkHover: '#0761d1',
           colorLinkActive: '#0059c8',
-
-          /* ── Vercel geist-radius: sm=6px ── */
           borderRadius: 6,
           borderRadiusLG: 12,
           borderRadiusSM: 4,
-
-          /* ── Vercel 表面体系 ── */
-          colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
-          colorBgElevated: isDark ? '#141414' : '#ffffff',
-          colorBgLayout: isDark ? '#0d0d0d' : '#fafafa',
-          colorBgSpotlight: isDark ? '#1a1a1a' : '#f5f5f5',
-          colorBorder: isDark ? '#2a2a2a' : '#ebebeb',
-          colorBorderSecondary: isDark ? '#1a1a1a' : '#ebebeb',
-          colorFillAlter: isDark ? '#141414' : '#f5f5f5',
-
-          /* ── Vercel 文字体系 ── */
-          colorText: isDark ? '#fafafa' : '#171717',
-          colorTextSecondary: isDark ? '#a1a1a1' : '#4d4d4d',
-          colorTextTertiary: isDark ? '#666666' : '#888888',
-          colorTextQuaternary: isDark ? '#444444' : '#a1a1a1',
-
-          /* ── 字体 — Inter 优先（Geist 开源替代）── */
+          colorBgContainer: '#ffffff',
+          colorBgElevated: '#ffffff',
+          colorBgLayout: '#fafafa',
+          colorBgSpotlight: '#f5f5f5',
+          colorBorder: '#ebebeb',
+          colorBorderSecondary: '#ebebeb',
+          colorFillAlter: '#f5f5f5',
+          colorText: '#171717',
+          colorTextSecondary: '#4d4d4d',
+          colorTextTertiary: '#888888',
+          colorTextQuaternary: '#a1a1a1',
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
           fontSize: 14,
           fontSizeHeading1: 30,
@@ -101,29 +89,15 @@ function AppContent() {
           fontSizeHeading4: 16,
           fontSizeHeading5: 14,
           lineHeight: 1.5714,
-
-          /* ── 控件高度 ── */
           controlHeight: 36,
           controlHeightLG: 42,
           controlHeightSM: 30,
-
-          /* ── 间距 ── */
           padding: 16,
           paddingLG: 24,
           paddingXS: 8,
           paddingSM: 12,
-
-          /* ── Vercel 层叠阴影（L3 作为默认卡片阴影）── */
-          boxShadow:
-            isDark
-              ? '0px 2px 4px rgba(0,0,0,0.3), 0px 8px 8px -8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06) inset'
-              : '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 8px -8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
-          boxShadowSecondary:
-            isDark
-              ? '0px 1px 2px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06) inset'
-              : '0px 1px 1px rgba(0,0,0,0.02), 0px 2px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
-
-          /* ── 动效 ── */
+          boxShadow: '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 8px -8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+          boxShadowSecondary: '0px 1px 1px rgba(0,0,0,0.02), 0px 2px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
           motionDurationSlow: '0.3s',
           motionDurationMid: '0.2s',
           motionDurationFast: '0.1s',
@@ -134,9 +108,9 @@ function AppContent() {
             itemBorderRadius: 6,
             itemMarginInline: 8,
             subMenuItemBg: 'transparent',
-            itemActiveBg: isDark ? '#1a1a1a' : '#f5f5f5',
-            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
-            itemSelectedColor: isDark ? '#fafafa' : '#171717',
+            itemActiveBg: '#f5f5f5',
+            itemSelectedBg: '#f5f5f5',
+            itemSelectedColor: '#171717',
             itemHeight: 40,
             iconSize: 16,
           },
@@ -146,11 +120,11 @@ function AppContent() {
           },
           Table: {
             borderRadius: 8,
-            headerBg: isDark ? '#141414' : '#fafafa',
-            headerColor: isDark ? '#a1a1a1' : '#4d4d4d',
-            headerSplitColor: isDark ? '#2a2a2a' : '#ebebeb',
-            rowHoverBg: isDark ? '#1a1a1a' : '#fafafa',
-            borderColor: isDark ? '#2a2a2a' : '#ebebeb',
+            headerBg: '#fafafa',
+            headerColor: '#4d4d4d',
+            headerSplitColor: '#ebebeb',
+            rowHoverBg: '#fafafa',
+            borderColor: '#ebebeb',
           },
           Button: {
             borderRadius: 6,
@@ -175,9 +149,9 @@ function AppContent() {
             controlHeightLG: 42,
             controlHeightSM: 30,
             paddingInline: 12,
-            colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
-            activeBorderColor: isDark ? '#fafafa' : '#171717',
-            hoverBorderColor: isDark ? '#a1a1a1' : '#4d4d4d',
+            colorBgContainer: '#ffffff',
+            activeBorderColor: '#171717',
+            hoverBorderColor: '#4d4d4d',
           },
           Modal: {
             borderRadiusLG: 12,
@@ -188,14 +162,14 @@ function AppContent() {
           },
           Tabs: {
             borderRadius: 6,
-            itemActiveColor: isDark ? '#fafafa' : '#171717',
-            itemHoverColor: isDark ? '#a1a1a1' : '#4d4d4d',
-            itemSelectedColor: isDark ? '#fafafa' : '#171717',
-            inkBarColor: isDark ? '#fafafa' : '#171717',
+            itemActiveColor: '#171717',
+            itemHoverColor: '#4d4d4d',
+            itemSelectedColor: '#171717',
+            inkBarColor: '#171717',
           },
           Segmented: {
             borderRadius: 6,
-            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
+            itemSelectedBg: '#f5f5f5',
           },
           Select: {
             borderRadius: 6,
