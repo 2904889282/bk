@@ -17,5 +17,9 @@ __pycache__/
 *.pyc
 .env
 .venv/
+_tmp_venv/
 # Test scripts
 scripts/test_*.py
+scripts/manual_rbac_test.py
+scripts/setup_test_users.py
+docs/sql/setup_rbac_test.sql

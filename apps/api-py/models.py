@@ -321,6 +321,7 @@ class BizProjectTeam(Base):
     dept = Column(String(64))
     role = Column(String(64))
     responsibility = Column(String(8))
+    work_description = Column("work_description", Text)
     sort_order = Column("sort_order", Integer, default=0)
     create_by = Column("create_by", BigInteger)
     create_time = Column("create_time", DateTime, default=_utcnow)

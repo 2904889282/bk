@@ -7,6 +7,13 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 import uuid
 
+# 导入权限核心模块
+from permissions import (
+    is_admin as _is_admin, require_admin as _require_admin,
+    verify_ownership, require_ownership, build_owner_filter,
+    PermissionChecker, OWNER_NAME_FIELDS, OWNER_ID_FIELDS,
+)
+
 bearer = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
@@ -38,30 +45,68 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
     return {"id": int(payload["sub"]), "username": payload["username"], "jti": payload.get("jti", "")}
 
 async def get_current_user_with_role(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer)):
-    """获取当前用户 + 角色 + 真实姓名（用于数据权限过滤）"""
+    """获取当前用户 + 角色 + 真实姓名 + 部门（用于数据权限过滤）"""
     u = await get_current_user(credentials)
     from database import async_session
     from sqlalchemy import text
     async with async_session() as db:
-        r = await db.execute(text("SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"), {"uid": u["id"]})
+        # 查询角色
+        r = await db.execute(text(
+            "SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"
+        ), {"uid": u["id"]})
         u["roles"] = [row[0] for row in r.all() if row[0]]
-        r2 = await db.execute(text("SELECT real_name FROM sys_user WHERE id=:uid"), {"uid": u["id"]})
+
+        # 查询用户详细信息
+        r2 = await db.execute(text(
+            "SELECT real_name, dept_id FROM sys_user WHERE id=:uid"
+        ), {"uid": u["id"]})
         row2 = r2.first()
-        u["realName"] = row2[0] if row2 else u["username"]
+        u["realName"] = row2[0] if row2 and row2[0] else u["username"]
+        u["deptId"] = row2[1] if row2 and row2[1] else None
+
+        # 查询部门名称（如果有关联）
+        if u.get("deptId"):
+            r3 = await db.execute(text(
+                "SELECT name FROM sys_dept WHERE id=:did"
+            ), {"did": u["deptId"]})
+            row3 = r3.first()
+            u["deptName"] = row3[0] if row3 else None
+        else:
+            u["deptName"] = None
+
     return u
 
+# ══════════════════════════════════════════════
+#  向后兼容的旧 API（标记为 deprecated，内部转发给权限模块）
+# ══════════════════════════════════════════════
 def require_admin(user: dict):
-    """要求管理员权限"""
-    if "ROLE_ADMIN" not in user.get("roles", []):
-        raise HTTPException(status_code=403, detail="仅管理员可操作")
+    """要求管理员权限 (deprecated: 建议使用 permissions.require_admin)"""
+    _require_admin(user)
 
 def is_admin(user: dict) -> bool:
-    """判断用户是否为管理员"""
-    return "ROLE_ADMIN" in user.get("roles", [])
+    """判断用户是否为管理员 (deprecated: 建议使用 permissions.is_admin)"""
+    return _is_admin(user)
 
 def verify_owner(user: dict, owner_field: str) -> bool:
-    """验证当前用户是否为资源的负责人（用于详情/更新/删除操作的权限校验）"""
-    if is_admin(user):
+    """
+    (deprecated) 单字段所有权校验。
+    新代码请使用 permissions.verify_ownership(user, resource, table_key)
+    """
+    from permissions import is_admin as p_is_admin
+    if p_is_admin(user):
         return True
     real_name = user.get("realName", "")
-    return real_name and real_name == owner_field
+    return bool(real_name and real_name == owner_field)
+
+# ══════════════════════════════════════════════
+#  新增：统一权限入口
+# ══════════════════════════════════════════════
+# 直接从 permissions 模块重新导出，路由中统一 import
+__all__ = [
+    'hash_password', 'verify_password', 'create_token', 'decode_token',
+    'get_current_user', 'get_current_user_with_role',
+    'require_admin', 'is_admin', 'verify_owner',
+    # 新权限 API
+    'verify_ownership', 'require_ownership', 'build_owner_filter',
+    'PermissionChecker', 'OWNER_NAME_FIELDS', 'OWNER_ID_FIELDS',
+]

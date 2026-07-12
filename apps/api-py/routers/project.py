@@ -5,6 +5,7 @@ from database import get_db
 from models import BizProject, BizProjectPeriod, BizProjectWeekly, BizProjectMilestone, BizProjectTeam, BizProjectWBS, BizProjectChange, SysUser
 from schemas import *
 from security import get_current_user_with_role
+from permissions import PermissionChecker, require_ownership, build_owner_filter
 from datetime import date
 import json
 
@@ -17,18 +18,31 @@ project_to_dict = row_to_camel  # 别名，保持现有调用兼容
 def clamp_page(pageNum: int, pageSize: int):
     return max(1, pageNum), min(max(1, pageSize), 100)
 
+# ──── 权限校验辅助 ────
+async def check_project_owner(project_id: int, db: AsyncSession, user: dict, action: str = "访问"):
+    """校验当前用户是否有权操作该项目，返回项目对象或抛 403"""
+    r = (await db.execute(
+        select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0)
+    )).scalar_one_or_none()
+    if not r:
+        from utils.response import fail
+        return fail("项目不存在"), None
+    require_ownership(user, project_to_dict(r), "project")
+    return None, r
+
 @router.get("/api/project/page")
 async def page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
                status: str = None, projectLevel: str = None, deptBelong: str = None,
                db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     pageNum, pageSize = clamp_page(pageNum, pageSize)
+    checker = PermissionChecker(user)
     q = select(BizProject).where(BizProject.is_deleted == 0)
-    # 非管理员只看与自己相关的项目
-    is_admin = "ROLE_ADMIN" in user.get("roles", [])
-    if not is_admin and user.get("realName"):
-        q = q.where(or_(BizProject.project_manager == user["realName"],
-                         BizProject.delivery_manager == user["realName"],
-                         BizProject.product_manager == user["realName"]))
+
+    # 统一权限过滤
+    f = checker.get_filter_cond(BizProject, "project")
+    if f is not None:
+        q = q.where(f)
+
     if keyword:
         q = q.where(or_(BizProject.project_name.contains(keyword), BizProject.client_name.contains(keyword)))
     if status: q = q.where(BizProject.project_status == status)
@@ -42,37 +56,30 @@ async def page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
 
 @router.get("/api/project/{project_id}")
 async def detail(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    r = await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))
-    p = r.scalar_one_or_none()
-    if not p: return fail("项目不存在")
-    from security import verify_owner
-    # 非管理员只能看自己管理的项目
-    if not verify_owner(user, p.project_manager or "") and not verify_owner(user, p.delivery_manager or "") and not verify_owner(user, p.product_manager or ""):
-        return fail("无权查看该项目")
-    if not p: return fail("项目不存在")
-    return success(project_to_dict(p))
+    r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
+    if not r: return fail("项目不存在")
+    require_ownership(user, project_to_dict(r), "project")
+    return success(project_to_dict(r))
 
 @router.post("/api/project")
 async def create(dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     data = dto.model_dump(exclude_none=True)
-    # camelCase → snake_case 映射
     key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
                "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
                "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
                "projectStatus":"project_status","deptBelong":"dept_belong","startDate":"start_date",
                "expectEndDate":"expect_end_date","riskAssessment":"risk_assessment"}
     mapped = {key_map.get(k, k): v for k, v in data.items()}
+    mapped["create_by"] = user["id"]  # 记录创建者
     p = BizProject(**mapped)
     db.add(p); await db.commit(); await db.refresh(p)
     return success(project_to_dict(p))
 
 @router.put("/api/project/{project_id}")
 async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
-    if not r: return fail("项目不存在")
-    from security import verify_owner
-    if not verify_owner(user, r.project_manager or "") and not verify_owner(user, r.delivery_manager or "") and not verify_owner(user, r.product_manager or ""):
-        return fail("无权修改该项目")
+    """编辑项目 — 管理员可编辑全部，非管理员只能编辑自己管理的"""
+    err, r = await check_project_owner(project_id, db, user, "修改")
+    if err: return err
     key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
                "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
                "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
@@ -85,28 +92,30 @@ async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depend
 
 @router.delete("/api/project/{project_id}")
 async def delete(project_id: int, body: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """删除项目 — 管理员可删除全部，非管理员只能删除自己管理的"""
     if not body.get("confirm"): return fail("请确认删除操作")
     r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not r: return fail("项目不存在")
-    from security import verify_owner
-    if not verify_owner(user, r.project_manager or "") and not verify_owner(user, r.delivery_manager or "") and not verify_owner(user, r.product_manager or ""):
-        return fail("无权删除该项目")
+    require_ownership(user, project_to_dict(r), "project")
     r.is_deleted = 1; await db.commit()
     return success()
 
 # ==================== 月度期数 ====================
 
 @router.get("/api/project-period/list/{project_id}")
-async def period_list(project_id: int, db: AsyncSession = Depends(get_db)):
+async def period_list(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看期数")
+    if err: return err
     q = select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc())
     rows = (await db.execute(q)).scalars().all()
     return success([project_to_dict(r) for r in rows])
 
 @router.post("/api/project-period")
-async def period_save(dto: ProjectPeriodDTO, db: AsyncSession = Depends(get_db)):
+async def period_save(dto: ProjectPeriodDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(dto.projectId, db, user, "保存期数")
+    if err: return err
     r = await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == dto.projectId, BizProjectPeriod.period_month == dto.periodMonth))
     exist = r.scalar_one_or_none()
-    # camelCase → snake_case 映射（与前端 DTO 对齐）
     period_map = {"projectId":"project_id","periodMonth":"period_month","periodStatus":"period_status",
                   "estimatedRevenue":"estimated_revenue","estimatedProfit":"estimated_profit",
                   "estimatedProfitRate":"estimated_profit_rate","estimatedCost":"estimated_cost",
@@ -136,32 +145,29 @@ async def period_save(dto: ProjectPeriodDTO, db: AsyncSession = Depends(get_db))
     return success(project_to_dict(p))
 
 @router.delete("/api/project-period/{period_id}")
-async def period_delete(period_id: int, db: AsyncSession = Depends(get_db)):
+async def period_delete(period_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     r = (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.id == period_id))).scalar_one_or_none()
-    if r: r.is_deleted = 1; await db.commit()
+    if r:
+        err, _ = await check_project_owner(r.project_id, db, user, "删除期数")
+        if err: return err
+        r.is_deleted = 1; await db.commit()
     return success()
 
 # ==================== 项目仪表盘（一次获取全部数据） ====================
 
 @router.get("/api/project/{project_id}/dashboard")
 async def dashboard(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    """一次请求返回项目全部数据：基本信息+月度+周报+里程碑+团队+WBS+风险+变更"""
-    # 基本信息
+    """一次请求返回项目全部数据 — 需要项目所有权"""
+    checker = PermissionChecker(user)
     proj = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not proj: return fail("项目不存在")
-    # 月度数据
+    require_ownership(user, project_to_dict(proj), "project")
     periods = (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc()))).scalars().all()
-    # 周报
     weeklies = (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0).order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc()))).scalars().all()
-    # 里程碑
     milestones = (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
-    # 团队
     team = (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
-    # WBS
     wbs = (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
-    # 变更
     changes = (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
-    # 风险
     risks = (await db.execute(text("SELECT * FROM biz_risk WHERE project_id=:pid AND is_deleted=0 ORDER BY create_time DESC"), {"pid": project_id})).mappings().all()
     return success({
         "project": project_to_dict(proj),
@@ -178,6 +184,8 @@ async def dashboard(project_id: int, db: AsyncSession = Depends(get_db), user=De
 
 @router.get("/api/project/{project_id}/weekly")
 async def weekly_list(project_id: int, month: str = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看周报")
+    if err: return err
     q = select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0)
     if month: q = q.where(BizProjectWeekly.period_month == month)
     q = q.order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc())
@@ -186,7 +194,9 @@ async def weekly_list(project_id: int, month: str = None, db: AsyncSession = Dep
 
 @router.post("/api/project/{project_id}/weekly")
 async def weekly_save(project_id: int, dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    """保存周报（有则更新，无则新建）"""
+    """保存周报（有则更新，无则新建）— 需要项目所有权"""
+    err, _ = await check_project_owner(project_id, db, user, "保存周报")
+    if err: return err
     month = dto.get("periodMonth")
     week = dto.get("weekNumber")
     existing = (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.period_month == month, BizProjectWeekly.week_number == week))).scalar_one_or_none()
@@ -208,16 +218,18 @@ async def weekly_save(project_id: int, dto: dict = Body(...), db: AsyncSession =
 
 @router.get("/api/project/{project_id}/milestones")
 async def milestone_list(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看里程碑")
+    if err: return err
     rows = (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
     return success([project_to_dict(r) for r in rows])
 
 @router.post("/api/project/{project_id}/milestones")
 async def milestone_save(project_id: int, items: list = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    """批量保存里程碑（覆盖式）"""
-    # 删除旧的
+    """批量保存里程碑（覆盖式）— 需要项目所有权"""
+    err, _ = await check_project_owner(project_id, db, user, "保存里程碑")
+    if err: return err
     old = (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id))).scalars().all()
     for o in old: await db.delete(o)
-    # 插入新的
     for i, item in enumerate(items):
         m = BizProjectMilestone(project_id=project_id, stage=item.get("stage"), milestone=item.get("milestone"),
                                 planned_date=item.get("plannedDate"), actual_date=item.get("actualDate"),
@@ -230,16 +242,22 @@ async def milestone_save(project_id: int, items: list = Body(...), db: AsyncSess
 
 @router.get("/api/project/{project_id}/team")
 async def team_list(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看团队")
+    if err: return err
     rows = (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
     return success([project_to_dict(r) for r in rows])
 
 @router.post("/api/project/{project_id}/team")
 async def team_save(project_id: int, items: list = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """批量保存团队（覆盖式）— 需要项目所有权"""
+    err, _ = await check_project_owner(project_id, db, user, "保存团队")
+    if err: return err
     old = (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id))).scalars().all()
     for o in old: await db.delete(o)
     for i, item in enumerate(items):
         t = BizProjectTeam(project_id=project_id, name=item.get("name"), dept=item.get("dept"),
-                          role=item.get("role"), responsibility=item.get("responsibility"), sort_order=i)
+                          role=item.get("role"), responsibility=item.get("responsibility"),
+                          work_description=item.get("workDescription"), sort_order=i)
         db.add(t)
     await db.commit()
     return success()
@@ -248,11 +266,16 @@ async def team_save(project_id: int, items: list = Body(...), db: AsyncSession =
 
 @router.get("/api/project/{project_id}/wbs")
 async def wbs_list(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看WBS")
+    if err: return err
     rows = (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
     return success([project_to_dict(r) for r in rows])
 
 @router.post("/api/project/{project_id}/wbs")
 async def wbs_save(project_id: int, items: list = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """批量保存 WBS（覆盖式）— 需要项目所有权"""
+    err, _ = await check_project_owner(project_id, db, user, "保存WBS")
+    if err: return err
     old = (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id))).scalars().all()
     for o in old: await db.delete(o)
     for i, item in enumerate(items):
@@ -271,11 +294,16 @@ async def wbs_save(project_id: int, items: list = Body(...), db: AsyncSession = 
 
 @router.get("/api/project/{project_id}/changes")
 async def change_list(project_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    err, _ = await check_project_owner(project_id, db, user, "查看变更记录")
+    if err: return err
     rows = (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
     return success([project_to_dict(r) for r in rows])
 
 @router.post("/api/project/{project_id}/changes")
 async def change_create(project_id: int, dto: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    """创建变更记录 — 需要项目所有权"""
+    err, _ = await check_project_owner(project_id, db, user, "创建变更记录")
+    if err: return err
     col_map = {"changeDate": "change_date", "affectedTask": "affected_task", "changeSummary": "change_summary", "changeReason": "change_reason", "impactAnalysis": "impact_analysis"}
     c = BizProjectChange(project_id=project_id, **{col_map.get(k, k): v for k, v in dto.items() if col_map.get(k, k) in [c.key for c in BizProjectChange.__table__.columns]})
     db.add(c); await db.commit(); await db.refresh(c)
