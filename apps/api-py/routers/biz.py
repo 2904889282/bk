@@ -229,6 +229,33 @@ async def clue_campaign_dashboard(campaignId: int = Query(...), db: AsyncSession
         "expectedThisWeek": 0,
     })
 
+# 批量操作（必须在参数化路由之前）
+@router.delete("/api/clue/batch")
+async def clue_batch_delete(ids: list[int], db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue SET is_deleted=1 WHERE id IN :ids"), {"ids": tuple(ids)})
+    await db.commit(); return success()
+
+@router.put("/api/clue/batch/assign")
+async def clue_batch_assign(ids: list[int], owner: str, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue SET beike_owner=:owner WHERE id IN :ids"), {"owner": owner, "ids": tuple(ids)})
+    await db.commit(); return success()
+
+@router.put("/api/clue/batch/level")
+async def clue_batch_level(ids: list[int], level: str, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue SET clue_level=:level WHERE id IN :ids"), {"level": level, "ids": tuple(ids)})
+    await db.commit(); return success()
+
+@router.put("/api/clue/batch/campaign")
+async def clue_batch_campaign(ids: list[int], campaignId: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue SET campaign_id=:cid WHERE id IN :ids"), {"cid": campaignId, "ids": tuple(ids)})
+    await db.commit(); return success()
+
+@router.post("/api/clue/export-weekly")
+async def clue_export_weekly(clueIds: list[int], db: AsyncSession = Depends(get_db)):
+    if not clueIds: return success([])
+    rows = (await db.execute(text("SELECT c.id, c.clue_name, c.client_company, c.beike_owner, c.clue_status, c.opportunity_amount, c.contact_date, c.requirement_desc, c.clue_evaluation, c.review_status FROM biz_clue c WHERE c.id IN :ids AND c.is_deleted=0"), {"ids": tuple(clueIds)})).mappings().all()
+    return success([dict(r) for r in rows])
+
 @router.get("/api/clue/{clue_id}")
 async def clue_detail(clue_id: int, db: AsyncSession = Depends(get_db)):
     r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
@@ -598,3 +625,176 @@ def _field_desc(en: str) -> str:
         "dept_belong": "承接部门名称",
     }
     return desc_map.get(en, "")
+
+# ==================== 线索转项目 ====================
+
+@router.post("/api/clue/{clue_id}/convert")
+async def clue_convert(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    clue = (await db.execute(select(BizClue).where(BizClue.id == clue_id, BizClue.is_deleted == 0))).scalar_one_or_none()
+    if not clue: return fail("线索不存在")
+    from models import BizProject
+    proj = BizProject(
+        project_name=dto.get("projectName", clue.clue_name),
+        client_name=clue.client_company or "",
+        project_manager=dto.get("projectManager", clue.beike_owner or "") or "",
+        project_amount=dto.get("projectAmount", clue.opportunity_amount or 0),
+        dept_belong=clue.dept_belong or "",
+        source_clue_id=clue.id,
+        start_date=str(date.today()),
+    )
+    db.add(proj); await db.flush()
+    clue.converted_opportunity_id = proj.id; clue.is_converted = True
+    await db.commit()
+    return success({"projectId": proj.id})
+
+# ==================== 线索全量详情 ====================
+
+@router.get("/api/clue/{clue_id}/full-detail")
+async def clue_full_detail(clue_id: int, db: AsyncSession = Depends(get_db)):
+    clue = (await db.execute(select(BizClue).where(BizClue.id == clue_id, BizClue.is_deleted == 0))).scalar_one_or_none()
+    if not clue: return fail("线索不存在")
+    follows = (await db.execute(text("SELECT * FROM biz_clue_follow WHERE clue_id=:cid AND is_deleted=0 ORDER BY follow_date DESC"), {"cid": clue_id})).mappings().all()
+    contacts = (await db.execute(text("SELECT * FROM biz_clue_contact WHERE clue_id=:cid AND is_deleted=0"), {"cid": clue_id})).mappings().all()
+    reviews = (await db.execute(text("SELECT * FROM biz_clue_opportunity_review WHERE clue_id=:cid"), {"cid": clue_id})).mappings().all()
+    logs = (await db.execute(text("SELECT * FROM biz_clue_log WHERE clue_id=:cid ORDER BY create_time DESC"), {"cid": clue_id})).mappings().all()
+    tasks = (await db.execute(text("SELECT * FROM biz_iron_triangle_task WHERE clue_id=:cid AND is_deleted=0"), {"cid": clue_id})).mappings().all()
+    resources = (await db.execute(text("SELECT * FROM biz_clue_resource WHERE clue_id=:cid AND is_deleted=0"), {"cid": clue_id})).mappings().all()
+    solutions = (await db.execute(text("SELECT * FROM biz_clue_solution WHERE clue_id=:cid AND is_deleted=0"), {"cid": clue_id})).mappings().all()
+    files = (await db.execute(text("SELECT * FROM biz_clue_file WHERE clue_id=:cid AND is_deleted=0"), {"cid": clue_id})).mappings().all()
+    return success({
+        "clue": row_to_dict(clue),
+        "followRecords": [dict(x) for x in follows],
+        "contacts": [dict(x) for x in contacts],
+        "opportunityReviews": [dict(x) for x in reviews],
+        "logs": [dict(x) for x in logs],
+        "ironTriangleTasks": [dict(x) for x in tasks],
+        "resources": [dict(x) for x in resources],
+        "solutions": [dict(x) for x in solutions],
+        "files": [dict(x) for x in files],
+    })
+
+# ==================== 商机评审 ====================
+
+@router.post("/api/clue/{clue_id}/opportunity-review")
+async def clue_submit_review(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    import uuid
+    code = f"OPP-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    await db.execute(text("INSERT INTO biz_clue_opportunity_review (clue_id, reviewer_id, opinion, opportunity_amount, expected_duration, conclusion, opportunity_code, create_time) VALUES (:cid, :uid, :opinion, :amt, :dur, '待审批', :code, :now)"),
+                     {"cid": clue_id, "uid": user["id"], "opinion": dto.get("opinion", ""), "amt": dto.get("opportunityAmount", 0),
+                      "dur": dto.get("expectedDuration", 0), "code": code, "now": datetime.now(timezone.utc).replace(tzinfo=None)})
+    await db.commit()
+    return success()
+
+@router.put("/api/clue/{clue_id}/review/{review_id}/approve")
+async def clue_approve_review(clue_id: int, review_id: int, db: AsyncSession = Depends(get_db)):
+    import uuid
+    code = f"OPP-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    await db.execute(text("UPDATE biz_clue_opportunity_review SET conclusion='通过', opportunity_code=:code WHERE id=:rid"), {"code": code, "rid": review_id})
+    await db.execute(text("UPDATE biz_clue SET review_status='通过' WHERE id=:cid"), {"cid": clue_id})
+    await db.commit()
+    return success({"opportunityCode": code})
+
+@router.put("/api/clue/{clue_id}/review/{review_id}/decision")
+async def clue_decide_review(clue_id: int, review_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    conclusion = dto.get("conclusion", "驳回")
+    opinion = dto.get("opinion", "")
+    code = None
+    if conclusion == "通过":
+        import uuid
+        code = f"OPP-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    await db.execute(text("UPDATE biz_clue_opportunity_review SET conclusion=:c, opinion=:o, opportunity_code=COALESCE(:code, opportunity_code) WHERE id=:rid"),
+                     {"c": conclusion, "o": opinion, "code": code, "rid": review_id})
+    if conclusion == "通过":
+        await db.execute(text("UPDATE biz_clue SET review_status='通过' WHERE id=:cid"), {"cid": clue_id})
+    await db.commit()
+    return success({"opportunityCode": code})
+
+# ==================== 决策人 ====================
+
+@router.post("/api/clue/{clue_id}/contacts")
+async def clue_add_contact(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("INSERT INTO biz_clue_contact (clue_id, name, position, level, contact_info, attitude, influence_weight, remarks, interaction_records, personal_focus, relations) VALUES (:cid, :name, :pos, :lvl, :info, :att, :iw, :rmk, :ir, :pf, :rel)"),
+                     {"cid": clue_id, "name": dto.get("name", ""), "pos": dto.get("position", ""), "lvl": dto.get("level", ""),
+                      "info": dto.get("contactInfo", ""), "att": dto.get("attitude", ""), "iw": dto.get("influenceWeight", 1),
+                      "rmk": dto.get("remarks", ""), "ir": dto.get("interactionRecords", ""), "pf": dto.get("personalFocus", ""), "rel": dto.get("relations", "")})
+    await db.commit(); return success()
+
+@router.put("/api/clue/{clue_id}/contacts/{contact_id}")
+async def clue_update_contact(clue_id: int, contact_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue_contact SET name=:name, position=:pos, level=:lvl, contact_info=:info, attitude=:att, influence_weight=:iw, remarks=:rmk, interaction_records=:ir, personal_focus=:pf, relations=:rel WHERE id=:id AND clue_id=:cid"),
+                     {"name": dto.get("name", ""), "pos": dto.get("position", ""), "lvl": dto.get("level", ""),
+                      "info": dto.get("contactInfo", ""), "att": dto.get("attitude", ""), "iw": dto.get("influenceWeight", 1),
+                      "rmk": dto.get("remarks", ""), "ir": dto.get("interactionRecords", ""), "pf": dto.get("personalFocus", ""),
+                      "rel": dto.get("relations", ""), "id": contact_id, "cid": clue_id})
+    await db.commit(); return success()
+
+# ==================== 资源协同 ====================
+
+@router.post("/api/clue/{clue_id}/resources")
+async def clue_add_resource(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("INSERT INTO biz_clue_resource (clue_id, resource_type, status, apply_time, effect_notes) VALUES (:cid, :rt, :st, :at, :en)"),
+                     {"cid": clue_id, "rt": dto.get("resourceType", ""), "st": dto.get("status", "申请中"), "at": str(date.today()), "en": dto.get("effectNotes", "")})
+    await db.commit(); return success()
+
+# ==================== 铁三角任务 ====================
+
+@router.post("/api/clue/{clue_id}/iron-triangle")
+async def clue_add_triangle_task(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("INSERT INTO biz_iron_triangle_task (clue_id, role, assignee_id, task_title, status, deadline, deliverable) VALUES (:cid, :role, :aid, :title, :st, :dl, :dv)"),
+                     {"cid": clue_id, "role": dto.get("role", ""), "aid": dto.get("assigneeId", None), "title": dto.get("taskTitle", ""),
+                      "st": dto.get("status", "待启动"), "dl": dto.get("deadline", None), "dv": dto.get("deliverable", "")})
+    await db.commit(); return success()
+
+# ==================== 方案库 ====================
+
+@router.get("/api/clue/{clue_id}/solutions")
+async def clue_solutions(clue_id: int, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT * FROM biz_clue_solution WHERE clue_id=:cid AND is_deleted=0 ORDER BY create_time DESC"), {"cid": clue_id})).mappings().all()
+    return success([dict(r) for r in rows])
+
+@router.post("/api/clue/{clue_id}/solutions")
+async def clue_save_solution(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("INSERT INTO biz_clue_solution (clue_id, solution_type, title, description, product_levels, file_name, file_url, file_size, is_pool) VALUES (:cid, :st, :title, :desc, :pl, :fn, :fu, :fs, :ip)"),
+                     {"cid": clue_id, "st": dto.get("solutionType", ""), "title": dto.get("title", ""), "desc": dto.get("description", ""),
+                      "pl": dto.get("productLevels", ""), "fn": dto.get("fileName", ""), "fu": dto.get("fileUrl", ""),
+                      "fs": dto.get("fileSize", 0), "ip": dto.get("isPool", 0)})
+    await db.commit(); return success()
+
+@router.delete("/api/clue/{clue_id}/solutions/{solution_id}")
+async def clue_delete_solution(clue_id: int, solution_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue_solution SET is_deleted=1 WHERE id=:id AND clue_id=:cid"), {"id": solution_id, "cid": clue_id})
+    await db.commit(); return success()
+
+# ==================== 资料库 ====================
+
+@router.get("/api/clue/{clue_id}/files")
+async def clue_files(clue_id: int, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT * FROM biz_clue_file WHERE clue_id=:cid AND is_deleted=0 ORDER BY create_time DESC"), {"cid": clue_id})).mappings().all()
+    return success([dict(r) for r in rows])
+
+@router.post("/api/clue/{clue_id}/files")
+async def clue_upload_file(clue_id: int, dto: dict, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("INSERT INTO biz_clue_file (clue_id, file_type, file_name, file_url, file_size, file_ext, mime_type, description, is_pool) VALUES (:cid, :ft, :fn, :fu, :fs, :fe, :mt, :desc, :ip)"),
+                     {"cid": clue_id, "ft": dto.get("fileType", ""), "fn": dto.get("fileName", ""), "fu": dto.get("fileUrl", ""),
+                      "fs": dto.get("fileSize", 0), "fe": dto.get("fileExt", ""), "mt": dto.get("mimeType", ""),
+                      "desc": dto.get("description", ""), "ip": dto.get("isPool", 0)})
+    await db.commit(); return success()
+
+@router.delete("/api/clue/{clue_id}/files/{file_id}")
+async def clue_delete_file(clue_id: int, file_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue_file SET is_deleted=1 WHERE id=:id AND clue_id=:cid"), {"id": file_id, "cid": clue_id})
+    await db.commit(); return success()
+
+@router.put("/api/clue/{clue_id}/files/{file_id}/pool")
+async def clue_pool_file(clue_id: int, file_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(text("UPDATE biz_clue_file SET is_pool=1 WHERE id=:id AND clue_id=:cid"), {"id": file_id, "cid": clue_id})
+    await db.commit(); return success()
+
+# ==================== 操作日志 + 周报导出 ====================
+
+@router.get("/api/clue/{clue_id}/logs")
+async def clue_logs(clue_id: int, db: AsyncSession = Depends(get_db)):
+    rows = (await db.execute(text("SELECT * FROM biz_clue_log WHERE clue_id=:cid ORDER BY create_time DESC Limit 100"), {"cid": clue_id})).mappings().all()
+    return success([dict(r) for r in rows])
+
+
