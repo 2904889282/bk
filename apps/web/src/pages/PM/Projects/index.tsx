@@ -138,7 +138,9 @@ export default function PMProjects() {
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
         <h2 style={{fontSize:20,fontWeight:600,margin:0,letterSpacing:'-0.3px',color:T.ink}}>项目列表</h2>
         <div style={{display:'flex',gap:8}}>
-          <button onClick={exportCSV} style={{padding:'7px 16px',borderRadius:8,border:`1px solid ${T.hl}`,background:'transparent',color:T.ink3,fontSize:13,fontFamily:'inherit',cursor:'pointer'}}>📥 导出</button>
+          <input type="file" accept=".xlsx,.xls" style={{display:'none'}} id="importFile" onChange={e=>{const f=e.target.files?.[0];if(f)alert('导入功能: '+f.name)}} />
+          <button onClick={()=>document.getElementById('importFile')?.click()} style={{padding:'7px 16px',borderRadius:8,border:`1px solid ${T.hl}`,background:'transparent',color:T.ink3,fontSize:13,fontFamily:'inherit',cursor:'pointer'}}>📥 导入</button>
+          <button onClick={exportCSV} style={{padding:'7px 16px',borderRadius:8,border:`1px solid ${T.hl}`,background:'transparent',color:T.ink3,fontSize:13,fontFamily:'inherit',cursor:'pointer'}}>📤 导出</button>
           <button onClick={() => { setEditTarget(null); setModalOpen(true); }} style={{padding:'7px 16px',borderRadius:8,border:'none',background:T.p,color:'#fff',fontSize:13,fontFamily:'inherit',cursor:'pointer',fontWeight:500}}>+ 新增项目</button>
         </div>
       </div>

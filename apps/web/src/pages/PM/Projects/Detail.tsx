@@ -1,7 +1,7 @@
 /** 项目详情 — 1:1 像素级对齐规范 (renderProjectDetail) */
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchDashboard, fetchProjectPage, createProject, updateProject, type ProjectDashboard, type ProjectVO } from '../../../api/project';
+import { fetchDashboard, fetchProjectPage, createProject, updateProject, deleteProject, type ProjectDashboard, type ProjectVO } from '../../../api/project';
 
 const T={s1:'#0f1011',s2:'#141516',hl:'#23252a',hls:'#34343a',ink:'#f7f8f8',ink2:'#d0d6e0',ink3:'#8a8f98',ink4:'#757880',p:'#5e6ad2',ok:'#27a644',warn:'#d4a030',err:'#e05050',bg:'#010102'};
 const fm = (n?:number|string)=>{const v=Number(n);if(!v||isNaN(v))return'-';return v>=10000?`¥${(v/10000).toFixed(0)}万`:`¥${v.toFixed(0)}`;};
@@ -69,7 +69,7 @@ export default function ProjectDetail(){
               <option value="">更新状态...</option><option value="正式执行">正式执行</option><option value="进行中">进行中</option><option value="已完成">已完成</option><option value="暂停">暂停</option>
             </select>
             <button onClick={duplicate} style={{background:'transparent',color:T.ink3,border:`1px solid ${T.hl}`,borderRadius:8,fontSize:13,padding:'8px 14px',cursor:'pointer',fontFamily:'inherit'}}>📄</button>
-            <button onClick={()=>{if(confirm('确定删除该项目？')){}} } style={{background:'transparent',color:T.err,border:'1px solid rgba(200,60,60,0.3)',borderRadius:8,fontSize:13,padding:'8px 14px',cursor:'pointer',fontFamily:'inherit'}}>🗑</button>
+            <button onClick={()=>{if(confirm('确定永久删除该项目？')){deleteProject(p.id).then(()=>nav('/pm/projects')).catch(()=>setMsg('删除失败'));}}} style={{background:'transparent',color:T.err,border:'1px solid rgba(200,60,60,0.3)',borderRadius:8,fontSize:13,padding:'8px 14px',cursor:'pointer',fontFamily:'inherit'}}>🗑</button>
           </div>
         </div>
         {/* KPI行 */}
@@ -138,8 +138,8 @@ export default function ProjectDetail(){
                 </select>
               </div>
               <div style={{display:'flex',gap:6,paddingLeft:19}}>
-                <input defaultValue={m.deadline||''} placeholder="截止日" type="date" onBlur={()=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
-                <input defaultValue={m.reward||''} placeholder="奖励" onBlur={()=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
+                <input defaultValue={m.deadline||''} placeholder="截止日" type="date" onBlur={e=>{if(e.target.value)sv('remark',e.target.value)}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
+                <input defaultValue={m.reward||''} placeholder="奖励" onBlur={e=>{if(e.target.value)sv('riskAssessment',e.target.value)}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
               </div>
             </div>);})}
           {ms.length<6&&<div onClick={()=>{}} style={{padding:'6px 10px',textAlign:'center',color:T.ink4,fontSize:11,cursor:'pointer',border:'1px dashed '+T.hl,borderRadius:6,marginTop:4}}>+ 添加里程碑 ({ms.length}/6)</div>}
