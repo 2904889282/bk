@@ -17,12 +17,12 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --port 8080
     environment:
       TZ: Asia/Shanghai
-      db_host: ${DB_HOST:?err: DB_HOST 必须通过 .env 文件或环境变量提供}
+      db_host: ${DB_HOST}
       db_port: ${DB_PORT:-3306}
       db_name: ${DB_NAME:-beike_platform}
       db_user: ${DB_USER:-beike}
-      db_password: ${DB_PASSWORD:?err: DB_PASSWORD 必须通过 .env 文件或环境变量提供}
-      jwt_secret: ${JWT_SECRET:?err: JWT_SECRET 必须通过 .env 文件或环境变量提供}
+      db_password: ${DB_PASSWORD}
+      jwt_secret: ${JWT_SECRET}
       jwt_access_expire_hours: ${JWT_ACCESS_EXPIRE_HOURS:-1}
       jwt_refresh_expire_days: ${JWT_REFRESH_EXPIRE_DAYS:-7}
       upload_dir: /app/uploads
