@@ -9,7 +9,6 @@ import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
 
 const LoginPage = lazy(() => import('./pages/Login'));
-const LtcKanban = lazy(() => import('./pages/LTC/Kanban'));
 const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
 const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
 const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
@@ -216,7 +215,7 @@ function AppContent() {
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
               {/* 线索板块 */}
               <Route path="ltc/dashboard" element={withSuspense(<LeadsList />)} />
-              <Route path="ltc/kanban" element={withSuspense(<LtcKanban />)} />
+              <Route path="ltc/kanban" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />
               <Route path="ltc/pipeline" element={withSuspense(<PipelineList />)} />
