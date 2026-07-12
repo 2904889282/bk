@@ -4,15 +4,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { fetchDashboard, fetchProjectPage, createProject, updateProject, type ProjectDashboard, type ProjectVO } from '../../../api/project';
 
 const T={s1:'#0f1011',s2:'#141516',hl:'#23252a',hls:'#34343a',ink:'#f7f8f8',ink2:'#d0d6e0',ink3:'#8a8f98',ink4:'#757880',p:'#5e6ad2',ok:'#27a644',warn:'#d4a030',err:'#e05050',bg:'#010102'};
-const R:Record<string,string>={A:'#e5484d',B:'#f5a623',C:'#6b7280'};
 const fm = (n?:number|string)=>{const v=Number(n);if(!v||isNaN(v))return'-';return v>=10000?`¥${(v/10000).toFixed(0)}万`:`¥${v.toFixed(0)}`;};
-const fd = (s?:string)=>s?.slice(5).replace(/^0/,'')+'/'+s?.slice(8)||'-';
 
 const inlineInput = (val:string,onChange:(v:string)=>void,style:React.CSSProperties={})=>(
-  <input defaultValue={val} onBlur={e=>{if(e.target.value!==val)onChange(e.target.value);}}
+  <input defaultValue={val}
+    onBlur={e=>{if(e.target.value!==val)onChange(e.target.value);e.target.style.borderColor='transparent';e.target.style.background=T.s2;}}
     style={{background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'3px 6px',fontSize:12,color:T.ink,fontFamily:'inherit',outline:'none',...style}}
     onFocus={e=>{e.target.style.borderColor=T.hls;e.target.style.background=T.s1;}}
-    onBlur={e=>{e.target.style.borderColor='transparent';e.target.style.background=T.s2;}}/>
+  />
 );
 
 const Panel=({title,children}:{title:string;children:React.ReactNode})=>(
@@ -133,25 +132,25 @@ export default function ProjectDetail(){
             return(<div key={i} style={{marginBottom:6,padding:'8px 10px',border:`1px solid ${T.hl}`,borderRadius:6,borderLeft:`3px solid ${done?T.ok:T.warn}`,background:done?'rgba(39,166,68,0.04)':T.s1}}>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:(m.deadline||m.reward)?4:0}}>
                 <span style={{fontSize:11,color:done?T.ok:T.warn}}>{done?'●':'○'}</span>
-                {inlineInput(m.name||'新里程碑',v=>{}, {fontSize:12,fontWeight:500,flex:1})}
-                <select defaultValue={m.status||''} onChange={e=>{}} style={{background:T.s2,border:`1px solid ${T.hl}`,borderRadius:4,color:T.ink,fontSize:10,padding:'2px 6px',cursor:'pointer',fontFamily:'inherit',marginLeft:'auto'}}>
+                {inlineInput(m.name||'新里程碑',()=>{}, {fontSize:12,fontWeight:500,flex:1})}
+                <select defaultValue={m.status||''} onChange={()=>{}} style={{background:T.s2,border:`1px solid ${T.hl}`,borderRadius:4,color:T.ink,fontSize:10,padding:'2px 6px',cursor:'pointer',fontFamily:'inherit',marginLeft:'auto'}}>
                   <option value="未完成">未完成</option><option value="已完成">已完成</option>
                 </select>
               </div>
               <div style={{display:'flex',gap:6,paddingLeft:19}}>
-                <input defaultValue={m.deadline||''} placeholder="截止日" type="date" onBlur={e=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
-                <input defaultValue={m.reward||''} placeholder="奖励" onBlur={e=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
+                <input defaultValue={m.deadline||''} placeholder="截止日" type="date" onBlur={()=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
+                <input defaultValue={m.reward||''} placeholder="奖励" onBlur={()=>{}} style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'2px 4px',fontSize:10,color:T.ink,fontFamily:'inherit',outline:'none'}}/>
               </div>
             </div>);})}
           {ms.length<6&&<div onClick={()=>{}} style={{padding:'6px 10px',textAlign:'center',color:T.ink4,fontSize:11,cursor:'pointer',border:'1px dashed '+T.hl,borderRadius:6,marginTop:4}}>+ 添加里程碑 ({ms.length}/6)</div>}
         </Panel>
         <Panel title="进展与风险">
           <div style={{marginBottom:8}}><div style={{fontSize:11,color:T.ink4,marginBottom:4}}>风险评估</div>
-            <input defaultValue={p.riskAssessment||''} onBlur={e=>sv('riskAssessment',e.target.value)} placeholder="输入风险评估..." style={{width:'100%',background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:12,color:T.ink,fontFamily:'inherit',outline:'none'}}
-              onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor=T.hl}/></div>
+            <input defaultValue={p.riskAssessment||''} onBlur={e=>{sv('riskAssessment',e.target.value);e.target.style.borderColor=T.hl}} placeholder="输入风险评估..." style={{width:'100%',background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:12,color:T.ink,fontFamily:'inherit',outline:'none'}}
+              onFocus={e=>e.target.style.borderColor=T.hls}/></div>
           <div style={{marginTop:8}}><div style={{fontSize:11,color:T.ink4,marginBottom:4}}>进展解读</div>
-            <textarea defaultValue={p.description||''} onBlur={e=>sv('description',e.target.value)} placeholder="描述项目进展..." style={{width:'100%',minHeight:70,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:12,color:T.ink,fontFamily:'inherit',resize:'vertical',outline:'none'}}
-              onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor=T.hl}/></div>
+            <textarea defaultValue={p.description||''} onBlur={e=>{sv('description',e.target.value);e.target.style.borderColor=T.hl}} placeholder="描述项目进展..." style={{width:'100%',minHeight:70,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:12,color:T.ink,fontFamily:'inherit',resize:'vertical',outline:'none'}}
+              onFocus={e=>e.target.style.borderColor=T.hls}/></div>
           <div style={{fontSize:10,color:T.ink4,marginTop:6}}>修改后自动保存</div>
         </Panel>
       </div>
