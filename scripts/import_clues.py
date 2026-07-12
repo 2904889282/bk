@@ -6,11 +6,14 @@ from sqlalchemy import create_engine, text
 
 EXCEL_PATH = sys.argv[1] if len(sys.argv) > 1 else "线索导入模板.xlsx"
 
-DB_HOST = os.getenv("db_host", "rm-2zery46bn1074b1b1.mysql.rds.aliyuncs.com")
+DB_HOST = os.getenv("db_host")
 DB_PORT = os.getenv("db_port", "3306")
 DB_NAME = os.getenv("db_name", "beike_platform")
 DB_USER = os.getenv("db_user", "beike")
-DB_PASSWORD = os.getenv("db_password", "BEIKEadmin123")
+DB_PASSWORD = os.getenv("db_password")
+if not DB_HOST or not DB_PASSWORD:
+    print("错误: 请设置环境变量 db_host 和 db_password")
+    sys.exit(1)
 DB_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
 engine = create_engine(DB_URL)
 

@@ -65,14 +65,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="贝壳管理平台", version="2.1.0", lifespan=lifespan)
 
-# CORS: 仅允许已知的生产和开发域名
+# CORS: 仅允许已知的生产和开发域名（生产域名通过 CORS_ORIGINS 环境变量注入）
 _ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
     "http://127.0.0.1:5173",
-    "http://123.57.140.159",
-    "https://beike.example.com",
 ]
+# 生产环境域名通过环境变量注入（逗号分隔）
+_cors_env = os.environ.get("CORS_ORIGINS", "")
+if _cors_env:
+    _ALLOWED_ORIGINS.extend(origin.strip() for origin in _cors_env.split(",") if origin.strip())
 @app.middleware("http")
 async def add_request_id(request: Request, call_next):
     """为每个请求注入 X-Request-ID，便于跨服务日志关联。

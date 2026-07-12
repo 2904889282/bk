@@ -43,8 +43,7 @@ def test_cors_not_allow_all():
     from main import _ALLOWED_ORIGINS
     assert "*" not in _ALLOWED_ORIGINS
     assert len(_ALLOWED_ORIGINS) > 0
-    # 生产地址必须在白名单中
-    assert "http://123.57.140.159" in _ALLOWED_ORIGINS
+    # CORS 白名单应为具体域名（含 localhost），不检查生产IP（由环境变量注入）
 
 
 # ==================== 4. 密码重置认证保护 ====================

@@ -590,7 +590,7 @@ def _parse_date(v):
 
 
 @router.get("/api/clue/import/template")
-async def clue_import_template():
+async def clue_import_template(user=Depends(get_current_user_with_role)):
     """下载线索导入 Excel 模板"""
     import pandas as pd
     from io import BytesIO
