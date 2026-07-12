@@ -16,9 +16,7 @@ const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
 const PipelineList = lazy(() => import('./pages/Pipeline/List'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
-const RecycleBin = lazy(() => import('./pages/Admin/RecycleBin'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
-const ResourcesPage = lazy(() => import('./pages/Resources'));
 const StatPlaceholder = lazy(() => import('./pages/StatPlaceholder'));
 
 function PageLoading() {
@@ -226,9 +224,7 @@ function AppContent() {
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
               {/* 管理板块 */}
               <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
-              <Route path="admin/recycle" element={withSuspense(<RecycleBin />)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
-              <Route path="resources" element={withSuspense(<ResourcesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
             </Route>
             {/* 根路径 → 直接进入工作台 */}

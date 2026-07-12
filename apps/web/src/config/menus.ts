@@ -27,8 +27,6 @@ export const UNIFIED_MENUS: MenuItem[] = [
     name: '系统管理', icon: 'SettingOutlined',
     children: [
       { path: '/admin/users', name: '用户管理', icon: 'UserOutlined' },
-      { path: '/admin/recycle', name: '数据回收站', icon: 'DeleteOutlined' },
-      { path: '/resources', name: '资源库', icon: 'FolderOpenOutlined' },
     ],
   },
 ];
