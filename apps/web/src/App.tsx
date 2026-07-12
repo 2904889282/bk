@@ -9,7 +9,6 @@ import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
 
 const LoginPage = lazy(() => import('./pages/Login'));
-const PortalPage = lazy(() => import('./pages/Portal'));
 const LtcKanban = lazy(() => import('./pages/LTC/Kanban'));
 const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
 const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
@@ -74,8 +73,6 @@ function AppInit() {
 
 function AppContent() {
   const { isDark } = useTheme();
-  const location = useLocation();
-  const isRoot = location.pathname === '/';
 
   return (
     <ConfigProvider
@@ -230,10 +227,6 @@ function AppContent() {
       <AntdApp>
         <MessageInjector />
         <AppInit />
-        {isRoot ? (
-          // 闪屏首页 — 在 <Routes> 外部渲染，零路由冲突
-          <PrivateRoute>{withSuspense(<PortalPage />)}</PrivateRoute>
-        ) : (
           <Routes>
             <Route path="/login" element={withSuspense(<LoginPage />)} />
             {/* 统一布局 — 所有页面共用 BasicLayout 侧边栏 */}
@@ -268,10 +261,11 @@ function AppContent() {
               <Route path="resources" element={withSuspense(<ResourcesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
             </Route>
+            {/* 根路径 → 直接进入工作台 */}
+            <Route index element={<Navigate to="/ltc/leads" replace />} />
             {/* 未知路径回退 */}
             <Route path="*" element={<Navigate to="/ltc/kanban" replace />} />
           </Routes>
-        )}
       </AntdApp>
     </ConfigProvider>
   );
