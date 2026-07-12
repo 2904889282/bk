@@ -51,13 +51,7 @@ export default function BasicLayout() {
   const [demoBannerVisible, setDemoBannerVisible] = useState(true);
   const [checkingHealth, setCheckingHealth] = useState(false);
 
-  const handleLogoEnter = () => {
-    if (logoTimer.current) clearTimeout(logoTimer.current);
-    setLogoHovered(true);
-  };
-  const handleLogoLeave = () => {
-    logoTimer.current = setTimeout(() => setLogoHovered(false), 200);
-  };
+  const demoMode = isMockMode();
 
   /** 检测后端是否在线，在线则切换到真实模式 */
   const handleCheckConnection = async () => {
