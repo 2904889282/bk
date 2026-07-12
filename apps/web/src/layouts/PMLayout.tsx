@@ -52,8 +52,13 @@ export default function PMLayout() {
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); }
-      if (document.activeElement === document.body && e.key === 'Escape') setCmdOpen(false);
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); setCollapsed(c => !c); return; }
+      if (e.key === 'Escape') { setCmdOpen(false); return; }
+      if (document.activeElement !== document.body) return;
+      // 单键导航
+      const map: Record<string,string> = {d:'/pm/dashboard',b:'/pm/board',l:'/pm/projects',g:'/pm/goals',r:'/pm/revenue',t:'/pm/team',s:'/pm/staff',n:'/pm/gantt'};
+      if (map[e.key.toLowerCase()]) navigate(map[e.key.toLowerCase()]);
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);

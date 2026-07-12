@@ -153,12 +153,19 @@ export default function PMBoard() {
                     <span>{p.deptBelong || '-'}</span>
                     {amount > 0 && <span style={{ marginLeft: 'auto', color: T.ink2, fontWeight: 500 }}>{fmtMoney(amount)}</span>}
                   </div>
-                  {/* 底部栏: 进度条 */}
+                  {/* 底部栏: 进度条 + W1-W4 */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ flex: 1, height: 3, background: T.s2, borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{ height: '100%', borderRadius: 2, width: `${progress}%`, background: T.p, transition: 'width 0.3s' }} />
                     </div>
                     <span style={{ fontSize: 10, color: T.ink3 }}>{progress}%</span>
+                    {/* W1-W4 4个小圆点 */}
+                    <div style={{display:'flex',gap:2,marginLeft:4}}>
+                      {[1,2,3,4].map(w => {
+                        const filled = progress >= w * 25;
+                        return <span key={w} style={{width:6,height:6,borderRadius:'50%',background:filled?T.p:T.hl}} />;
+                      })}
+                    </div>
                   </div>
                 </div>
               );
