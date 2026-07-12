@@ -1,8 +1,9 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, Query, Body
 from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from models import SysUser, SysRole, SysPermission, SysUserRole, SysRolePermission, SysDept, SysPosition, BizCampaign
+from models import SysUser, SysRole, SysPermission, SysUserRole, SysRolePermission, SysDept, SysPosition
 from security import get_current_user, get_current_user_with_role, require_admin, hash_password
 from schemas import success, fail
 
@@ -16,8 +17,8 @@ def clamp_page(pageNum: int, pageSize: int):
 # ==================== 用户 ====================
 
 @router.get("/api/user/page")
-async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None, status: str = None,
-                    deptId: int = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+async def user_page(pageNum: int = 1, pageSize: int = 15, keyword: Optional[str] = None, status: Optional[str] = None,
+                    deptId: Optional[int] = None, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     require_admin(user)
     pageNum, pageSize = clamp_page(pageNum, pageSize)
     q = select(SysUser).where(SysUser.is_deleted == 0)
@@ -85,7 +86,9 @@ async def user_toggle(user_id: int, db: AsyncSession = Depends(get_db), user=Dep
     require_admin(user)
     r = (await db.execute(select(SysUser).where(SysUser.id == user_id))).scalar_one_or_none()
     if not r: return fail("用户不存在")
-    r.status = 0 if r.status == 1 else 1; await db.commit()
+    new_status = int(not int(r.status))  # pyright: ignore[reportArgumentType]
+    r.status = new_status  # pyright: ignore[reportAttributeAccessIssue]
+    await db.commit()
     return success()
 
 @router.put("/api/user/{user_id}/reset-password")
@@ -96,7 +99,8 @@ async def user_reset_pwd(user_id: int, db: AsyncSession = Depends(get_db), user=
     import secrets, string
     charset = string.ascii_letters + string.digits + '!@#$%^&*'
     new_pwd = ''.join(secrets.choice(charset) for _ in range(12))
-    r.password = hash_password(new_pwd); await db.commit()
+    r.password = hash_password(new_pwd)  # pyright: ignore[reportAttributeAccessIssue]
+    await db.commit()
     return success({"msg": "密码已重置，请通过安全渠道通知用户新密码"})
 
 # ==================== 角色 ====================
@@ -137,8 +141,10 @@ async def dept_tree(db: AsyncSession = Depends(get_db), user=Depends(get_current
         node = {"id": r.id, "name": r.name, "parentId": r.parent_id, "sortOrder": r.sort_order, "children": []}
         dept_map[r.id] = node
     for r in rows:
-        if r.parent_id and r.parent_id in dept_map:
-            dept_map[r.parent_id]["children"].append(dept_map[r.id])
+        pid = r.parent_id
+        pid_int = 0 if pid is None else int(pid)  # pyright: ignore[reportArgumentType]
+        if pid_int and pid_int in dept_map:
+            dept_map[pid_int]["children"].append(dept_map[r.id])
         else:
             tree.append(dept_map[r.id])
     # 清理空 children
@@ -182,7 +188,8 @@ async def dept_delete(dept_id: int, db: AsyncSession = Depends(get_db), user=Dep
     if sub.scalars().first(): return fail("请先删除子部门")
     dept = (await db.execute(select(SysDept).where(SysDept.id == dept_id))).scalar_one_or_none()
     if not dept: return fail("部门不存在")
-    dept.is_deleted = 1; await db.commit()
+    dept.is_deleted = 1  # pyright: ignore[reportAttributeAccessIssue]
+    await db.commit()
     return success()
 
 @router.get("/api/dept/users")
@@ -219,18 +226,19 @@ async def position_delete(pos_id: int, db: AsyncSession = Depends(get_db), user=
     require_admin(user)
     pos = (await db.execute(select(SysPosition).where(SysPosition.id == pos_id))).scalar_one_or_none()
     if not pos: return fail("职位不存在")
-    pos.is_deleted = 1; await db.commit()
+    pos.is_deleted = 1  # pyright: ignore[reportAttributeAccessIssue]
+    await db.commit()
     return success()
 
 # ==================== 日志 ====================
 
 @router.get("/api/log/page")
-async def log_page(pageNum: int = 1, pageSize: int = 15, keyword: str = None,
+async def log_page(pageNum: int = 1, pageSize: int = 15, keyword: Optional[str] = None,
                    db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
     # sys_operation_log table
     from sqlalchemy import text
     sql = "SELECT * FROM sys_operation_log"
-    params = {}
+    params: dict = {}
     if keyword:
         sql += " WHERE user_name LIKE :kw OR action LIKE :kw2"; params = {"kw": f"%{keyword}%", "kw2": f"%{keyword}%"}
     sql += " ORDER BY create_time DESC LIMIT :limit OFFSET :offset"
@@ -252,7 +260,7 @@ def _validate_biz_type(bizType: str) -> bool:
     return bizType in _RECYCLE_ALLOWED_TABLES
 
 @router.get("/api/recycle/page")
-async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: str = None,
+async def recycle_page(pageNum: int = 1, pageSize: int = 15, bizType: Optional[str] = None,
                        db: AsyncSession = Depends(get_db), _=Depends(get_current_user)):
     results = []; total = 0
     for tbl, name_col in [("biz_clue", "clue_name"), ("biz_project", "project_name"), ("biz_talent", "name"), ("biz_risk", "type")]:
