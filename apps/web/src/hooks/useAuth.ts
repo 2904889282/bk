@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import request from '../utils/request';
-import { FALLBACK_MENUS, REGULAR_USER_MENUS, type MenuItem } from '../config/menus';
+import { FALLBACK_MENUS, type MenuItem } from '../config/menus';
 
 /** 根据是否"记住我"选择存储位置 */
 const tokenStore = {
@@ -57,8 +57,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         localStorage.setItem('beike_username', username);
       }
 
-      const isAdminOrManager = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_MANAGER');
-      set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : (isAdminOrManager ? FALLBACK_MENUS : REGULAR_USER_MENUS) });
+      set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : FALLBACK_MENUS });
       return { success: true };
     } catch (err: unknown) {
       // 后端返回了明确的业务错误（如密码错误），直接反馈给用户
@@ -100,11 +99,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       const user = normalizeUser(data.user);
       localStorage.setItem('beike_user', JSON.stringify(user));
       const permissions = normalizePermissions(data);
-      // 根据角色选择菜单
-      const menus = user.roles?.includes('ROLE_ADMIN') || user.roles?.includes('ROLE_MANAGER')
-        ? (data.menus || FALLBACK_MENUS)
-        : REGULAR_USER_MENUS;
-      set({ user, isLoggedIn: true, permissions, menus });
+      set({ user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : FALLBACK_MENUS });
     } catch {
       get().logout();
     }

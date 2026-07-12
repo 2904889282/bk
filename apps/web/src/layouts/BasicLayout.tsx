@@ -101,7 +101,7 @@ export default function BasicLayout() {
 
   const userMenuNode = (
     <Dropdown menu={{ items: [
-      { key: 'info', icon: <UserOutlined />, label: `${user?.name || '用户'} (${(user?.roles || []).includes('ROLE_ADMIN') ? '管理员' : '普通用户'})`, disabled: true },
+      { key: 'info', icon: <UserOutlined />, label: `${user?.name || '用户'}`, disabled: true },
       { type: 'divider' },
       { key: 'devices', icon: <DesktopOutlined />, label: '设备管理', onClick: () => navigate('/account/devices') },
       { key: 'pwd', icon: <SafetyOutlined />, label: '修改密码', onClick: () => message.info('请联系管理员修改密码') },

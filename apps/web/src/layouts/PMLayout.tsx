@@ -148,7 +148,7 @@ export default function PMLayout() {
             <div style={{ width: 28, height: 28, borderRadius: 7, background: TOKENS.p, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
               {user?.name?.[0] || '贝'}
             </div>
-            {!collapsed && <div><div style={{ fontSize: 12, fontWeight: 500 }}>{user?.name || '用户'}</div><div style={{ fontSize: 11, color: TOKENS.ink4 }}>{user?.roles?.includes('ROLE_ADMIN') ? '管理员' : '成员'}</div></div>}
+            {!collapsed && <div style={{ fontSize: 12, fontWeight: 500 }}>{user?.name || '用户'}</div>}
           </div>
         </aside>
 
