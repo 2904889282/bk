@@ -6,7 +6,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { Input } from 'antd';
 import { SearchOutlined, BellOutlined, PlusOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import CmdPalette, { type CmdAction } from '../components/ui/CmdPalette';
 
 /* Linear 风格暗色设计令牌 */
@@ -44,6 +44,7 @@ export default function PMLayout() {
   const [searchValue, setSearchValue] = useState('');
   const [collapsed, setCollapsed] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   const cmdActions: CmdAction[] = NAV_ITEMS.map(item => ({
     id: item.key, label: item.label, desc: item.route,
@@ -54,7 +55,8 @@ export default function PMLayout() {
     const h = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCmdOpen(true); return; }
       if ((e.ctrlKey || e.metaKey) && e.key === 'b') { e.preventDefault(); setCollapsed(c => !c); return; }
-      if (e.key === 'Escape') { setCmdOpen(false); return; }
+      if (e.key === 'Escape') { setCmdOpen(false); setShortcutsOpen(false); return; }
+      if (e.key === '?') { e.preventDefault(); setShortcutsOpen(true); return; }
       if (document.activeElement !== document.body) return;
       // 单键导航
       const map: Record<string,string> = {d:'/pm/dashboard',b:'/pm/board',l:'/pm/projects',g:'/pm/goals',r:'/pm/revenue',t:'/pm/team',s:'/pm/staff',n:'/pm/gantt'};
@@ -100,6 +102,7 @@ export default function PMLayout() {
         />
         <div style={{ flex: 1 }} />
         <span onClick={() => setCmdOpen(true)} style={{ padding:'5px 11px',borderRadius:999,fontSize:11,color:TOKENS.ink3,border:`1px solid ${TOKENS.hl}`,cursor:'pointer',fontFamily:'monospace',background:'transparent' }}>⌘K</span>
+        <span onClick={() => setShortcutsOpen(true)} style={{ padding:'5px 11px',borderRadius:999,fontSize:11,color:TOKENS.ink3,border:`1px solid ${TOKENS.hl}`,cursor:'pointer',background:'transparent' }}>?</span>
         <button onClick={() => navigate('/pm/projects')} style={{padding:'6px 14px',borderRadius:999,border:'none',background:TOKENS.p,color:'#fff',fontSize:12,fontFamily:'inherit',cursor:'pointer',fontWeight:500,display:'flex',alignItems:'center',gap:4}}><PlusOutlined /> 新增</button>
         <span style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: TOKENS.ink4 }}>
           <BellOutlined />
@@ -155,6 +158,18 @@ export default function PMLayout() {
         </main>
       </div>
       <CmdPalette open={cmdOpen} onClose={() => setCmdOpen(false)} actions={cmdActions} />
+      {shortcutsOpen && (
+        <div style={{position:'fixed',inset:0,zIndex:600,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setShortcutsOpen(false)}>
+          <div style={{background:TOKENS.s1,border:`1px solid ${TOKENS.hls}`,borderRadius:12,padding:24,maxWidth:480}} onClick={e=>e.stopPropagation()}>
+            <div style={{fontSize:16,fontWeight:600,marginBottom:16,color:TOKENS.ink}}>键盘快捷键</div>
+            <div style={{display:'grid',gridTemplateColumns:'auto auto',gap:'6px 24px',fontSize:13}}>
+              {[
+                ['D','数据看板'],['B','项目看板'],['L','项目列表'],['G','关键目标'],['R','营收分析'],['T','团队管理'],['N','人员分配'],['Ctrl+K','命令面板'],['Ctrl+B','折叠侧边栏'],['Esc','关闭弹窗'],['?','快捷键帮助'],
+              ].map(([k,v])=><React.Fragment key={k}><span style={{color:TOKENS.p,fontWeight:600,fontFamily:'monospace'}}>{k}</span><span style={{color:TOKENS.ink3}}>{v}</span></React.Fragment>)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -72,12 +72,7 @@ export default function ProjectDetail() {
           </div>
           {/* KPI 行 */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:12,marginTop:16,paddingTop:14,borderTop:`1px solid ${T.hl}`}}>
-            {[
-              {l:'预计营收',v:fmtMoney(p.projectAmount),c:T.ink2},
-              {l:'进度',v:`${p.progress||0}%`,c:T.p},
-              {l:'开始日期',v:p.startDate?.slice(0,10)||'-',c:T.ink3},
-              {l:'结束日期',v:p.expectEndDate?.slice(0,10)||'-',c:T.ink3},
-            ].map((k,i)=>(<div key={i}><div style={{fontSize:11,color:T.ink4}}>{k.l}</div><div style={{fontSize:18,fontWeight:600,color:k.c}}>{k.v}</div></div>))}
+            {[{l:'预计营收',v:fmtMoney(p.projectAmount),c:T.ink2},{l:'进度',v:`${p.progress||0}%`,c:T.p},{l:'开始日期',v:p.startDate?.slice(0,10)||'-',c:T.ink3},{l:'结束日期',v:p.expectEndDate?.slice(0,10)||'-',c:T.ink3}].map((k,i)=>(<div key={i}><div style={{fontSize:11,color:T.ink4}}>{k.l}</div><div style={{fontSize:18,fontWeight:600,color:k.c}}>{k.v}</div></div>))}
           </div>
           {/* 操作按钮 */}
           <div style={{display:'flex',gap:8,marginTop:14}}>
@@ -175,6 +170,30 @@ export default function ProjectDetail() {
                 style={{width:'100%',minHeight:60,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:13,color:T.ink,fontFamily:'inherit',resize:'vertical',outline:'none'}}
                 onFocus={e=>e.target.style.borderColor=T.hls}/>
             </div>
+          </div>
+        </div>
+
+        {/* ===== 环形进度 + 沟通记录 ===== */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:20,marginBottom:20}}>
+          <div style={{background:T.s1,border:`1px solid ${T.hl}`,borderRadius:12,padding:20}}>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:16,color:T.ink}}>项目进度</div>
+            <div style={{display:'flex',alignItems:'center',gap:20}}>
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke={T.hl} strokeWidth="6"/>
+                <circle cx="40" cy="40" r="34" fill="none" stroke={T.p} strokeWidth="6" strokeDasharray={`${(p.progress||0)*2.14} 214`} strokeLinecap="round" transform="rotate(-90 40 40)"/>
+                <text x="40" y="44" textAnchor="middle" fontSize="18" fontWeight="600" fill={T.ink}>{(p.progress||0)}%</text>
+              </svg>
+              <div style={{fontSize:12,color:T.ink3}}>{(p.progress||0)>=100?'项目已完成':(p.progress||0)>=50?'项目进行中':'项目初期'}</div>
+            </div>
+          </div>
+          <div style={{background:T.s1,border:`1px solid ${T.hl}`,borderRadius:12,padding:20}}>
+            <div style={{fontSize:14,fontWeight:600,marginBottom:16,color:T.ink}}>沟通记录</div>
+            <div style={{display:'flex',gap:8,marginBottom:8}}>
+              <input placeholder="添加沟通记录..." style={{flex:1,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:12,color:T.ink,fontFamily:'inherit',outline:'none'}}
+                onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor=T.hl}/>
+              <button style={{padding:'6px 14px',borderRadius:6,border:'none',background:T.p,color:'#fff',fontSize:12,fontFamily:'inherit',cursor:'pointer'}}>发送</button>
+            </div>
+            <div style={{fontSize:12,color:T.ink4}}>暂无沟通记录</div>
           </div>
         </div>
 
