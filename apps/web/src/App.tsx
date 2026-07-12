@@ -4,12 +4,9 @@ import { App as AntdApp, ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuth } from './hooks/useAuth';
 import { useTheme } from './store/useTheme';
-import PermissionGuard from './components/auth/PermissionGuard';
 import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
-import ClueLayout from './layouts/ClueLayout';
-import PMLayout from './layouts/PMLayout';
 
 const LoginPage = lazy(() => import('./pages/Login'));
 const PortalPage = lazy(() => import('./pages/Portal'));
@@ -239,37 +236,34 @@ function AppContent() {
         ) : (
           <Routes>
             <Route path="/login" element={withSuspense(<LoginPage />)} />
-            {/* 线索板块 — 统一使用 ClueLayout 侧边栏 */}
-            <Route path="ltc" element={<PrivateRoute><ClueLayout /></PrivateRoute>}>
-              <Route path="dashboard" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
-              <Route path="kanban" element={withSuspense(<PermissionGuard permCode="clue:list"><LtcKanban /></PermissionGuard>)} />
-              <Route path="leads" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsList /></PermissionGuard>)} />
-              <Route path="leads/:id" element={withSuspense(<PermissionGuard permCode="clue:list"><LeadsDetail /></PermissionGuard>)} />
-              <Route path="pipeline" element={withSuspense(<PermissionGuard permCode="pipeline:list"><PipelineList /></PermissionGuard>)} />
-              <Route path="alerts" element={withSuspense(<PermissionGuard permCode="alert:list"><LtcAlerts /></PermissionGuard>)} />
-              <Route path="analysis" element={withSuspense(<PermissionGuard permCode="pipeline:list"><LtcAnalysis /></PermissionGuard>)} />
-            </Route>
-            {/* 项目板块 v2 — Linear 暗色设计系统 */}
-            <Route path="pm" element={<PrivateRoute><PMLayout /></PrivateRoute>}>
-              <Route path="dashboard" element={withSuspense(<PermissionGuard permCode="project:list"><PMDashboard /></PermissionGuard>)} />
-              <Route path="board"     element={withSuspense(<PermissionGuard permCode="project:list"><PMBoard /></PermissionGuard>)} />
-              <Route path="projects"  element={withSuspense(<PermissionGuard permCode="project:list"><PmProjects /></PermissionGuard>)} />
-              <Route path="goals"     element={withSuspense(<PermissionGuard permCode="project:list"><PMGoals /></PermissionGuard>)} />
-              <Route path="revenue"   element={withSuspense(<PermissionGuard permCode="project:list"><PMRevenue /></PermissionGuard>)} />
-              <Route path="team"      element={withSuspense(<PermissionGuard permCode="project:list"><PMTeam /></PermissionGuard>)} />
-              <Route path="staff"     element={withSuspense(<PermissionGuard permCode="project:list"><PMStaff /></PermissionGuard>)} />
-              <Route path="gantt"     element={withSuspense(<PermissionGuard permCode="project:list"><PmGantt /></PermissionGuard>)} />
-              <Route path="kanban"    element={withSuspense(<PermissionGuard permCode="project:list"><PmKanban /></PermissionGuard>)} />
-              <Route path="risks"     element={withSuspense(<PermissionGuard permCode="risk:list"><PmRisks /></PermissionGuard>)} />
-              <Route path="talent"    element={withSuspense(<PermissionGuard permCode="talent:list"><PmTalent /></PermissionGuard>)} />
-            </Route>
-            {/* 项目详情(旧) + 管理板块 — 通用 BasicLayout */}
+            {/* 统一布局 — 所有页面共用 BasicLayout 侧边栏 */}
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
-              <Route path="projects/:id" element={withSuspense(<PermissionGuard permCode="project:list"><ProjectDetail /></PermissionGuard>)} />
-              <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
-              <Route path="admin/depts" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminDepts /></PermissionGuard>)} />
-              <Route path="admin/positions" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminPositions /></PermissionGuard>)} />
-              <Route path="admin/recycle" element={withSuspense(<PermissionGuard permCode="recycle:list"><RecycleBin /></PermissionGuard>)} />
+              {/* 线索板块 */}
+              <Route path="ltc/dashboard" element={withSuspense(<LeadsList />)} />
+              <Route path="ltc/kanban" element={withSuspense(<LtcKanban />)} />
+              <Route path="ltc/leads" element={withSuspense(<LeadsList />)} />
+              <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />
+              <Route path="ltc/pipeline" element={withSuspense(<PipelineList />)} />
+              <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
+              <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
+              {/* 项目板块 */}
+              <Route path="pm/dashboard" element={withSuspense(<PMDashboard />)} />
+              <Route path="pm/board" element={withSuspense(<PMBoard />)} />
+              <Route path="pm/projects" element={withSuspense(<PmProjects />)} />
+              <Route path="pm/goals" element={withSuspense(<PMGoals />)} />
+              <Route path="pm/revenue" element={withSuspense(<PMRevenue />)} />
+              <Route path="pm/team" element={withSuspense(<PMTeam />)} />
+              <Route path="pm/staff" element={withSuspense(<PMStaff />)} />
+              <Route path="pm/gantt" element={withSuspense(<PmGantt />)} />
+              <Route path="pm/kanban" element={withSuspense(<PmKanban />)} />
+              <Route path="pm/risks" element={withSuspense(<PmRisks />)} />
+              <Route path="pm/talent" element={withSuspense(<PmTalent />)} />
+              {/* 管理板块 */}
+              <Route path="projects/:id" element={withSuspense(<ProjectDetail />)} />
+              <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
+              <Route path="admin/depts" element={withSuspense(<AdminDepts />)} />
+              <Route path="admin/positions" element={withSuspense(<AdminPositions />)} />
+              <Route path="admin/recycle" element={withSuspense(<RecycleBin />)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
               <Route path="resources" element={withSuspense(<ResourcesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
