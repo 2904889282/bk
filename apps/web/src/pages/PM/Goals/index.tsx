@@ -57,6 +57,19 @@ export default function PMGoals() {
     } catch {}
   };
 
+  /* W1-W4 平均同步到 goal1_progress */
+  const quickSyncGoals = async (projectId: number) => {
+    const p = periods[projectId];
+    if (!p) return;
+    const vals = [1,2,3,4].map(w => Number((p as any)[`w${w}Progress`] || 0)).filter(v => v > 0);
+    if (vals.length === 0) return;
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
+    try {
+      const saved = await savePeriod({...(p as any), monthlyProgress: String(avg)});
+      setPeriods(prev => ({...prev, [projectId]: saved}));
+    } catch {}
+  };
+
   /* 获取 W 值 */
   const getW = (p: ProjectPeriod | undefined, w: number, type: 'target'|'progress') => {
     if (!p) return '';
@@ -141,6 +154,7 @@ export default function PMGoals() {
                   background: status==='done'?'rgba(39,166,68,0.15)':status==='partial'?'rgba(212,160,48,0.15)':'rgba(138,143,152,0.1)',
                   color: status==='done'?T.ok:status==='partial'?T.warn:T.ink4,
                 }}>{status==='done'?'✓ 完成':status==='partial'?'进行中':'待填'}</span>
+                <span onClick={e => { e.stopPropagation(); quickSyncGoals(p.id); }} style={{fontSize:10,color:T.p,cursor:'pointer',marginLeft:4}} title="同步W平均到总进度">↻</span>
               </span>
             </div>
           );

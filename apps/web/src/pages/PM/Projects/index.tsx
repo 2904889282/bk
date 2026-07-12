@@ -4,7 +4,7 @@
  */
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProjectPage, deleteProject, deleteProjectBatch, updateProject, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, createProject, deleteProject, deleteProjectBatch, updateProject, type ProjectVO } from '../../../api/project';
 import ContextMenu, { type ContextMenuAction } from '../../../components/project/ContextMenu';
 import ProjectModal from '../../../components/project/ProjectModal';
 import { T, RATING, fmtMoney } from '../tokens';
@@ -44,6 +44,31 @@ export default function PMProjects() {
   const [ctx, setCtx] = useState<{ x:number; y:number; project: ProjectVO } | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<ProjectVO | null>(null);
+  const [density, setDensity] = useState<'comfortable'|'compact'|'spacious'>('comfortable');
+  const [presets, setPresets] = useState<{name:string;rating:string|null;dept:string|null;search:string}[]>([]);
+
+  /* 导出 CSV */
+  const exportCSV = () => {
+    const cols = ['项目名称','一条龙经理','交付经理','产品经理','部门','评级','状态','预计营收','开始日期','结束日期'];
+    const keys = ['projectName','projectManager','deliveryManager','productManager','deptBelong','projectLevel','projectStatus','projectAmount','startDate','expectEndDate'];
+    const csv = '\uFEFF' + cols.join(',') + '\n' + sorted.map(p => keys.map(k => `"${(p as any)[k]||''}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = '项目列表.csv'; a.click();
+  };
+
+  /* 复制项目（下月版本） */
+  const duplicateProject = async (p: ProjectVO) => {
+    const d = new Date(); const nextMonth = `${d.getFullYear()}-${String(d.getMonth()+2).padStart(2,'0')}`;
+    const family = cleanFamily(p.projectName);
+    try {
+      await createProject({
+        projectName: `${family}-${d.getMonth()+2}月`, projectManager: p.projectManager, clientName: p.clientName, projectLevel: p.projectLevel,
+        projectStatus: '进行中', deptBelong: p.deptBelong, projectAmount: 0, startDate: `${nextMonth}-01`, deliveryManager: p.deliveryManager,
+        productManager: p.productManager, clientContact: p.clientContact, supplier: p.supplier, riskAssessment: p.riskAssessment, description: p.description,
+      });
+      load(page);
+    } catch {}
+  };
 
   const load = useCallback(async (p = 1) => {
     try {
@@ -101,7 +126,7 @@ export default function PMProjects() {
   /* 右键菜单 */
   const ctxActions: ContextMenuAction[] = ctx ? [
     { label: '查看详情', icon: '📋', onClick: () => navigate(`/projects/${ctx.project.id}`) },
-    { label: '复制项目', icon: '📋', onClick: () => {}, dividerAfter: true },
+    { label: '复制项目', icon: '📋', onClick: () => duplicateProject(ctx.project), dividerAfter: true },
     { label: '状态: 进行中', onClick: () => updateProject(ctx.project.id, {projectStatus:'进行中'} as any).then(()=>load(page)).catch(()=>{})},
     { label: '状态: 已完成', onClick: () => updateProject(ctx.project.id, {projectStatus:'已完成'} as any).then(()=>load(page)).catch(()=>{})},
     { label: '状态: 暂停', onClick: () => updateProject(ctx.project.id, {projectStatus:'暂停'} as any).then(()=>load(page)).catch(()=>{}), dividerAfter: true},
@@ -112,7 +137,10 @@ export default function PMProjects() {
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
         <h2 style={{fontSize:20,fontWeight:600,margin:0,letterSpacing:'-0.3px',color:T.ink}}>项目列表</h2>
-        <button onClick={() => { setEditTarget(null); setModalOpen(true); }} style={{padding:'7px 16px',borderRadius:8,border:'none',background:T.p,color:'#fff',fontSize:13,fontFamily:'inherit',cursor:'pointer',fontWeight:500}}>+ 新增项目</button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={exportCSV} style={{padding:'7px 16px',borderRadius:8,border:`1px solid ${T.hl}`,background:'transparent',color:T.ink3,fontSize:13,fontFamily:'inherit',cursor:'pointer'}}>📥 导出</button>
+          <button onClick={() => { setEditTarget(null); setModalOpen(true); }} style={{padding:'7px 16px',borderRadius:8,border:'none',background:T.p,color:'#fff',fontSize:13,fontFamily:'inherit',cursor:'pointer',fontWeight:500}}>+ 新增项目</button>
+        </div>
       </div>
 
       {/* 评级筛选 pills */}
@@ -130,6 +158,17 @@ export default function PMProjects() {
           style={{ background:T.s2, border:`1px solid ${T.hl}`, borderRadius:8, padding:'7px 8px', fontSize:12, color:T.ink3, fontFamily:'inherit', cursor:'pointer' }}>
           <option value="none">不分组</option><option value="family">按家族</option>
         </select>
+        <select value={density} onChange={e => setDensity(e.target.value as any)}
+          style={{ background:T.s2, border:`1px solid ${T.hl}`, borderRadius:8, padding:'7px 8px', fontSize:12, color:T.ink3, fontFamily:'inherit', cursor:'pointer' }}>
+          <option value="comfortable">舒适</option><option value="compact">紧凑</option><option value="spacious">宽敞</option>
+        </select>
+        <button onClick={() => { const p={name:`预设${presets.length+1}`,rating:ratingFilter,dept:deptFilter,search}; setPresets([...presets,p]); }}
+          style={{ background:'transparent',border:`1px solid ${T.hl}`,borderRadius:8,padding:'5px 10px',fontSize:11,color:T.ink3,cursor:'pointer',fontFamily:'inherit' }}>💾 保存筛选</button>
+        {presets.map((p,i) => (
+          <button key={i} onClick={() => { setRatingFilter(p.rating); setDeptFilter(p.dept); setSearch(p.search); }}
+            style={{ background:T.s2,border:`1px solid ${T.hl}`,borderRadius:8,padding:'5px 10px',fontSize:11,color:T.ink3,cursor:'pointer',fontFamily:'inherit' }}
+            onDoubleClick={() => setPresets(presets.filter((_,j)=>j!==i))}>{p.name}</button>
+        ))}
       </div>
 
       {/* 摘要栏 */}
@@ -166,7 +205,7 @@ export default function PMProjects() {
 
         {/* 表体 */}
         {groupBy === 'none' ? (
-          paged.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} />)
+          paged.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} density={density} />)
         ) : (
           /* 分组视图 */
           Array.from(families.entries()).sort((a,b) => b[1].length - a[1].length).map(([fam, items]) => {
@@ -179,7 +218,7 @@ export default function PMProjects() {
                   <span>{fam || '其他项目'}</span>
                   <span style={{ fontSize:11, color:T.ink4 }}>{items.length} 个月</span>
                 </div>
-                {!isCollapsed && items.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} isGroup />)}
+                {!isCollapsed && items.map((p, idx) => <Row key={p.id} p={p} idx={idx} sel={selected.has(p.id)} onToggle={()=>toggleSel(p.id)} onOpen={()=>navigate(`/projects/${p.id}`)} onCtx={e => { e.preventDefault(); setCtx({x:e.clientX, y:e.clientY, project:p}); }} isGroup density={density} />)}
               </div>
             );
           })
@@ -206,11 +245,13 @@ export default function PMProjects() {
 }
 
 /* === 行组件 === */
-function Row({ p, idx, sel, onToggle, onOpen, onCtx, isGroup }: { p: ProjectVO; idx: number; sel: boolean; onToggle: ()=>void; onOpen: ()=>void; onCtx: (e:React.MouseEvent)=>void; isGroup?: boolean }) {
+function Row({ p, idx, sel, onToggle, onOpen, onCtx, isGroup, density }: { p: ProjectVO; idx: number; sel: boolean; onToggle: ()=>void; onOpen: ()=>void; onCtx: (e:React.MouseEvent)=>void; isGroup?: boolean; density?: string }) {
   const amount = Number(p.projectAmount);
   const progress = p.progress || 0;
+  const py = density==='compact'?'6px 16px':density==='spacious'?'16px 16px':'11px 16px';
+  const fs = density==='compact'?12:density==='spacious'?14:13;
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'34px minmax(140px,1.2fr) 90px 80px 72px 80px 72px 52px', padding:'11px 16px', borderBottom:`1px solid ${T.hl}`, cursor:'pointer', fontSize:13, color:T.ink,
+    <div style={{ display:'grid', gridTemplateColumns:'34px minmax(140px,1.2fr) 90px 80px 72px 80px 72px 52px', padding:py, borderBottom:`1px solid ${T.hl}`, cursor:'pointer', fontSize:fs, color:T.ink,
       background: sel ? 'rgba(94,106,210,0.06)' : idx%2===0 ? T.s1 : 'transparent', transition:'background 0.08s', position:'relative', opacity: isGroup ? 0.7 : 1,
     }}
       onDoubleClick={onOpen} onContextMenu={onCtx}

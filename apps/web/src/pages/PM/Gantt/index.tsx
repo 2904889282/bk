@@ -3,6 +3,7 @@
  */
 import { useEffect, useState, useMemo } from 'react';
 import { fetchProjectPage, type ProjectVO } from '../../../api/project';
+import { fmtMoney } from '../tokens';
 
 const T = { s1:'#0f1011', s2:'#141516', hl:'#23252a', hls:'#34343a', ink:'#f7f8f8', ink2:'#d0d6e0', ink3:'#8a8f98', ink4:'#757880', p:'#5e6ad2', ok:'#27a644' };
 const RATING_COLORS: Record<string,string> = { A:'#5e6ad2', B:'rgba(208,214,224,0.5)', C:'rgba(138,143,152,0.4)' };
@@ -12,6 +13,7 @@ export default function PmGantt() {
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [statusFilter, setStatusFilter] = useState('全部');
   const [periods, setPeriods] = useState(12);
+  const [tip, setTip] = useState<{x:number;y:number;p:ProjectVO}|null>(null);
 
   useEffect(() => {
     fetchProjectPage({pageNum:1,pageSize:500}).then(r => setProjects(r.records||[])).catch(()=>{});
@@ -97,7 +99,7 @@ export default function PmGantt() {
                 return (
                   <div key={m} style={{minWidth:72,height:40,position:'relative',flexShrink:0}}>
                     {inRange && (
-                      <div title={`${p.projectName}\n${p.projectManager||''}\n${p.projectStatus||''}`} style={{
+                      <div onMouseEnter={e => setTip({x:e.clientX,y:e.clientY,p})} onMouseLeave={()=>setTip(null)} style={{
                         position:'absolute',top:isFirst?6:6,bottom:6,
                         left: isFirst ? 4 : -12, right: isLast ? 4 : -12,
                         borderRadius:4, background:RATING_COLORS[p.projectLevel]||T.ink4,
@@ -116,6 +118,17 @@ export default function PmGantt() {
         })}
         {filtered.length === 0 && <div style={{textAlign:'center',padding:60,color:T.ink4,fontSize:13}}>暂无项目</div>}
       </div>
+
+      {/* Tooltip */}
+      {tip && (
+        <div style={{position:'fixed',zIndex:600,left:tip.x+12,top:tip.y-10,background:'#141516',border:'1px solid #34343a',borderRadius:8,padding:'12px 16px',fontSize:12,color:'#f7f8f8',maxWidth:260,pointerEvents:'none',boxShadow:'0 4px 20px rgba(0,0,0,0.5)'}}>
+          <div style={{fontSize:14,fontWeight:600,marginBottom:4}}>{tip.p.projectName}</div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:2,fontSize:11,color:'#8a8f98'}}><span>经理</span><span style={{color:'#d0d6e0'}}>{tip.p.projectManager||'-'}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:2,fontSize:11,color:'#8a8f98'}}><span>日期</span><span style={{color:'#d0d6e0'}}>{tip.p.startDate||'-'} → {tip.p.expectEndDate||'-'}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:2,fontSize:11,color:'#8a8f98'}}><span>营收</span><span style={{color:'#d0d6e0'}}>{fmtMoney(tip.p.projectAmount)}</span></div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#8a8f98'}}><span>状态</span><span style={{color:'#5e6ad2'}}>{tip.p.projectStatus||'-'} {tip.p.progress||0}%</span></div>
+        </div>
+      )}
     </div>
   );
 }
