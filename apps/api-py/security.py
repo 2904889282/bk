@@ -54,3 +54,14 @@ def require_admin(user: dict):
     """要求管理员权限"""
     if "ROLE_ADMIN" not in user.get("roles", []):
         raise HTTPException(status_code=403, detail="仅管理员可操作")
+
+def is_admin(user: dict) -> bool:
+    """判断用户是否为管理员"""
+    return "ROLE_ADMIN" in user.get("roles", [])
+
+def verify_owner(user: dict, owner_field: str) -> bool:
+    """验证当前用户是否为资源的负责人（用于详情/更新/删除操作的权限校验）"""
+    if is_admin(user):
+        return True
+    real_name = user.get("realName", "")
+    return real_name and real_name == owner_field

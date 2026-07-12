@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizTalent, BizRisk, BizAlert, BizClue, BizCampaign, BizProject
 from schemas import *
-from security import get_current_user_with_role
+from security import get_current_user_with_role, is_admin, verify_owner
 from datetime import date, datetime, timezone
 import io, traceback
 
@@ -257,9 +257,11 @@ async def clue_export_weekly(clueIds: list[int], db: AsyncSession = Depends(get_
     return success([dict(r) for r in rows])
 
 @router.get("/api/clue/{clue_id}")
-async def clue_detail(clue_id: int, db: AsyncSession = Depends(get_db)):
-    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
-    return success(row_to_dict(r)) if r else fail("线索不存在")
+async def clue_detail(clue_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id, BizClue.is_deleted == 0))).scalar_one_or_none()
+    if not r: return fail("线索不存在")
+    if not verify_owner(user, r.beike_owner or ""): return fail("无权查看该线索")
+    return success(row_to_dict(r))
 
 @router.post("/api/clue")
 async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
@@ -301,8 +303,9 @@ async def clue_create(dto: ClueSaveDTO, db: AsyncSession = Depends(get_db), user
 
 @router.put("/api/clue/{clue_id}")
 async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
+    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id, BizClue.is_deleted == 0))).scalar_one_or_none()
     if not r: return fail("线索不存在")
+    if not verify_owner(user, r.beike_owner or ""): return fail("无权修改该线索")
     key_map = {"clueName":"clue_name","clientCompany":"client_company","clientDept":"client_dept",
                "clientContact":"client_contact","beikeOwner":"beike_owner","budgetAmount":"budget_amount",
                "clueLevel":"clue_level","clueStatus":"clue_status","reviewStatus":"review_status",
@@ -324,9 +327,11 @@ async def clue_update(clue_id: int, dto: ClueSaveDTO, db: AsyncSession = Depends
     await db.commit(); return success()
 
 @router.delete("/api/clue/{clue_id}")
-async def clue_delete(clue_id: int, db: AsyncSession = Depends(get_db)):
-    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id))).scalar_one_or_none()
-    if r: r.is_deleted = 1; await db.commit()
+async def clue_delete(clue_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    r = (await db.execute(select(BizClue).where(BizClue.id == clue_id, BizClue.is_deleted == 0))).scalar_one_or_none()
+    if not r: return fail("线索不存在")
+    if not verify_owner(user, r.beike_owner or ""): return fail("无权删除该线索")
+    r.is_deleted = 1; await db.commit()
     return success()
 
 # ==================== 线索仪表盘 ====================

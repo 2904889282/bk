@@ -45,6 +45,11 @@ async def detail(project_id: int, db: AsyncSession = Depends(get_db), user=Depen
     r = await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))
     p = r.scalar_one_or_none()
     if not p: return fail("项目不存在")
+    from security import verify_owner
+    # 非管理员只能看自己管理的项目
+    if not verify_owner(user, p.project_manager or "") and not verify_owner(user, p.delivery_manager or "") and not verify_owner(user, p.product_manager or ""):
+        return fail("无权查看该项目")
+    if not p: return fail("项目不存在")
     return success(project_to_dict(p))
 
 @router.post("/api/project")
@@ -63,8 +68,11 @@ async def create(dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=D
 
 @router.put("/api/project/{project_id}")
 async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    r = (await db.execute(select(BizProject).where(BizProject.id == project_id))).scalar_one_or_none()
+    r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not r: return fail("项目不存在")
+    from security import verify_owner
+    if not verify_owner(user, r.project_manager or "") and not verify_owner(user, r.delivery_manager or "") and not verify_owner(user, r.product_manager or ""):
+        return fail("无权修改该项目")
     key_map = {"projectName":"project_name","projectNumber":"project_number","clientName":"client_name",
                "clientContact":"client_contact","projectManager":"project_manager","deliveryManager":"delivery_manager",
                "productManager":"product_manager","projectAmount":"project_amount","projectLevel":"project_level",
@@ -78,8 +86,11 @@ async def update(project_id: int, dto: ProjectSaveDTO, db: AsyncSession = Depend
 @router.delete("/api/project/{project_id}")
 async def delete(project_id: int, body: dict = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
     if not body.get("confirm"): return fail("请确认删除操作")
-    r = (await db.execute(select(BizProject).where(BizProject.id == project_id))).scalar_one_or_none()
+    r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not r: return fail("项目不存在")
+    from security import verify_owner
+    if not verify_owner(user, r.project_manager or "") and not verify_owner(user, r.delivery_manager or "") and not verify_owner(user, r.product_manager or ""):
+        return fail("无权删除该项目")
     r.is_deleted = 1; await db.commit()
     return success()
 
