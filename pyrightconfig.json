@@ -1,0 +1,21 @@
+{
+  "include": ["apps/api-py"],
+  "typeCheckingMode": "basic",
+  "reportMissingImports": false,
+  "reportImplicitRelativeImport": false,
+  "reportMissingTypeArgument": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownArgumentType": false,
+  "reportUnusedCallResult": false,
+  "reportUnusedParameter": false,
+  "reportUnusedImport": false,
+  "reportUnusedVariable": false,
+  "reportCallInDefaultInitializer": false,
+  "reportArgumentType": "warning",
+  "reportAttributeAccessIssue": "warning",
+  "reportGeneralTypeIssues": "warning",
+  "reportOptionalSubscript": false,
+  "pythonVersion": "3.12"
+}
