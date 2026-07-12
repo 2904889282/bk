@@ -7,13 +7,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from config import settings
 import uuid
 
-# 导入权限核心模块
-from permissions import (
-    is_admin as _is_admin, require_admin as _require_admin,
-    verify_ownership, require_ownership, build_owner_filter,
-    PermissionChecker, OWNER_NAME_FIELDS, OWNER_ID_FIELDS,
-)
-
 bearer = HTTPBearer(auto_error=False)
 
 def hash_password(password: str) -> str:
@@ -46,11 +39,7 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
     return {"id": int(payload["sub"]), "username": payload["username"], "jti": payload.get("jti", "")}
 
 async def get_current_user_with_role(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer)):
-    """获取当前用户 + 角色 + 真实姓名 + 部门（用于数据权限过滤）
-
-    优化：将三次独立查询（角色、用户详情、部门名称）通过 asyncio.gather 并行化，
-    减少数据库往返次数。三个查询互不依赖，可同时执行。
-    """
+    """获取当前用户 + 角色 + 真实姓名 + 部门"""
     import asyncio
     u = await get_current_user(credentials)
     from database import async_session
@@ -70,57 +59,38 @@ async def get_current_user_with_role(credentials: Optional[HTTPAuthorizationCred
             return (row2[0] if row2 and row2[0] else u["username"],
                     row2[1] if row2 and row2[1] else None)
 
-        # 前两个查询互不依赖，可并行执行
         roles, (real_name, dept_id) = await asyncio.gather(
             _fetch_roles(), _fetch_user_detail()
         )
         u["roles"] = roles
         u["realName"] = real_name
         u["deptId"] = dept_id
+        u["deptName"] = None
 
-        # 部门名称依赖 deptId，但查询量小，串行执行即可
         if u.get("deptId"):
             r3 = await db.execute(text(
                 "SELECT name FROM sys_dept WHERE id=:did"
             ), {"did": u["deptId"]})
             row3 = r3.first()
             u["deptName"] = row3[0] if row3 else None
-        else:
-            u["deptName"] = None
 
     return u
 
-# ══════════════════════════════════════════════
-#  向后兼容的旧 API（标记为 deprecated，内部转发给权限模块）
-# ══════════════════════════════════════════════
-def require_admin(user: dict):
-    """要求管理员权限 (deprecated: 建议使用 permissions.require_admin)"""
-    _require_admin(user)
 
 def is_admin(user: dict) -> bool:
-    """判断用户是否为管理员 (deprecated: 建议使用 permissions.is_admin)"""
-    return _is_admin(user)
+    """判断用户是否为管理员"""
+    return "ROLE_ADMIN" in user.get("roles", [])
+
+
+def require_admin(user: dict):
+    """要求管理员权限"""
+    if not is_admin(user):
+        raise HTTPException(status_code=403, detail="仅管理员可操作")
+
 
 def verify_owner(user: dict, owner_field: str) -> bool:
-    """
-    (deprecated) 单字段所有权校验。
-    新代码请使用 permissions.verify_ownership(user, resource, table_key)
-    """
-    from permissions import is_admin as p_is_admin
-    if p_is_admin(user):
+    """单字段所有权校验"""
+    if is_admin(user):
         return True
     real_name = user.get("realName", "")
     return bool(real_name and real_name == owner_field)
-
-# ══════════════════════════════════════════════
-#  新增：统一权限入口
-# ══════════════════════════════════════════════
-# 直接从 permissions 模块重新导出，路由中统一 import
-__all__ = [
-    'hash_password', 'verify_password', 'create_token', 'decode_token',
-    'get_current_user', 'get_current_user_with_role',
-    'require_admin', 'is_admin', 'verify_owner',
-    # 新权限 API
-    'verify_ownership', 'require_ownership', 'build_owner_filter',
-    'PermissionChecker', 'OWNER_NAME_FIELDS', 'OWNER_ID_FIELDS',
-]
