@@ -62,7 +62,7 @@ export default function ProjectDetail() {
             </button>
             <input defaultValue={p.projectName} onBlur={e => { if(e.target.value!==p.projectName) save('projectName',e.target.value); }}
               style={{fontSize:22,fontWeight:600,letterSpacing:'-0.4px',color:T.ink,background:'transparent',border:'1px solid transparent',borderRadius:4,padding:'2px 8px',outline:'none',fontFamily:'inherit',flex:1}}
-              onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor='transparent'}
+              onFocus={e=>e.target.style.borderColor=T.hls}
             />
             <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:24,height:24,borderRadius:5,fontSize:11,fontWeight:700,background:RATING[p.projectLevel]||T.ink4,color:'#fff'}}>{p.projectLevel||'-'}</span>
             <span style={{padding:'3px 12px',borderRadius:999,fontSize:11,fontWeight:500,background:'rgba(94,106,210,0.15)',color:T.p}}>{p.projectStatus||'-'}</span>
@@ -167,13 +167,13 @@ export default function ProjectDetail() {
               <div style={{fontSize:11,color:T.ink4,marginBottom:4}}>进展解读</div>
               <textarea defaultValue={p.description||''} onBlur={e=>{if(e.target.value!==(p.description||'')) save('description',e.target.value);}}
                 style={{width:'100%',minHeight:60,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:13,color:T.ink,fontFamily:'inherit',resize:'vertical',outline:'none'}}
-                onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor=T.hl}/>
+                onFocus={e=>e.target.style.borderColor=T.hls}/>
             </div>
             <div>
               <div style={{fontSize:11,color:T.ink4,marginBottom:4}}>风险评估</div>
               <textarea defaultValue={p.riskAssessment||''} onBlur={e=>{if(e.target.value!==(p.riskAssessment||'')) save('riskAssessment',e.target.value);}}
                 style={{width:'100%',minHeight:60,background:T.s2,border:`1px solid ${T.hl}`,borderRadius:6,padding:'6px 10px',fontSize:13,color:T.ink,fontFamily:'inherit',resize:'vertical',outline:'none'}}
-                onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor=T.hl}/>
+                onFocus={e=>e.target.style.borderColor=T.hls}/>
             </div>
           </div>
         </div>
@@ -207,7 +207,7 @@ function Field({label,val,onChange}:{label:string;val:string;onChange:(v:string)
       <span style={{width:85,fontSize:12,color:T.ink4,flexShrink:0}}>{label}</span>
       <input defaultValue={val} onBlur={e=>{if(e.target.value!==val) onChange(e.target.value);e.target.style.borderColor='transparent'}}
         style={{flex:1,background:T.s2,border:'1px solid transparent',borderRadius:4,padding:'5px 8px',fontSize:13,color:T.ink2,fontFamily:'inherit',outline:'none'}}
-        onFocus={e=>e.target.style.borderColor=T.hls} onBlur={e=>e.target.style.borderColor='transparent'}/>
+        onFocus={e=>e.target.style.borderColor=T.hls}/>
     </div>
   );
 }
