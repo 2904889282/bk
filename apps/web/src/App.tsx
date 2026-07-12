@@ -13,6 +13,9 @@ const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
 const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
 const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
+const PmProjects = lazy(() => import('./pages/PM/Projects'));
+const PmKanban = lazy(() => import('./pages/PM/Kanban'));
+const PmGantt = lazy(() => import('./pages/PM/Gantt'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
 const StatPlaceholder = lazy(() => import('./pages/StatPlaceholder'));
@@ -193,6 +196,10 @@ function AppContent() {
               <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />
               <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
+              {/* 项目板块 */}
+              <Route path="pm/projects" element={withSuspense(<PmProjects />)} />
+              <Route path="pm/kanban" element={withSuspense(<PmKanban />)} />
+              <Route path="pm/gantt" element={withSuspense(<PmGantt />)} />
               {/* 管理板块 */}
               <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />

@@ -22,6 +22,14 @@ export const UNIFIED_MENUS: MenuItem[] = [
     ],
   },
   {
+    name: '项目管理', icon: 'ProjectOutlined',
+    children: [
+      { path: '/pm/projects', name: '项目列表', icon: 'UnorderedListOutlined' },
+      { path: '/pm/kanban', name: '项目看板', icon: 'ProjectOutlined' },
+      { path: '/pm/gantt', name: '项目甘特图', icon: 'BarChartOutlined' },
+    ],
+  },
+  {
     name: '系统管理', icon: 'SettingOutlined',
     children: [
       { path: '/admin/users', name: '用户管理', icon: 'UserOutlined', permCode: 'system:user:list' },
