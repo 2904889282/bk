@@ -5,9 +5,11 @@ import { fetchProjectPage, type ProjectVO } from '../../api/project';
 const d = { s1: '#0f1011', s2: '#141516', hl: '#23252a', ink: '#f7f8f8', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', bg: '#010102' };
 const l = { s1: '#fff', s2: '#f5f5f5', hl: '#e5e5e5', ink: '#171717', ink4: '#999', p: '#5e6ad2', ok: '#16a34a', warn: '#ca8a04', bg: '#fafafa' };
 
+let T = l;
+
 export default function PMBoard() {
   const { isDark } = useTheme();
-  const T = isDark ? d : l;
+  T = isDark ? d : l;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   useEffect(() => { (async () => { try { const r = await fetchProjectPage({ pageNum: 1, pageSize: 500 }); setProjects(r.records || []); } catch { setProjects([]); } })(); }, []);
 

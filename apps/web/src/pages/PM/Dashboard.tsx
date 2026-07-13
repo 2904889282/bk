@@ -10,10 +10,12 @@ const l = { s1: '#fff', s2: '#f5f5f5', hl: '#e5e5e5', p: '#5e6ad2', ink: '#17171
 const fr = (v: number) => v >= 10000 ? Math.round(v / 10000) + '万' : v.toLocaleString();
 const fmtMonth = (d: string) => d ? parseInt(d.slice(5, 7)) + '月' : '-';
 
+let T = l; // 模块级，子组件可引用
+
 export default function PMDashboard() {
   const nav = useNavigate();
   const { isDark } = useTheme();
-  const T = isDark ? d : l;
+  T = isDark ? d : l; // 渲染前同步主题
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
 

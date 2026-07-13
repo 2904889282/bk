@@ -13,10 +13,12 @@ const fmtDate = (d: string) => { if (!d) return '-'; const m = d.match(/(\d{4})-
 const STATUS_OPTIONS = ['', '进行中', '正式执行', '已完成', '已暂停'];
 const RATING_OPTIONS = ['', 'A', 'B', 'C'];
 
+let T = lightTokens;
+
 export default function PmProjects() {
   const nav = useNavigate();
   const { isDark } = useTheme();
-  const T = isDark ? darkTokens : lightTokens;
+  T = isDark ? darkTokens : lightTokens;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');

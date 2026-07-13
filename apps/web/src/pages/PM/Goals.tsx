@@ -13,10 +13,12 @@ const sortGoals = (a: ProjectVO, b: ProjectVO) => {
   return bp - ap;
 };
 
+let T = l;
+
 export default function PMGoals() {
   const nav = useNavigate();
   const { isDark } = useTheme();
-  const T = isDark ? d : l;
+  T = isDark ? d : l;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [dept, setDept] = useState('');

@@ -11,10 +11,12 @@ const fr = (v: number) => v >= 10000 ? (v / 10000).toFixed(0) + '万' : v ? v.to
 
 type RevItem = ProjectVO & { actual: number; actualProfit: number; expectedProfit: number };
 
+let T = l;
+
 export default function PMRevenue() {
   const nav = useNavigate();
   const { isDark } = useTheme();
-  const T = isDark ? d : l;
+  T = isDark ? d : l;
   const [raw, setRaw] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
 
