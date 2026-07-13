@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query, Body
-from sqlalchemy import select, func, or_, text
+from sqlalchemy import select, func, or_, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizProject, BizProjectPeriod, BizProjectWeekly, BizProjectMilestone, BizProjectTeam, BizProjectWBS, BizProjectChange, SysUser
@@ -79,6 +79,13 @@ async def delete(project_id: int, body: dict = Body(...), db: AsyncSession = Dep
     r = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not r: return fail("项目不存在")
     r.is_deleted = 1; await db.commit()
+    return success()
+
+
+@router.delete("/api/project/batch")
+async def delete_project_batch(ids: list[int] = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    await db.execute(update(BizProject).where(BizProject.id.in_(ids)).values(is_deleted=1))
+    await db.commit()
     return success()
 
 

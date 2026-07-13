@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select, func, or_, text, and_
+from sqlalchemy import select, func, or_, update, text, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizTalent, BizRisk, BizAlert, BizClue, BizCampaign, BizProject
@@ -77,6 +77,12 @@ async def talent_delete(talent_id: int, db: AsyncSession = Depends(get_db), user
     if r: r.is_deleted = 1; await db.commit()
     return success()
 
+@router.delete("/api/talent/batch")
+async def talent_batch_delete(ids: list[int] = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    await db.execute(update(BizTalent).where(BizTalent.id.in_(ids)).values(is_deleted=1))
+    await db.commit()
+    return success()
+
 # ==================== 风险 ====================
 
 @router.get("/api/risk/page")
@@ -126,6 +132,19 @@ async def risk_delete(risk_id: int, db: AsyncSession = Depends(get_db), user=Dep
     if not is_admin(user) and not verify_ownership(user, row_to_dict(r), "risk"):
         return fail("无权删除该风险")
     r.is_deleted = 1; await db.commit()
+    return success()
+
+@router.delete("/api/risk/batch")
+async def risk_batch_delete(ids: list[int] = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    await db.execute(update(BizRisk).where(BizRisk.id.in_(ids)).values(is_deleted=1))
+    await db.commit()
+    return success()
+
+@router.put("/api/risk/{risk_id}/resolve")
+async def risk_resolve(risk_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    r = (await db.execute(select(BizRisk).where(BizRisk.id == risk_id))).scalar_one_or_none()
+    if not r: return fail("风险不存在")
+    r.status = "已解决"; await db.commit()
     return success()
 
 # ==================== 预警 ====================

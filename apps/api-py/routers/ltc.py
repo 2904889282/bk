@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
-from sqlalchemy import select, func, or_, text
+from fastapi import APIRouter, Depends, Body, UploadFile, File, Form
+from sqlalchemy import select, func, or_, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizPipeline, BizCampaign
@@ -69,6 +69,37 @@ async def pipeline_delete(pipeline_id: int, db: AsyncSession = Depends(get_db), 
     if not is_admin(user) and not verify_ownership(user, row_to_dict(r), "pipeline"):
         return fail("无权删除该商机")
     r.is_deleted = 1; await db.commit()
+    return success()
+
+@router.delete("/api/pipeline/batch")
+async def pipeline_batch_delete(ids: list[int] = Body(...), db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    await db.execute(update(BizPipeline).where(BizPipeline.id.in_(ids)).values(is_deleted=1))
+    await db.commit()
+    return success()
+
+@router.get("/api/pipeline/stages")
+async def pipeline_stages(db: AsyncSession = Depends(get_db)):
+    """返回商机阶段列表及每个阶段的商机数量"""
+    rows = (await db.execute(select(BizPipeline.stage, func.count(BizPipeline.id))
+        .where(BizPipeline.is_deleted == 0)
+        .group_by(BizPipeline.stage)
+        .order_by(BizPipeline.stage))).all()
+    return success([{"stage": r[0], "count": r[1]} for r in rows])
+
+@router.post("/api/pipeline/{pipeline_id}/claim")
+async def pipeline_claim(pipeline_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id, BizPipeline.is_deleted == 0))).scalar_one_or_none()
+    if not r: return fail("商机不存在")
+    r.owner = user.get("realName", user.get("username", ""))
+    await db.commit()
+    return success()
+
+@router.post("/api/pipeline/{pipeline_id}/move-to-sea")
+async def pipeline_move_to_sea(pipeline_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
+    r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id, BizPipeline.is_deleted == 0))).scalar_one_or_none()
+    if not r: return fail("商机不存在")
+    r.stage = "公海"
+    await db.commit()
     return success()
 
 # ==================== 线索跟进 ====================
