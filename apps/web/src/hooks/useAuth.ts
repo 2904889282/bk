@@ -57,7 +57,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         localStorage.setItem('beike_username', username);
       }
 
-      set({ token: data.token, user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : FALLBACK_MENUS });
+      set({ token: data.token, user, isLoggedIn: true, permissions, menus: FALLBACK_MENUS });
       return { success: true };
     } catch (err: unknown) {
       // 后端返回了明确的业务错误（如密码错误），直接反馈给用户
@@ -99,7 +99,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       const user = normalizeUser(data.user);
       localStorage.setItem('beike_user', JSON.stringify(user));
       const permissions = normalizePermissions(data);
-      set({ user, isLoggedIn: true, permissions, menus: data.menus?.length ? data.menus : FALLBACK_MENUS });
+      set({ user, isLoggedIn: true, permissions, menus: FALLBACK_MENUS });
     } catch {
       get().logout();
     }
