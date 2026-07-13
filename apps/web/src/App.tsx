@@ -3,18 +3,37 @@ import { useEffect, lazy, Suspense } from 'react';
 import { App as AntdApp, ConfigProvider, theme, Spin } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useAuth } from './hooks/useAuth';
+import { useTheme } from './store/useTheme';
 import { setMessageApi } from './utils/request';
 import { initStageMapping } from './utils/stageMapping';
 import BasicLayout from './layouts/BasicLayout';
-import PermissionGuard from './components/auth/PermissionGuard';
 
 const LoginPage = lazy(() => import('./pages/Login'));
+const LtcKanban = lazy(() => import('./pages/LTC/Kanban'));
 const LtcAlerts = lazy(() => import('./pages/LTC/Alerts'));
 const LtcAnalysis = lazy(() => import('./pages/LTC/Analysis'));
 const LeadsList = lazy(() => import('./pages/LTC/Leads/List'));
 const LeadsDetail = lazy(() => import('./pages/LTC/Leads/Detail'));
+const PipelineList = lazy(() => import('./pages/Pipeline/List'));
+const PmKanban = lazy(() => import('./pages/PM/Kanban'));
+const PmProjects = lazy(() => import('./pages/PM/Projects'));
+const ProjectDetail = lazy(() => import('./pages/PM/Projects/Detail'));
+const PmRisks = lazy(() => import('./pages/PM/Risks'));
+const PmTalent = lazy(() => import('./pages/PM/Talent'));
+const PmGantt = lazy(() => import('./pages/PM/Gantt'));
+// 新项目管理板块 v2
+const PMDashboard = lazy(() => import('./pages/PM/Dashboard'));
+const PMBoard = lazy(() => import('./pages/PM/Board'));
+const PMGoals = lazy(() => import('./pages/PM/Goals'));
+const PMRevenue = lazy(() => import('./pages/PM/Revenue'));
+const PMTeam = lazy(() => import('./pages/PM/Team'));
+const PMStaff = lazy(() => import('./pages/PM/Staff'));
 const AdminUsers = lazy(() => import('./pages/Admin/Users'));
+const AdminDepts = lazy(() => import('./pages/Admin/Depts'));
+const AdminPositions = lazy(() => import('./pages/Admin/Positions'));
+const RecycleBin = lazy(() => import('./pages/Admin/RecycleBin'));
 const DevicesPage = lazy(() => import('./pages/Account/Devices'));
+const ResourcesPage = lazy(() => import('./pages/Resources'));
 const StatPlaceholder = lazy(() => import('./pages/StatPlaceholder'));
 
 function PageLoading() {
@@ -53,13 +72,16 @@ function AppInit() {
 }
 
 function AppContent() {
+  const { isDark } = useTheme();
+
   return (
     <ConfigProvider
       locale={zhCN}
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {
-          colorPrimary: '#171717',
+          /* ── Vercel Ink 墨水黑主色 ── */
+          colorPrimary: isDark ? '#fafafa' : '#171717',
           colorInfo: '#0070f3',
           colorSuccess: '#0070f3',
           colorWarning: '#f5a623',
@@ -67,20 +89,28 @@ function AppContent() {
           colorLink: '#0070f3',
           colorLinkHover: '#0761d1',
           colorLinkActive: '#0059c8',
+
+          /* ── Vercel geist-radius: sm=6px ── */
           borderRadius: 6,
           borderRadiusLG: 12,
           borderRadiusSM: 4,
-          colorBgContainer: '#ffffff',
-          colorBgElevated: '#ffffff',
-          colorBgLayout: '#fafafa',
-          colorBgSpotlight: '#f5f5f5',
-          colorBorder: '#ebebeb',
-          colorBorderSecondary: '#ebebeb',
-          colorFillAlter: '#f5f5f5',
-          colorText: '#171717',
-          colorTextSecondary: '#4d4d4d',
-          colorTextTertiary: '#888888',
-          colorTextQuaternary: '#a1a1a1',
+
+          /* ── Vercel 表面体系 ── */
+          colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
+          colorBgElevated: isDark ? '#141414' : '#ffffff',
+          colorBgLayout: isDark ? '#0d0d0d' : '#fafafa',
+          colorBgSpotlight: isDark ? '#1a1a1a' : '#f5f5f5',
+          colorBorder: isDark ? '#2a2a2a' : '#ebebeb',
+          colorBorderSecondary: isDark ? '#1a1a1a' : '#ebebeb',
+          colorFillAlter: isDark ? '#141414' : '#f5f5f5',
+
+          /* ── Vercel 文字体系 ── */
+          colorText: isDark ? '#fafafa' : '#171717',
+          colorTextSecondary: isDark ? '#a1a1a1' : '#4d4d4d',
+          colorTextTertiary: isDark ? '#666666' : '#888888',
+          colorTextQuaternary: isDark ? '#444444' : '#a1a1a1',
+
+          /* ── 字体 — Inter 优先（Geist 开源替代）── */
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
           fontSize: 14,
           fontSizeHeading1: 30,
@@ -89,15 +119,29 @@ function AppContent() {
           fontSizeHeading4: 16,
           fontSizeHeading5: 14,
           lineHeight: 1.5714,
+
+          /* ── 控件高度 ── */
           controlHeight: 36,
           controlHeightLG: 42,
           controlHeightSM: 30,
+
+          /* ── 间距 ── */
           padding: 16,
           paddingLG: 24,
           paddingXS: 8,
           paddingSM: 12,
-          boxShadow: '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 8px -8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
-          boxShadowSecondary: '0px 1px 1px rgba(0,0,0,0.02), 0px 2px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+
+          /* ── Vercel 层叠阴影（L3 作为默认卡片阴影）── */
+          boxShadow:
+            isDark
+              ? '0px 2px 4px rgba(0,0,0,0.3), 0px 8px 8px -8px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.06) inset'
+              : '0px 2px 2px rgba(0,0,0,0.04), 0px 8px 8px -8px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+          boxShadowSecondary:
+            isDark
+              ? '0px 1px 2px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.06) inset'
+              : '0px 1px 1px rgba(0,0,0,0.02), 0px 2px 2px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.08) inset',
+
+          /* ── 动效 ── */
           motionDurationSlow: '0.3s',
           motionDurationMid: '0.2s',
           motionDurationFast: '0.1s',
@@ -108,9 +152,9 @@ function AppContent() {
             itemBorderRadius: 6,
             itemMarginInline: 8,
             subMenuItemBg: 'transparent',
-            itemActiveBg: '#f5f5f5',
-            itemSelectedBg: '#f5f5f5',
-            itemSelectedColor: '#171717',
+            itemActiveBg: isDark ? '#1a1a1a' : '#f5f5f5',
+            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
+            itemSelectedColor: isDark ? '#fafafa' : '#171717',
             itemHeight: 40,
             iconSize: 16,
           },
@@ -120,11 +164,11 @@ function AppContent() {
           },
           Table: {
             borderRadius: 8,
-            headerBg: '#fafafa',
-            headerColor: '#4d4d4d',
-            headerSplitColor: '#ebebeb',
-            rowHoverBg: '#fafafa',
-            borderColor: '#ebebeb',
+            headerBg: isDark ? '#141414' : '#fafafa',
+            headerColor: isDark ? '#a1a1a1' : '#4d4d4d',
+            headerSplitColor: isDark ? '#2a2a2a' : '#ebebeb',
+            rowHoverBg: isDark ? '#1a1a1a' : '#fafafa',
+            borderColor: isDark ? '#2a2a2a' : '#ebebeb',
           },
           Button: {
             borderRadius: 6,
@@ -149,9 +193,9 @@ function AppContent() {
             controlHeightLG: 42,
             controlHeightSM: 30,
             paddingInline: 12,
-            colorBgContainer: '#ffffff',
-            activeBorderColor: '#171717',
-            hoverBorderColor: '#4d4d4d',
+            colorBgContainer: isDark ? '#0a0a0a' : '#ffffff',
+            activeBorderColor: isDark ? '#fafafa' : '#171717',
+            hoverBorderColor: isDark ? '#a1a1a1' : '#4d4d4d',
           },
           Modal: {
             borderRadiusLG: 12,
@@ -162,14 +206,14 @@ function AppContent() {
           },
           Tabs: {
             borderRadius: 6,
-            itemActiveColor: '#171717',
-            itemHoverColor: '#4d4d4d',
-            itemSelectedColor: '#171717',
-            inkBarColor: '#171717',
+            itemActiveColor: isDark ? '#fafafa' : '#171717',
+            itemHoverColor: isDark ? '#a1a1a1' : '#4d4d4d',
+            itemSelectedColor: isDark ? '#fafafa' : '#171717',
+            inkBarColor: isDark ? '#fafafa' : '#171717',
           },
           Segmented: {
             borderRadius: 6,
-            itemSelectedBg: '#f5f5f5',
+            itemSelectedBg: isDark ? '#1a1a1a' : '#f5f5f5',
           },
           Select: {
             borderRadius: 6,
@@ -188,14 +232,33 @@ function AppContent() {
             {/* 统一布局 — 所有页面共用 BasicLayout 侧边栏 */}
             <Route path="/*" element={<PrivateRoute><BasicLayout /></PrivateRoute>}>
               {/* 线索板块 */}
-              <Route path="ltc/kanban" element={withSuspense(<LeadsList />)} />
+              <Route path="ltc/dashboard" element={withSuspense(<LeadsList />)} />
+              <Route path="ltc/kanban" element={withSuspense(<LtcKanban />)} />
               <Route path="ltc/leads" element={withSuspense(<LeadsList />)} />
               <Route path="ltc/leads/:id" element={withSuspense(<LeadsDetail />)} />
+              <Route path="ltc/pipeline" element={withSuspense(<PipelineList />)} />
               <Route path="ltc/alerts" element={withSuspense(<LtcAlerts />)} />
               <Route path="ltc/analysis" element={withSuspense(<LtcAnalysis />)} />
+              {/* 项目板块 */}
+              <Route path="pm/dashboard" element={withSuspense(<PMDashboard />)} />
+              <Route path="pm/board" element={withSuspense(<PMBoard />)} />
+              <Route path="pm/projects" element={withSuspense(<PmProjects />)} />
+              <Route path="pm/goals" element={withSuspense(<PMGoals />)} />
+              <Route path="pm/revenue" element={withSuspense(<PMRevenue />)} />
+              <Route path="pm/team" element={withSuspense(<PMTeam />)} />
+              <Route path="pm/staff" element={withSuspense(<PMStaff />)} />
+              <Route path="pm/gantt" element={withSuspense(<PmGantt />)} />
+              <Route path="pm/kanban" element={withSuspense(<PmKanban />)} />
+              <Route path="pm/risks" element={withSuspense(<PmRisks />)} />
+              <Route path="pm/talent" element={withSuspense(<PmTalent />)} />
               {/* 管理板块 */}
-              <Route path="admin/users" element={withSuspense(<PermissionGuard permCode="system:user:list"><AdminUsers /></PermissionGuard>)} />
+              <Route path="projects/:id" element={withSuspense(<ProjectDetail />)} />
+              <Route path="admin/users" element={withSuspense(<AdminUsers />)} />
+              <Route path="admin/depts" element={withSuspense(<AdminDepts />)} />
+              <Route path="admin/positions" element={withSuspense(<AdminPositions />)} />
+              <Route path="admin/recycle" element={withSuspense(<RecycleBin />)} />
               <Route path="account/devices" element={withSuspense(<DevicesPage />)} />
+              <Route path="resources" element={withSuspense(<ResourcesPage />)} />
               <Route path="stats/:type" element={withSuspense(<StatPlaceholder />)} />
             </Route>
             {/* 根路径 → 直接进入工作台 */}

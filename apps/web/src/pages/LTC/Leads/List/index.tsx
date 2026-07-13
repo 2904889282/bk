@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { Button, Typography, App, Modal, Input, Select, Form, Drawer, Timeline, Tag } from 'antd';
 import {
   SearchOutlined, PlusOutlined, DownloadOutlined,
@@ -466,22 +465,12 @@ function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
 /* ============ 主页面组件 ============ */
 export default function LeadsList() {
   const { message } = App.useApp();
-  const navigate = useNavigate();
-  const location = useLocation();
-  
-  /* 根据 URL 决定初始视图 */
-  const getInitialView = () => {
-    if (location.pathname.includes('/ltc/kanban')) return 'board';
-    if (location.pathname.includes('/ltc/dashboard')) return 'dashboard';
-    return 'list';
-  };
-  
   const [leads, setLeads] = useState<ClueVO[]>([]);
   const [total, setTotal] = useState(0);
   const [pg, setPg] = useState({ p: 1, s: 15 });
 
-  /* 视图切换 — 从 URL 初始化 */
-  const [view, setView] = useState<'dashboard' | 'board' | 'list'>(getInitialView);
+  /* 视图切换 */
+  const [view, setView] = useState<'dashboard' | 'board' | 'list'>('list');
 
   /* 筛选 */
   const [kw, setKw] = useState('');
@@ -876,8 +865,8 @@ export default function LeadsList() {
             </div>
           </div>
 
-          {/* 视图切换 — 同步更新 URL */}
-          <ViewSwitch view={view} onChange={v => { setView(v); const routes: Record<string,string> = { dashboard:'/ltc/dashboard', board:'/ltc/kanban', list:'/ltc/leads' }; navigate(routes[v], { replace: true }); }} counts={{ total: stats.total }} />
+          {/* 视图切换 */}
+          <ViewSwitch view={view} onChange={setView} counts={{ total: stats.total }} />
 
           {/* 状态筛选标签 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>

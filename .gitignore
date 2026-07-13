@@ -18,12 +18,6 @@ __pycache__/
 .env
 .venv/
 _tmp_venv/
-# Security: exclude agent handoff and key files
-AGENT_HANDOFF.md
-*.pem
-*.key
-ops/**/.env
-apps/**/.env
 # Test scripts
 scripts/test_*.py
 scripts/manual_rbac_test.py
