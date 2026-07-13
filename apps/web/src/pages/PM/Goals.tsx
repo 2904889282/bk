@@ -111,10 +111,9 @@ export default function PMGoals() {
                   defaultValue={prog || ''}
                   type="number" placeholder="%"
                   onClick={e => e.stopPropagation()}
-                  onBlur={e => { const v = parseInt(e.target.value) || 0; saveGoal(p.id, 'progress', v); }}
+                  onFocus={e => { const t = e.target as HTMLInputElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
+                  onBlur={e => { const t = e.target as HTMLInputElement; const v = parseInt(t.value || '') || 0; saveGoal(p.id, 'progress', v); t.style.borderColor = T.hl; t.style.background = T.s2; }}
                   style={{ width: 52, height: 24, fontSize: 11, fontWeight: 600, textAlign: 'center', background: T.s2, border: `1px solid ${T.hl}`, borderRadius: 4, color: clr, fontFamily: 'inherit', padding: 2, outline: 'none' }}
-                  onFocus={e => { e.target.style.borderColor = T.hls; e.target.style.background = T.s1; }}
-                  onBlur={e => { e.target.style.borderColor = T.hl; e.target.style.background = T.s2; }}
                 />
                 <div style={{ flex: 1, height: 5, background: T.s2, borderRadius: 3, overflow: 'hidden' }}>
                   <div style={{ height: '100%', borderRadius: 3, background: clr, width: `${Math.min(prog, 100)}%`, transition: 'width 0.3s' }} />

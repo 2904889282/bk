@@ -504,6 +504,7 @@ export default function ProjectDetail() {
                           onBlur={e => {
                             if (e.target.value !== workDesc)
                               saveWorkDesc(m.roleKey, m.name || m.roleKey, e.target.value);
+                            e.currentTarget.style.borderColor = T.hl;
                           }}
                           style={{
                             width: '100%', minHeight: 48, background: T.s2,
@@ -513,7 +514,6 @@ export default function ProjectDetail() {
                             lineHeight: 1.5, marginTop: 8,
                           }}
                           onFocus={e => e.currentTarget.style.borderColor = T.hls}
-                          onBlur={e => e.currentTarget.style.borderColor = T.hl}
                         />
                       </div>
                     </div>
@@ -643,14 +643,13 @@ export default function ProjectDetail() {
                       <input
                         defaultValue={m.milestone || m.name || '新里程碑'}
                         placeholder="里程碑名称"
-                        onBlur={e => { if (e.target.value !== (m.milestone || m.name)) saveMilestoneField(idx, 'milestone', e.target.value); }}
+                        onBlur={e => { const t = e.target as HTMLInputElement; if (t.value !== (m.milestone || m.name)) saveMilestoneField(idx, 'milestone', t.value); t.style.borderColor = 'transparent'; t.style.background = T.s2; }}
                         style={{
                           fontSize: 12, fontWeight: 500, flex: 1,
                           background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '3px 6px', color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
                         onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
-                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
                         onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
                         onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
@@ -671,26 +670,24 @@ export default function ProjectDetail() {
                         defaultValue={m.plannedDate || m.actualDate || ''}
                         placeholder="截止日"
                         type="date"
-                        onBlur={e => { if (e.target.value !== (m.plannedDate || m.actualDate || '')) saveMilestoneField(idx, 'plannedDate', e.target.value); }}
+                        onBlur={e => { const t = e.target as HTMLInputElement; if (t.value !== (m.plannedDate || m.actualDate || '')) saveMilestoneField(idx, 'plannedDate', t.value); t.style.borderColor = 'transparent'; t.style.background = T.s2; }}
                         style={{
                           flex: 1, background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '2px 4px', fontSize: 10, color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
                         onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
-                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
                         onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
                         onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
                       <input
                         defaultValue={m.stage || m.reward || ''}
                         placeholder="奖励"
-                        onBlur={e => { if (e.target.value !== (m.stage || m.reward || '')) saveMilestoneField(idx, 'stage', e.target.value); }}
+                        onBlur={e => { const t = e.target as HTMLInputElement; if (t.value !== (m.stage || m.reward || '')) saveMilestoneField(idx, 'stage', t.value); t.style.borderColor = 'transparent'; t.style.background = T.s2; }}
                         style={{
                           flex: 1, background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '2px 4px', fontSize: 10, color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
                         onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
-                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
                         onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
                         onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
@@ -715,7 +712,7 @@ export default function ProjectDetail() {
                 <div style={{ fontSize: 11, color: T.ink4, marginBottom: 4 }}>风险评估</div>
                 <input
                   defaultValue={p.riskAssessment || ''}
-                  onBlur={e => { if (e.target.value !== (p.riskAssessment || '')) sv('riskAssessment', e.target.value); }}
+                  onBlur={e => { if (e.target.value !== (p.riskAssessment || '')) sv('riskAssessment', e.target.value); (e.target as HTMLElement).style.borderColor = T.hl; }}
                   placeholder="输入风险评估..."
                   style={{
                     width: '100%', background: T.s2, border: `1px solid ${T.hl}`, borderRadius: 6,
@@ -723,14 +720,13 @@ export default function ProjectDetail() {
                     boxSizing: 'border-box',
                   }}
                   onFocus={e => (e.target as HTMLElement).style.borderColor = T.hls}
-                  onBlur={e => (e.target as HTMLElement).style.borderColor = T.hl}
                 />
               </div>
               <div style={{ marginTop: 8 }}>
                 <div style={{ fontSize: 11, color: T.ink4, marginBottom: 4 }}>进展解读</div>
                 <textarea
                   defaultValue={p.description || ''}
-                  onBlur={e => { if (e.target.value !== (p.description || '')) sv('description', e.target.value); }}
+                  onBlur={e => { if (e.target.value !== (p.description || '')) sv('description', e.target.value); (e.target as HTMLElement).style.borderColor = T.hl; }}
                   placeholder="描述项目进展..."
                   style={{
                     width: '100%', minHeight: 70, background: T.s2, border: `1px solid ${T.hl}`,
@@ -738,7 +734,6 @@ export default function ProjectDetail() {
                     fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box',
                   }}
                   onFocus={e => (e.target as HTMLElement).style.borderColor = T.hls}
-                  onBlur={e => (e.target as HTMLElement).style.borderColor = T.hl}
                 />
               </div>
               <div style={{ fontSize: 10, color: T.ink4, marginTop: 6 }}>修改后自动保存</div>
