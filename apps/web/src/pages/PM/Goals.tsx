@@ -1,7 +1,7 @@
 /** PM 关键目标 — 目标KPI + 部门/评级筛选 + 项目目标卡片 + 内联编辑 */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProjectPage, updateProject, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, updateProject, type ProjectVO } from '../../api/project';
 
 const T = { s1: '#0f1011', s2: '#141516', s3: '#18191a', hl: '#23252a', hls: '#34343a',
   ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',

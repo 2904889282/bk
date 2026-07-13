@@ -1,7 +1,7 @@
 /** PM 数据看板 — KPI网格 + 部门分布 + 月度营收 + 最近项目 + 待填写提醒 */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchProjectPage, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, type ProjectVO } from '../../api/project';
 
 const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', p: '#5e6ad2',
   ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',

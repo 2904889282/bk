@@ -1,6 +1,6 @@
 /** PM 人员分配 */
 import { useEffect, useState } from 'react';
-import { fetchProjectPage, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, type ProjectVO } from '../../api/project';
 const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', bg: '#010102' };
 
 export default function PMStaff() {

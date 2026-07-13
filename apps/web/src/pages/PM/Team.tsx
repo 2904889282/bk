@@ -1,6 +1,6 @@
 /** PM 团队总览 */
 import { useEffect, useState } from 'react';
-import { fetchProjectPage, type ProjectVO } from '../../../api/project';
+import { fetchProjectPage, type ProjectVO } from '../../api/project';
 const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', bg: '#010102' };
 
 export default function PMTeam() {
