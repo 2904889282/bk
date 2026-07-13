@@ -67,7 +67,7 @@ export default function PMGoals() {
         <span style={{ fontSize: 12, color: T.ink4, marginLeft: 12 }}>评级:</span>
         <PillGroup>
           <Pill active={!rating} onClick={() => setRating('')}>全部</Pill>
-          {['A', 'B', 'C'].map(r => <Pill key={r} active={rating === r} onClick={() => setRating(r)}>{r}级</Pill>)}
+          {['A', 'B', 'C'].map(r => <Pill key={r} active={rating === r} onClick={() => setRating(r)}>{`${r}级`}</Pill>)}
         </PillGroup>
       </div>
 

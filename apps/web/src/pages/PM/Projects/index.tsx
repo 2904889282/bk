@@ -43,12 +43,7 @@ export default function PmProjects() {
     })();
   }, []);
 
-  const visibleCols = useMemo(() => ({
-    name: 1, manager: 1, dept: 1, revenue: 1, rating: 1, status: 1, progress: 1, month: 1,
-  }), []);
-
   const managers = useMemo(() => [...new Set(projects.map(p => p.projectManager).filter(Boolean))].sort(), [projects]);
-  const depts = useMemo(() => [...new Set(projects.map(p => p.deptBelong).filter(Boolean))].sort(), [projects]);
 
   const filtered = useMemo(() => {
     let d = projects;
@@ -153,7 +148,7 @@ export default function PmProjects() {
       {selected.size > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.s2, border: `1px solid ${T.hl}`, borderRadius: 8, padding: '10px 16px', marginBottom: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 500, color: T.ink }}>已选 {selected.size} 项</span>
-          <button onClick={() => { if (confirm('确定删除选中项目？')) { setProjects(prev => prev.filter(p => !selected.has(p.id))); setSelected(new Set()); toast('✓ 已删除'); } }}
+          <button onClick={() => { if (confirm('确定删除选中项目？')) { setProjects(prev => prev.filter(p => !selected.has(p.id))); setSelected(new Set()); } }}
             style={{ background: 'transparent', color: T.err, border: `1px solid rgba(224,80,80,0.3)`, borderRadius: 99, padding: '3px 11px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer' }}>批量删除</button>
           <button onClick={() => setSelected(new Set())} style={{ background: 'transparent', color: T.ink3, border: `1px solid ${T.hl}`, borderRadius: 99, padding: '3px 11px', fontSize: 11, fontFamily: 'inherit', cursor: 'pointer', marginLeft: 'auto' }}>取消选择</button>
         </div>
@@ -176,7 +171,7 @@ export default function PmProjects() {
           <span></span>
         </div>
 
-        {grouped.map((g, gi) => (
+        {grouped.map((g) => (
           <div key={g.name || 'all'}>
             {group && (
               <div style={{ display: 'grid', gridTemplateColumns: '34px 1fr auto 52px', alignItems: 'center', padding: '10px 16px', borderBottom: `1px solid ${T.hl}`, fontSize: 12, fontWeight: 500, color: T.ink2, background: T.s2 }}>

@@ -482,7 +482,6 @@ export default function LeadsList() {
   const { message } = App.useApp();
   const { isDark } = useTheme();
   currentDm = DM(isDark);  // 更新模块级变量，子组件通过 getDm() 读取
-  const dm = currentDm;
   const [leads, setLeads] = useState<ClueVO[]>([]);
   const [total, setTotal] = useState(0);
   const [pg, setPg] = useState({ p: 1, s: 15 });

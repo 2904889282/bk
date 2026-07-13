@@ -183,7 +183,6 @@ export default function BasicLayout() {
       contentWidth="Fixed"
       fixedHeader
       navTheme={isDark ? 'realDark' : 'light'}
-      colorBgHeader={isDark ? '#0a0a0a' : '#fff'}
       pageTitleRender={false}
       actionsRender={() => [
         <Tooltip key="home" title="工作台">

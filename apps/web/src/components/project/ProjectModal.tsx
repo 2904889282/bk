@@ -192,7 +192,7 @@ export default function ProjectModal({ open, editProject, onClose }: Props) {
 
   /* 内联输入（带焦点高亮） */
   const Inp = ({ value, onChange, placeholder, type }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => {
-    const { focused, handlers, style } = useFocusStyle();
+    const { handlers, style } = useFocusStyle();
     return <input {...handlers} type={type || 'text'} style={style} value={value}
       onChange={e => onChange(e.target.value)} placeholder={placeholder} />;
   };
@@ -203,8 +203,7 @@ export default function ProjectModal({ open, editProject, onClose }: Props) {
       footer={null} width={700} closable={false} destroyOnHidden
       maskClosable={false}
       styles={{
-        body: { padding: 0 },
-        content: { padding: 0, background: C.modalBg, borderRadius: 14, overflow: 'hidden' },
+        body: { padding: 0, background: C.modalBg, borderRadius: 14, overflow: 'hidden' },
       }}
       style={{ top: 30 }}
     >

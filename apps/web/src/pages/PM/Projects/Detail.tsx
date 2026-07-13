@@ -45,14 +45,14 @@ const InlineInput = ({ val, onChange, style, type, placeholder }: {
   <input type={type || 'text'} defaultValue={val} placeholder={placeholder}
     onBlur={e => {
       if (e.target.value !== val) onChange(e.target.value);
-      e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2;
+      (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2;
     }}
     style={{ background: T.s2, border: '1px solid transparent', borderRadius: 4,
       padding: '4px 8px', fontSize: 12, color: T.ink, fontFamily: 'inherit',
       outline: 'none', transition: 'all 0.15s', ...style }}
-    onFocus={e => { e.target.style.borderColor = T.hls; e.target.style.background = T.s1; }}
-    onMouseEnter={e => { if (document.activeElement !== e.target) e.target.style.borderColor = T.hl; }}
-    onMouseLeave={e => { if (document.activeElement !== e.target) { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; } }}
+    onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
+    onMouseEnter={e => { const t = e.target as HTMLElement; if (document.activeElement !== t) t.style.borderColor = T.hl; }}
+    onMouseLeave={e => { const t = e.target as HTMLElement; if (document.activeElement !== t) { t.style.borderColor = 'transparent'; t.style.background = T.s2; } }}
   />
 );
 
@@ -230,7 +230,7 @@ export default function ProjectDetail() {
   const msList = d.milestones || [];
   const period = d.periods?.[0];
   const changes = d.changes || [];
-  const today = new Date();
+  const _today = new Date(); void _today;
 
   /* 获取项目家族 */
   const getProjectFamily = (): ProjectVO[] => fam;
@@ -649,10 +649,10 @@ export default function ProjectDetail() {
                           background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '3px 6px', color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
-                        onFocus={e => { e.target.style.borderColor = T.hls; e.target.style.background = T.s1; }}
-                        onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; }}
-                        onMouseEnter={e => { if (document.activeElement !== e.target) e.target.style.borderColor = T.hl; }}
-                        onMouseLeave={e => { if (document.activeElement !== e.target) { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; } }}
+                        onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
+                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
+                        onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
+                        onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
                       <select defaultValue={m.status || '未完成'}
                         onChange={e => saveMilestoneField(idx, 'status', e.target.value)}
@@ -676,10 +676,10 @@ export default function ProjectDetail() {
                           flex: 1, background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '2px 4px', fontSize: 10, color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
-                        onFocus={e => { e.target.style.borderColor = T.hls; e.target.style.background = T.s1; }}
-                        onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; }}
-                        onMouseEnter={e => { if (document.activeElement !== e.target) e.target.style.borderColor = T.hl; }}
-                        onMouseLeave={e => { if (document.activeElement !== e.target) { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; } }}
+                        onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
+                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
+                        onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
+                        onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
                       <input
                         defaultValue={m.stage || m.reward || ''}
@@ -689,10 +689,10 @@ export default function ProjectDetail() {
                           flex: 1, background: T.s2, border: '1px solid transparent', borderRadius: 4,
                           padding: '2px 4px', fontSize: 10, color: T.ink, fontFamily: 'inherit', outline: 'none',
                         }}
-                        onFocus={e => { e.target.style.borderColor = T.hls; e.target.style.background = T.s1; }}
-                        onBlur={e => { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; }}
-                        onMouseEnter={e => { if (document.activeElement !== e.target) e.target.style.borderColor = T.hl; }}
-                        onMouseLeave={e => { if (document.activeElement !== e.target) { e.target.style.borderColor = 'transparent'; e.target.style.background = T.s2; } }}
+                        onFocus={e => { const t = e.target as HTMLElement; t.style.borderColor = T.hls; t.style.background = T.s1; }}
+                        onBlur={e => { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; }}
+                        onMouseEnter={e => { if (document.activeElement !== e.target) (e.target as HTMLElement).style.borderColor = T.hl; }}
+                        onMouseLeave={e => { if (document.activeElement !== e.target) { (e.target as HTMLElement).style.borderColor = 'transparent'; (e.target as HTMLElement).style.background = T.s2; } }}
                       />
                     </div>
                   </div>
@@ -722,8 +722,8 @@ export default function ProjectDetail() {
                     padding: '6px 10px', fontSize: 12, color: T.ink, fontFamily: 'inherit', outline: 'none',
                     boxSizing: 'border-box',
                   }}
-                  onFocus={e => e.target.style.borderColor = T.hls}
-                  onBlur={e => e.target.style.borderColor = T.hl}
+                  onFocus={e => (e.target as HTMLElement).style.borderColor = T.hls}
+                  onBlur={e => (e.target as HTMLElement).style.borderColor = T.hl}
                 />
               </div>
               <div style={{ marginTop: 8 }}>
@@ -737,8 +737,8 @@ export default function ProjectDetail() {
                     borderRadius: 6, padding: '6px 10px', fontSize: 12, color: T.ink,
                     fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box',
                   }}
-                  onFocus={e => e.target.style.borderColor = T.hls}
-                  onBlur={e => e.target.style.borderColor = T.hl}
+                  onFocus={e => (e.target as HTMLElement).style.borderColor = T.hls}
+                  onBlur={e => (e.target as HTMLElement).style.borderColor = T.hl}
                 />
               </div>
               <div style={{ fontSize: 10, color: T.ink4, marginTop: 6 }}>修改后自动保存</div>
