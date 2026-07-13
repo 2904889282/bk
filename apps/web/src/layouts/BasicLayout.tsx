@@ -22,20 +22,19 @@ import type { MenuDataItem } from '@ant-design/pro-components';
 import { useTheme } from '../store/useTheme';
 import { FALLBACK_MENUS, type MenuItem } from '../config/menus';
 
-function toMenuItems(backend: MenuItem[], hasPermission: (code: string) => boolean): MenuDataItem[] {
+function toMenuItems(backend: MenuItem[]): MenuDataItem[] {
   if (!backend || !Array.isArray(backend)) return [];
   return backend
     .map(item => {
       if (!item) return null;
       if (!item.children || item.children.length === 0) {
-        if (item.permCode && !hasPermission(item.permCode)) return null;
         return {
           path: item.path || '/',
           name: item.name || '',
           icon: resolveMenuIcon(item.icon),
         } as MenuDataItem;
       }
-      const filteredChildren = toMenuItems(item.children, hasPermission);
+      const filteredChildren = toMenuItems(item.children);
       if (filteredChildren.length === 0) return null;
       return {
         name: item.name || '',
@@ -93,7 +92,7 @@ export default function BasicLayout() {
   const menuData = useMemo(() => {
     try {
       const source = (menus && menus.length > 0) ? menus as unknown as MenuItem[] : FALLBACK_MENUS;
-      return toMenuItems(source, hasPermission);
+      return toMenuItems(source);
     } catch {
       return [] as MenuDataItem[];
     }
