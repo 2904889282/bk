@@ -179,9 +179,12 @@ export default function BasicLayout() {
         <a onClick={() => { setPathname(item.path || '/'); navigate(item.path || '/'); }}>{dom}</a>
       )}
       location={{ pathname }}
-      layout="top"
+      layout="side"
       contentWidth="Fixed"
       fixedHeader
+      navTheme={isDark ? 'realDark' : 'light'}
+      colorBgHeader={isDark ? '#0a0a0a' : '#fff'}
+      pageTitleRender={false}
       actionsRender={() => [
         <Tooltip key="home" title="工作台">
           <Button type="text" icon={<HomeOutlined />} onClick={() => { setPathname('/'); navigate('/'); }} />

@@ -1,11 +1,11 @@
-/** PM 营收分析 — 预计 vs 实际营收对比 + 毛利率 */
+/** PM 营收分析 */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../store/useTheme';
 import { fetchProjectPage, type ProjectVO } from '../../api/project';
 
-const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a',
-  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
-  p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const d = { s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const l = { s1: '#fff', s2: '#f5f5f5', hl: '#e5e5e5', hls: '#c5c5c5', ink: '#171717', ink2: '#444', ink3: '#737373', ink4: '#999', p: '#5e6ad2', ok: '#16a34a', warn: '#ca8a04', err: '#dc2626', bg: '#fafafa' };
 
 const fr = (v: number) => v >= 10000 ? (v / 10000).toFixed(0) + '万' : v ? v.toLocaleString() : '0';
 
@@ -13,6 +13,8 @@ type RevItem = ProjectVO & { actual: number; actualProfit: number; expectedProfi
 
 export default function PMRevenue() {
   const nav = useNavigate();
+  const { isDark } = useTheme();
+  const T = isDark ? d : l;
   const [raw, setRaw] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
 

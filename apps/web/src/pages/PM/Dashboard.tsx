@@ -1,17 +1,19 @@
-/** PM 数据看板 — KPI网格 + 部门分布 + 月度营收 + 最近项目 + 待填写提醒 */
+/** PM 数据看板 */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../store/useTheme';
 import { fetchProjectPage, type ProjectVO } from '../../api/project';
 
-const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', p: '#5e6ad2',
-  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
-  ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const d = { s1: '#0f1011', s2: '#141516', hl: '#23252a', p: '#5e6ad2', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const l = { s1: '#fff', s2: '#f5f5f5', hl: '#e5e5e5', p: '#5e6ad2', ink: '#171717', ink2: '#444', ink3: '#737373', ink4: '#999', ok: '#16a34a', warn: '#ca8a04', err: '#dc2626', bg: '#fafafa' };
 
 const fr = (v: number) => v >= 10000 ? Math.round(v / 10000) + '万' : v.toLocaleString();
 const fmtMonth = (d: string) => d ? parseInt(d.slice(5, 7)) + '月' : '-';
 
 export default function PMDashboard() {
   const nav = useNavigate();
+  const { isDark } = useTheme();
+  const T = isDark ? d : l;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
 

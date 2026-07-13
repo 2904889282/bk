@@ -12,7 +12,22 @@ import {
   type ClueVO, type FollowSaveDTO,
 } from '../../../../api/clue';
 import { isMockTokenError } from '../../../../utils/request';
+import { useTheme } from '../../../../store/useTheme';
 import CmdPalette, { useCmdActions } from '../../../../components/ui/CmdPalette';
+
+const DM = (dark: boolean) => ({
+  pageBg: dark ? '#0f1011' : '#F5F5F5',
+  cardBg: dark ? '#1a1a1a' : '#fff',
+  cardBorder: dark ? '#2a2a2a' : '#E5E7EB',
+  text: dark ? '#f7f8f8' : '#111827',
+  text2: dark ? '#d0d6e0' : '#374151',
+  text3: dark ? '#8a8f98' : '#6B7280',
+  text4: dark ? '#757880' : '#9CA3AF',
+});
+
+/* 模块级 dm，LeadsList 渲染时通过 getDm() 更新 */
+let currentDm = DM(false);
+const getDm = () => currentDm;
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -135,7 +150,7 @@ function KpiCard({ type, value, sub }: { type: 'total' | 'active' | 'budget' | '
   return (
     <div style={{
       flex: 1, minWidth: 180,
-      background: '#fff', borderRadius: 12,
+      background: getDm().cardBg, borderRadius: 12,
       padding: '20px 24px',
       border: '1px solid #E5E7EB',
       display: 'flex', alignItems: 'flex-start', gap: 16,
@@ -154,7 +169,7 @@ function KpiCard({ type, value, sub }: { type: 'total' | 'active' | 'budget' | '
       </div>
       <div>
         <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>{cfg.label}</div>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', lineHeight: 1.1 }}>{value}</div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: getDm().text, lineHeight: 1.1 }}>{value}</div>
         <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>{sub}</div>
       </div>
     </div>
@@ -247,7 +262,7 @@ function ClueDetailDrawer({ clueId, open, onClose }: { clueId: number | null; op
           }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>{clue.clueName}</span>
+                <span style={{ fontSize: 18, fontWeight: 600, color: getDm().text }}>{clue.clueName}</span>
                 <StatusBadge status={clue.clueStatus} />
                 {clue.clueLevel && <GradeBadge grade={clue.clueLevel} />}
               </div>
@@ -310,7 +325,7 @@ function ClueDetailDrawer({ clueId, open, onClose }: { clueId: number | null; op
                       children: (
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: getDm().text }}>
                               {f.follow_type || '跟进'}
                             </span>
                             <span style={{ fontSize: 11, color: '#9CA3AF' }}>
@@ -337,7 +352,7 @@ function ClueDetailDrawer({ clueId, open, onClose }: { clueId: number | null; op
                       ),
                     })),
                     {
-                      dot: <span style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid #CECBF6', background: '#fff', display: 'block', marginTop: 4 }} />,
+                      dot: <span style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid #CECBF6', background: getDm().cardBg, display: 'block', marginTop: 4 }} />,
                       children: (
                         <div
                           onClick={() => setFollowModal(true)}
@@ -390,7 +405,7 @@ function ClueDetailDrawer({ clueId, open, onClose }: { clueId: number | null; op
             borderTop: '1px solid #F3F4F6',
             padding: '12px 20px',
             display: 'flex', gap: 8,
-            background: '#fff',
+            background: getDm().cardBg,
           }}>
             <Button size="small" style={{ borderColor: BRAND[100], color: BRAND[600] }}>更新状态</Button>
             <Button size="small" type="primary" onClick={() => setFollowModal(true)}
@@ -465,6 +480,9 @@ function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
 /* ============ 主页面组件 ============ */
 export default function LeadsList() {
   const { message } = App.useApp();
+  const { isDark } = useTheme();
+  currentDm = DM(isDark);  // 更新模块级变量，子组件通过 getDm() 读取
+  const dm = currentDm;
   const [leads, setLeads] = useState<ClueVO[]>([]);
   const [total, setTotal] = useState(0);
   const [pg, setPg] = useState({ p: 1, s: 15 });
@@ -616,14 +634,14 @@ export default function LeadsList() {
 
   /* ============ 渲染 ============ */
   return (
-    <div style={{ minHeight: '100%' }}>
+    <div style={{ minHeight: '100%', background: getDm().pageBg }}>
       <CmdPalette open={cmd} onClose={() => setCmd(false)} actions={cmdActs} />
 
       {/* ---- 数据看板 ---- */}
       {view === 'dashboard' && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: '#111827' }}>数据看板</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: getDm().text }}>数据看板</h2>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button icon={<PlusOutlined />} onClick={openCreate}
                 style={{ background: BRAND[500], borderColor: BRAND[500], color: '#fff', borderRadius: 8 }}>
@@ -644,8 +662,8 @@ export default function LeadsList() {
           {/* 图表区 */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
             {/* 线索状态分布 */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ background: getDm().cardBg, borderRadius: 12, border: `1px solid ${getDm().cardBorder}`, padding: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8, color: getDm().text }}>
                 线索状态分布
                 <Tag style={{ margin: 0, borderRadius: 999, fontSize: 11 }}>{stats.total} 条</Tag>
               </div>
@@ -659,7 +677,7 @@ export default function LeadsList() {
             </div>
 
             {/* 部门线索分布 */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: 20 }}>
+            <div style={{ background: getDm().cardBg, borderRadius: 12, border: `1px solid ${getDm().cardBorder}`, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                 部门线索分布
                 <Tag style={{ margin: 0, borderRadius: 999, fontSize: 11 }}>{Object.keys(deptStats).length} 个部门</Tag>
@@ -671,7 +689,7 @@ export default function LeadsList() {
             </div>
 
             {/* 月度线索趋势（占位） */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: 20 }}>
+            <div style={{ background: getDm().cardBg, borderRadius: 12, border: `1px solid ${getDm().cardBorder}`, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>月度线索趋势</div>
               <div style={{ textAlign: 'center', padding: '40px 0', color: '#D1D5DB' }}>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>📈</div>
@@ -680,7 +698,7 @@ export default function LeadsList() {
             </div>
 
             {/* 承接人业绩TOP10 */}
-            <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: 20 }}>
+            <div style={{ background: getDm().cardBg, borderRadius: 12, border: `1px solid ${getDm().cardBorder}`, padding: 20 }}>
               <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>承接人业绩 TOP10</div>
               {(() => {
                 const m: Record<string, number> = {};
@@ -698,7 +716,7 @@ export default function LeadsList() {
           </div>
 
           {/* 最近更新 */}
-          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: 20 }}>
+          <div style={{ background: getDm().cardBg, borderRadius: 12, border: `1px solid ${getDm().cardBorder}`, padding: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <span style={{ fontSize: 15, fontWeight: 600 }}>最近更新的线索</span>
               <Button type="link" size="small" onClick={() => setView('list')} style={{ color: BRAND[500] }}>
@@ -718,7 +736,7 @@ export default function LeadsList() {
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 <StatusBadge status={l.clueStatus} />
-                <span style={{ fontWeight: 500, fontSize: 13, color: '#111827' }}>{l.clueName || '-'}</span>
+                <span style={{ fontWeight: 500, fontSize: 13, color: getDm().text }}>{l.clueName || '-'}</span>
                 <span style={{ fontSize: 12, color: '#9CA3AF' }}>{l.clientCompany}</span>
                 <span style={{ marginLeft: 'auto', fontSize: 12, color: '#D1D5DB' }}>{l.updateTime || l.createTime || '-'}</span>
               </div>
@@ -736,7 +754,7 @@ export default function LeadsList() {
       {view === 'board' && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: '#111827' }}>线索看板</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: getDm().text }}>线索看板</h2>
             <Button icon={<PlusOutlined />} onClick={openCreate}
               style={{ background: BRAND[500], borderColor: BRAND[500], color: '#fff', borderRadius: 8 }}>
               新增线索
@@ -783,7 +801,7 @@ export default function LeadsList() {
                           }}
                           onDragEnd={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                           style={{
-                            background: '#fff', border: '1px solid #E5E7EB',
+                            background: getDm().cardBg, border: `1px solid ${getDm().cardBorder}`,
                             borderRadius: 8, padding: 14, cursor: 'pointer',
                             transition: 'all 0.15s', opacity: isLost ? 0.65 : 1,
                           }}
@@ -800,7 +818,7 @@ export default function LeadsList() {
                         >
                           {/* 线索名称 */}
                           <div style={{
-                            fontSize: 13, fontWeight: 600, color: '#111827',
+                            fontSize: 13, fontWeight: 600, color: getDm().text,
                             marginBottom: 6, textDecoration: isLost ? 'line-through' : 'none',
                             display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                           }}>
@@ -855,7 +873,7 @@ export default function LeadsList() {
       {view === 'list' && (
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: '#111827' }}>线索列表</h2>
+            <h2 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: getDm().text }}>线索列表</h2>
             <div style={{ display: 'flex', gap: 8 }}>
               <Button icon={<DownloadOutlined />} style={{ borderRadius: 8 }}>导出</Button>
               <Button icon={<PlusOutlined />} onClick={openCreate}
@@ -905,7 +923,7 @@ export default function LeadsList() {
           {/* 搜索+筛选 — 完整筛选栏 */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap',
-            padding: '12px 16px', background: '#fff', borderRadius: 8, border: '1px solid #E5E7EB',
+            padding: '12px 16px', background: getDm().cardBg, borderRadius: 8, border: `1px solid ${getDm().cardBorder}`,
             overflowX: 'auto',
           }}>
             <Input prefix={<SearchOutlined style={{ color: '#9CA3AF' }} />}
@@ -925,7 +943,7 @@ export default function LeadsList() {
           </div>
 
           {/* 表格 */}
-          <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #E5E7EB', overflowX: 'auto' }}>
+          <div style={{ background: getDm().cardBg, borderRadius: 8, border: `1px solid ${getDm().cardBorder}`, overflowX: 'auto' }}>
             {/* 表头 — 13列：☑ ▸ 线索名称 客户公司 部门 对接人 承接人 预算 等级 状态 评审 商机 日期 操作 */}
             <div style={{
               display: 'grid',

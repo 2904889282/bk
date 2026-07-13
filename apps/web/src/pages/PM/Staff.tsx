@@ -1,9 +1,13 @@
 /** PM 人员分配 */
 import { useEffect, useState } from 'react';
+import { useTheme } from '../../store/useTheme';
 import { fetchProjectPage, type ProjectVO } from '../../api/project';
-const T = { s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', bg: '#010102' };
+const d = { s1: '#0f1011', s2: '#141516', hl: '#23252a', hls: '#34343a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', bg: '#010102' };
+const l = { s1: '#fff', s2: '#f5f5f5', hl: '#e5e5e5', hls: '#c5c5c5', ink: '#171717', ink2: '#444', ink3: '#737373', ink4: '#999', p: '#5e6ad2', ok: '#16a34a', warn: '#ca8a04', bg: '#fafafa' };
 
 export default function PMStaff() {
+  const { isDark } = useTheme();
+  const T = isDark ? d : l;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   useEffect(() => { (async () => { try { const r = await fetchProjectPage({ pageNum: 1, pageSize: 500 }); setProjects(r.records || []); } catch { setProjects([]); } })(); }, []);
 

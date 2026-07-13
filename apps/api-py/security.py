@@ -40,31 +40,21 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
 
 async def get_current_user_with_role(credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer)):
     """获取当前用户 + 角色 + 真实姓名 + 部门"""
-    import asyncio
     u = await get_current_user(credentials)
     from database import async_session
     from sqlalchemy import text
     async with async_session() as db:
-        async def _fetch_roles():
-            r = await db.execute(text(
-                "SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"
-            ), {"uid": u["id"]})
-            return [row[0] for row in r.all() if row[0]]
+        r = await db.execute(text(
+            "SELECT r.code FROM sys_role r JOIN sys_user_role ur ON ur.role_id=r.id WHERE ur.user_id=:uid"
+        ), {"uid": u["id"]})
+        u["roles"] = [row[0] for row in r.all() if row[0]]
 
-        async def _fetch_user_detail():
-            r2 = await db.execute(text(
-                "SELECT real_name, dept_id FROM sys_user WHERE id=:uid"
-            ), {"uid": u["id"]})
-            row2 = r2.first()
-            return (row2[0] if row2 and row2[0] else u["username"],
-                    row2[1] if row2 and row2[1] else None)
-
-        roles, (real_name, dept_id) = await asyncio.gather(
-            _fetch_roles(), _fetch_user_detail()
-        )
-        u["roles"] = roles
-        u["realName"] = real_name
-        u["deptId"] = dept_id
+        r2 = await db.execute(text(
+            "SELECT real_name, dept_id FROM sys_user WHERE id=:uid"
+        ), {"uid": u["id"]})
+        row2 = r2.first()
+        u["realName"] = row2[0] if row2 and row2[0] else u["username"]
+        u["deptId"] = row2[1] if row2 and row2[1] else None
         u["deptName"] = None
 
         if u.get("deptId"):

@@ -135,28 +135,17 @@ async def period_delete(period_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/api/project/{project_id}/dashboard")
 async def dashboard(project_id: int, db: AsyncSession = Depends(get_db)):
-    import asyncio
     proj = (await db.execute(select(BizProject).where(BizProject.id == project_id, BizProject.is_deleted == 0))).scalar_one_or_none()
     if not proj: return fail("项目不存在")
 
-    async def _periods():
-        return (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc()))).scalars().all()
-    async def _weeklies():
-        return (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0).order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc()))).scalars().all()
-    async def _milestones():
-        return (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
-    async def _team():
-        return (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
-    async def _wbs():
-        return (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
-    async def _changes():
-        return (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
-    async def _risks():
-        return (await db.execute(text("SELECT * FROM biz_risk WHERE project_id=:pid AND is_deleted=0 ORDER BY create_time DESC"), {"pid": project_id})).mappings().all()
+    periods = (await db.execute(select(BizProjectPeriod).where(BizProjectPeriod.project_id == project_id, BizProjectPeriod.is_deleted == 0).order_by(BizProjectPeriod.period_month.desc()))).scalars().all()
+    weeklies = (await db.execute(select(BizProjectWeekly).where(BizProjectWeekly.project_id == project_id, BizProjectWeekly.is_deleted == 0).order_by(BizProjectWeekly.period_month.desc(), BizProjectWeekly.week_number.desc()))).scalars().all()
+    milestones = (await db.execute(select(BizProjectMilestone).where(BizProjectMilestone.project_id == project_id, BizProjectMilestone.is_deleted == 0).order_by(BizProjectMilestone.sort_order))).scalars().all()
+    team = (await db.execute(select(BizProjectTeam).where(BizProjectTeam.project_id == project_id, BizProjectTeam.is_deleted == 0).order_by(BizProjectTeam.sort_order))).scalars().all()
+    wbs = (await db.execute(select(BizProjectWBS).where(BizProjectWBS.project_id == project_id, BizProjectWBS.is_deleted == 0).order_by(BizProjectWBS.sort_order))).scalars().all()
+    changes = (await db.execute(select(BizProjectChange).where(BizProjectChange.project_id == project_id, BizProjectChange.is_deleted == 0).order_by(BizProjectChange.change_date.desc()))).scalars().all()
+    risks = (await db.execute(text("SELECT * FROM biz_risk WHERE project_id=:pid AND is_deleted=0 ORDER BY create_time DESC"), {"pid": project_id})).mappings().all()
 
-    periods, weeklies, milestones, team, wbs, changes, risks = await asyncio.gather(
-        _periods(), _weeklies(), _milestones(), _team(), _wbs(), _changes(), _risks()
-    )
     return success({
         "project": project_to_dict(proj),
         "periods": [project_to_dict(p) for p in periods],

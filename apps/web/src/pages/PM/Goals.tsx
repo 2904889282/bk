@@ -1,11 +1,11 @@
-/** PM 关键目标 — 目标KPI + 部门/评级筛选 + 项目目标卡片 + 内联编辑 */
+/** PM 关键目标 */
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../../store/useTheme';
 import { fetchProjectPage, updateProject, type ProjectVO } from '../../api/project';
 
-const T = { s1: '#0f1011', s2: '#141516', s3: '#18191a', hl: '#23252a', hls: '#34343a',
-  ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880',
-  p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const d = { s1: '#0f1011', s2: '#141516', s3: '#18191a', hl: '#23252a', hls: '#34343a', ink: '#f7f8f8', ink2: '#d0d6e0', ink3: '#8a8f98', ink4: '#757880', p: '#5e6ad2', ok: '#27a644', warn: '#d4a030', err: '#e05050', bg: '#010102' };
+const l = { s1: '#fff', s2: '#f5f5f5', s3: '#e5e5e5', hl: '#e5e5e5', hls: '#c5c5c5', ink: '#171717', ink2: '#444', ink3: '#737373', ink4: '#999', p: '#5e6ad2', ok: '#16a34a', warn: '#ca8a04', err: '#dc2626', bg: '#fafafa' };
 
 const sortGoals = (a: ProjectVO, b: ProjectVO) => {
   const ap = (a as any).goalName ? (a.progress || 0) : -1;
@@ -15,6 +15,8 @@ const sortGoals = (a: ProjectVO, b: ProjectVO) => {
 
 export default function PMGoals() {
   const nav = useNavigate();
+  const { isDark } = useTheme();
+  const T = isDark ? d : l;
   const [projects, setProjects] = useState<ProjectVO[]>([]);
   const [loading, setLoading] = useState(true);
   const [dept, setDept] = useState('');

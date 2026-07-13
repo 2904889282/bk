@@ -168,6 +168,8 @@ function AppContent() {
             headerColor: isDark ? '#a1a1a1' : '#4d4d4d',
             headerSplitColor: isDark ? '#2a2a2a' : '#ebebeb',
             rowHoverBg: isDark ? '#1a1a1a' : '#fafafa',
+            colorBgContainer: isDark ? '#1a1a1a' : '#fff',
+            colorBgElevated: isDark ? '#1a1a1a' : '#fff',
             borderColor: isDark ? '#2a2a2a' : '#ebebeb',
           },
           Button: {
