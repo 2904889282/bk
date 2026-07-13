@@ -84,3 +84,26 @@ def verify_owner(user: dict, owner_field: str) -> bool:
         return True
     real_name = user.get("realName", "")
     return bool(real_name and real_name == owner_field)
+
+
+def verify_ownership(user: dict, resource: dict, entity_type: str = "") -> bool:
+    """所有权校验（3参数版）— 返回 True/False，替代已删除的 permissions.py。"""
+    if is_admin(user):
+        return True
+    real_name = user.get("realName", "")
+    if not real_name:
+        return False
+    owner_fields = {
+        "risk": ["owner", "riskOwner", "assignedTo"],
+        "alert": ["owner", "assignedTo"],
+        "pipeline": ["owner", "beikeOwner"],
+        "project": ["projectManager", "deliveryManager", "productManager"],
+        "clue": ["beikeOwner", "owner"],
+    }
+    fields = owner_fields.get(entity_type, [])
+    for f in fields:
+        if resource.get(f) == real_name:
+            return True
+    if isinstance(resource, str) and resource == real_name:
+        return True
+    return False

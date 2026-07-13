@@ -121,10 +121,9 @@ async def risk_update(risk_id: int, dto: RiskSaveDTO, db: AsyncSession = Depends
 
 @router.delete("/api/risk/{risk_id}")
 async def risk_delete(risk_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    from permissions import is_admin as perm_is_admin
     r = (await db.execute(select(BizRisk).where(BizRisk.id == risk_id))).scalar_one_or_none()
     if not r: return fail("风险不存在")
-    if not perm_is_admin(user) and not verify_ownership(user, row_to_dict(r), "risk"):
+    if not is_admin(user) and not verify_ownership(user, row_to_dict(r), "risk"):
         return fail("无权删除该风险")
     r.is_deleted = 1; await db.commit()
     return success()
@@ -168,10 +167,9 @@ async def alert_update(alert_id: int, dto: AlertSaveDTO, db: AsyncSession = Depe
 
 @router.delete("/api/alert/{alert_id}")
 async def alert_delete(alert_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    from permissions import is_admin as perm_is_admin
     r = (await db.execute(select(BizAlert).where(BizAlert.id == alert_id))).scalar_one_or_none()
     if not r: return fail("预警不存在")
-    if not perm_is_admin(user) and not verify_ownership(user, row_to_dict(r), "alert"):
+    if not is_admin(user) and not verify_ownership(user, row_to_dict(r), "alert"):
         return fail("无权删除该预警")
     r.is_deleted = 1; await db.commit()
     return success()

@@ -188,6 +188,8 @@ class BizClue(Base):
     update_by = Column("update_by", BigInteger)
     update_time = Column("update_time", DateTime, default=_utcnow, onupdate=_utcnow)
     is_deleted = Column("is_deleted", Integer, default=0)
+    converted_opportunity_id = Column("converted_opportunity_id", BigInteger)
+    is_converted = Column("is_converted", Boolean, default=False)
 
 class BizTalent(Base):
     __tablename__ = "biz_talent"

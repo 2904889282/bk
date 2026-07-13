@@ -3,7 +3,7 @@ from sqlalchemy import select, func, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import BizPipeline, BizCampaign
-from security import get_current_user_with_role
+from security import get_current_user_with_role, is_admin, verify_ownership
 from schemas import success, fail
 
 router = APIRouter(tags=["LTC"])
@@ -64,10 +64,9 @@ async def pipeline_update(pipeline_id: int, dto: dict, db: AsyncSession = Depend
 
 @router.delete("/api/pipeline/{pipeline_id}")
 async def pipeline_delete(pipeline_id: int, db: AsyncSession = Depends(get_db), user=Depends(get_current_user_with_role)):
-    from permissions import verify_ownership, is_admin as perm_is_admin
     r = (await db.execute(select(BizPipeline).where(BizPipeline.id == pipeline_id))).scalar_one_or_none()
     if not r: return fail("商机不存在")
-    if not perm_is_admin(user) and not verify_ownership(user, row_to_dict(r), "pipeline"):
+    if not is_admin(user) and not verify_ownership(user, row_to_dict(r), "pipeline"):
         return fail("无权删除该商机")
     r.is_deleted = 1; await db.commit()
     return success()

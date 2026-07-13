@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request, Body
 from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
-from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermission, SysDept, BizTalent, SysLoginAttempt
+from models import SysUser, SysRole, SysUserRole, SysRolePermission, SysPermission, SysDept, BizTalent
 from schemas import *
 from security import verify_password, hash_password, create_token, decode_token, get_current_user
 from config import settings
